@@ -1,11 +1,7 @@
-<script setup>
-import LandingPage from './views/LandingPage.vue'
-</script>
+<script setup></script>
 
 <template>
-  <div class="min-h-screen font-sans flex flex-col">
-    <LandingPage />
-  </div>
+  <router-view />
 </template>
 
 <style>

@@ -18,14 +18,14 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <!-- Logo -->
-        <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer">
+        <router-link to="/" class="flex-shrink-0 flex items-center gap-2">
           <div
             class="w-8 h-8 bg-primary-green rounded-full flex items-center justify-center text-white"
           >
             <img src="/bird-svgrepo-com.svg" alt="Bird" width="20" height="20" />
           </div>
           <span class="font-bold text-xl text-white tracking-tight">BirdDex</span>
-        </div>
+        </router-link>
 
         <!-- Desktop Navigation -->
         <nav class="hidden md:flex items-center space-x-8">
@@ -41,18 +41,18 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
 
         <!-- Desktop Auth -->
         <div class="hidden md:flex items-center gap-4">
-          <a
-            href="/login"
+          <router-link
+            to="/login"
             class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
           >
             Login
-          </a>
-          <a
-            href="/register"
+          </router-link>
+          <router-link
+            to="/register"
             class="bg-primary-green text-white px-5 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-opacity shadow-sm text-sm"
           >
             Register
-          </a>
+          </router-link>
         </div>
 
         <!-- Mobile Menu Button -->
@@ -102,20 +102,20 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
         >
           {{ link.label }}
         </a>
-        <a
-          href="#"
+        <router-link
+          to="/login"
           @click="mobileMenuOpen = false"
           class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
         >
           Login
-        </a>
-        <a
-          href="#signup"
+        </router-link>
+        <router-link
+          to="/register"
           @click="mobileMenuOpen = false"
           class="block py-3 text-primary-green font-semibold text-sm"
         >
           Register
-        </a>
+        </router-link>
       </div>
     </div>
   </header>
