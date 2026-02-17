@@ -52,7 +52,7 @@ useScrollAnimation(stepsRef, { animateChildren: true, y: 50, stagger: 0.15 })
       <div class="relative">
         <!-- Connecting line (desktop only) -->
         <div
-          class="hidden md:block absolute top-16 left-[20%] right-[20%] h-0.5 bg-linear-to-r from-forest-green/20 via-forest-green/40 to-forest-green/20 z-0"
+          class="hidden md:block absolute top-16 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-forest-green/20 via-forest-green/40 to-forest-green/20 z-0"
         ></div>
 
         <div ref="stepsRef" class="grid md:grid-cols-3 gap-8 relative z-10">

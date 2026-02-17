@@ -44,7 +44,7 @@ useScrollAnimation(gridRef, {
         <div class="col-span-2 row-span-2 relative rounded-2xl overflow-hidden group shadow-md">
           <img :src="photos[0].src" :alt="photos[0].name" class="object-cover w-full h-full" />
           <div
-            class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"
+            class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"
           ></div>
           <div
             class="absolute bottom-4 left-4 text-white font-bold text-xl drop-shadow-md translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
@@ -62,7 +62,7 @@ useScrollAnimation(gridRef, {
         >
           <img :src="photo.src" :alt="photo.name" class="object-cover w-full h-full" />
           <div
-            class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"
+            class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"
           ></div>
           <div
             class="absolute bottom-4 left-4 text-white font-bold text-lg drop-shadow-md translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
