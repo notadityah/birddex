@@ -13,10 +13,10 @@ export function useLoadAnimation(targetRef, options = {}) {
   const { animateChildren = false, ...gsapOptions } = options
 
   const defaults = {
-    y: 40,
+    y: 20,
     opacity: 0,
-    duration: 0.8,
-    stagger: 0.15,
+    duration: 0.35,
+    stagger: 0.08,
     ease: 'power3.out',
   }
 
@@ -36,10 +36,10 @@ export function useScrollAnimation(targetRef, options = {}) {
   const { animateChildren = false, start = 'top 80%', ...gsapOptions } = options
 
   const defaults = {
-    y: 40,
+    y: 20,
     opacity: 0,
-    duration: 0.7,
-    stagger: 0.12,
+    duration: 0.35,
+    stagger: 0.06,
     ease: 'power3.out',
   }
 

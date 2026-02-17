@@ -1,9 +1,18 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useLoadAnimation } from '@/composables/useAnimation'
+import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const mobileMenuOpen = ref(false)
 const headerRef = ref(null)
+
+async function handleLogout() {
+  await authStore.logout()
+  router.push('/login')
+}
 
 const navLinks = [
   { label: 'Try Now', href: '#try' },
@@ -41,18 +50,34 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
 
         <!-- Desktop Auth -->
         <div class="hidden md:flex items-center gap-4">
-          <router-link
-            to="/login"
-            class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
-          >
-            Login
-          </router-link>
-          <router-link
-            to="/register"
-            class="bg-primary-green text-white px-5 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-opacity shadow-sm text-sm"
-          >
-            Register
-          </router-link>
+          <template v-if="authStore.isAuthenticated">
+            <router-link
+              to="/dashboard"
+              class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
+            >
+              Dashboard
+            </router-link>
+            <button
+              @click="handleLogout"
+              class="text-gray-300 hover:text-red-400 font-medium transition-colors text-sm cursor-pointer"
+            >
+              Sign out
+            </button>
+          </template>
+          <template v-else>
+            <router-link
+              to="/login"
+              class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
+            >
+              Login
+            </router-link>
+            <router-link
+              to="/register"
+              class="bg-primary-green text-white px-5 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-opacity shadow-sm text-sm"
+            >
+              Register
+            </router-link>
+          </template>
         </div>
 
         <!-- Mobile Menu Button -->
@@ -102,20 +127,37 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
         >
           {{ link.label }}
         </a>
-        <router-link
-          to="/login"
-          @click="mobileMenuOpen = false"
-          class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
-        >
-          Login
-        </router-link>
-        <router-link
-          to="/register"
-          @click="mobileMenuOpen = false"
-          class="block py-3 text-primary-green font-semibold text-sm"
-        >
-          Register
-        </router-link>
+        <template v-if="authStore.isAuthenticated">
+          <router-link
+            to="/dashboard"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
+          >
+            Dashboard
+          </router-link>
+          <button
+            @click="(handleLogout(), (mobileMenuOpen = false))"
+            class="block w-full text-left py-3 text-gray-300 hover:text-red-400 font-medium text-sm cursor-pointer"
+          >
+            Sign out
+          </button>
+        </template>
+        <template v-else>
+          <router-link
+            to="/login"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
+          >
+            Login
+          </router-link>
+          <router-link
+            to="/register"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-primary-green font-semibold text-sm"
+          >
+            Register
+          </router-link>
+        </template>
       </div>
     </div>
   </header>
