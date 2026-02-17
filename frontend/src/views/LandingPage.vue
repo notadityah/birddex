@@ -17,7 +17,7 @@ const { visible: showChevron } = useBounceAnimation(chevronRef, { containerRef: 
 <template>
   <div class="min-h-screen font-sans flex flex-col">
     <Header />
-    <main class="flex-grow">
+    <main class="grow">
       <div ref="contentRef">
         <Hero />
         <HowItWorks />
