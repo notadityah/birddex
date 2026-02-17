@@ -1,12 +1,12 @@
 import './assets/main.css'
 
 import { Amplify } from 'aws-amplify'
-import outputs from '../amplify_outputs.json'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
-Amplify.configure(outputs)
+const outputs = await import('../amplify_outputs.json')
+Amplify.configure(outputs.default)
 
 const app = createApp(App)
 
