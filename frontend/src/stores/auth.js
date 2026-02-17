@@ -8,7 +8,7 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { auth, googleProvider } from '@/firebase'
+import { auth, googleProvider } from '@/firebase/firebase'
 import { createUserProfile, getUserProfile } from '@/services/userService'
 
 export const useAuthStore = defineStore('auth', () => {

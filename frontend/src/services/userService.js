@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/firebase'
+import { db } from '@/firebase/firebase'
 
 /**
  * Create a new user profile in Firestore
