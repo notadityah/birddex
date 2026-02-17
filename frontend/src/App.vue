@@ -1,9 +1,10 @@
-<script setup></script>
+<script setup>
+import Header from '@/components/landingpage/HeaderComponent.vue'
+</script>
 
 <template>
-  <router-view />
+  <div class="min-h-screen flex flex-col">
+    <Header />
+    <router-view />
+  </div>
 </template>
-
-<style>
-/* Global styles are imported in main.js via assets/main.css */
-</style>

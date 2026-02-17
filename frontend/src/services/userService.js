@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/firebase'
 
 /**
@@ -25,14 +25,4 @@ export async function getUserProfile(uid) {
   const userRef = doc(db, 'users', uid)
   const snap = await getDoc(userRef)
   return snap.exists() ? snap.data() : null
-}
-
-/**
- * Partially update a user profile
- * @param {string} uid
- * @param {Object} data - fields to update
- */
-export async function updateUserProfile(uid, data) {
-  const userRef = doc(db, 'users', uid)
-  await updateDoc(userRef, data)
 }
