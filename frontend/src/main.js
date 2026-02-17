@@ -5,8 +5,12 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
-const outputs = await import('../amplify_outputs.json')
-Amplify.configure(outputs.default)
+try {
+  const outputs = await import('../amplify_outputs.json')
+  Amplify.configure(outputs.default)
+} catch {
+  console.warn('amplify_outputs.json not found — Amplify not configured')
+}
 
 const app = createApp(App)
 
