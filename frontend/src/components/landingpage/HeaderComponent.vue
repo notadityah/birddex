@@ -1,6 +1,11 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useLoadAnimation } from '@/composables/useAnimation'
+import { useAuth } from '@/composables/useAuth'
+
+const router = useRouter()
+const { user, isAuthenticated, isAdmin, logout } = useAuth()
 
 const mobileMenuOpen = ref(false)
 const headerRef = ref(null)
@@ -11,6 +16,12 @@ const navLinks = [
 ]
 
 useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
+
+async function handleLogout() {
+  mobileMenuOpen.value = false
+  await logout()
+  router.push({ name: 'home' })
+}
 </script>
 
 <template>
@@ -41,18 +52,48 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
 
         <!-- Desktop Auth -->
         <div class="hidden md:flex items-center gap-4">
-          <router-link
-            to="/login"
-            class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
-          >
-            Login
-          </router-link>
-          <router-link
-            to="/register"
-            class="bg-primary-green text-white px-5 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-opacity shadow-sm text-sm"
-          >
-            Register
-          </router-link>
+          <template v-if="isAuthenticated">
+            <router-link
+              v-if="isAdmin"
+              to="/admin"
+              class="text-gray-300 hover:text-primary-green font-medium transition-colors text-sm"
+            >
+              Admin
+            </router-link>
+            <router-link
+              to="/dashboard"
+              class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
+            >
+              Dashboard
+            </router-link>
+            <div class="flex items-center gap-2">
+              <div
+                class="w-7 h-7 bg-primary-green rounded-full flex items-center justify-center text-white text-xs font-bold"
+              >
+                {{ user?.name?.charAt(0)?.toUpperCase() || '?' }}
+              </div>
+              <button
+                @click="handleLogout"
+                class="text-gray-300 hover:text-white font-medium transition-colors text-sm cursor-pointer"
+              >
+                Sign out
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            <router-link
+              to="/login"
+              class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
+            >
+              Login
+            </router-link>
+            <router-link
+              to="/register"
+              class="bg-primary-green text-white px-5 py-2 rounded-md font-semibold hover:bg-opacity-90 transition-opacity shadow-sm text-sm"
+            >
+              Register
+            </router-link>
+          </template>
         </div>
 
         <!-- Mobile Menu Button -->
@@ -102,20 +143,46 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
         >
           {{ link.label }}
         </a>
-        <router-link
-          to="/login"
-          @click="mobileMenuOpen = false"
-          class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
-        >
-          Login
-        </router-link>
-        <router-link
-          to="/register"
-          @click="mobileMenuOpen = false"
-          class="block py-3 text-primary-green font-semibold text-sm"
-        >
-          Register
-        </router-link>
+
+        <template v-if="isAuthenticated">
+          <router-link
+            to="/dashboard"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
+          >
+            Dashboard
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-gray-300 hover:text-primary-green font-medium text-sm"
+          >
+            Admin
+          </router-link>
+          <button
+            @click="handleLogout"
+            class="block w-full text-left py-3 text-gray-300 hover:text-white font-medium text-sm cursor-pointer"
+          >
+            Sign out
+          </button>
+        </template>
+        <template v-else>
+          <router-link
+            to="/login"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
+          >
+            Login
+          </router-link>
+          <router-link
+            to="/register"
+            @click="mobileMenuOpen = false"
+            class="block py-3 text-primary-green font-semibold text-sm"
+          >
+            Register
+          </router-link>
+        </template>
       </div>
     </div>
   </header>
