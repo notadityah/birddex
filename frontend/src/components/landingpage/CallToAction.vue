@@ -18,12 +18,12 @@ useScrollAnimation(contentRef, { animateChildren: true })
         birdwatchers and build your personal collection.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a
-          href="#"
+        <router-link
+          to="/register"
           class="inline-flex items-center justify-center bg-forest-green text-white px-10 py-4 rounded-lg font-semibold text-lg hover:shadow-lg hover:shadow-forest-green/25 transition-all"
         >
           Sign Up - It's Free
-        </a>
+        </router-link>
         <a
           href="#try"
           class="inline-flex items-center justify-center border-2 border-gray-600 text-gray-900 px-10 py-4 rounded-lg font-semibold text-lg hover:border-gray-400 transition-all"

@@ -21,9 +21,6 @@ useScrollAnimation(footerRef, { animateChildren: true, y: 30, start: 'top 90%' }
             </div>
             <span class="font-bold text-xl tracking-tight text-white">BirdDex</span>
           </div>
-          <p class="text-gray-300 text-sm mb-6 leading-relaxed">
-            Your companion for exploring the avian world. Identify and track your feathered friends.
-          </p>
         </div>
       </div>
 

@@ -27,7 +27,7 @@ useLoadAnimation(heroRight, { x: 60, y: 0, duration: 1 })
         <!-- Right Column -->
         <div ref="heroRight" class="relative">
           <div
-            class="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-100 aspect-[4/3] w-full group"
+            class="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-100 aspect-4/3 w-full group"
           >
             <!-- Hero Image -->
             <img
@@ -41,7 +41,7 @@ useLoadAnimation(heroRight, { x: 60, y: 0, duration: 1 })
               class="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg flex items-center gap-4 border border-white/50"
             >
               <div
-                class="w-10 h-10 bg-forest-green/10 rounded-full flex items-center justify-center flex-shrink-0"
+                class="w-10 h-10 bg-forest-green/10 rounded-full flex items-center justify-center shrink-0"
               >
                 <img src="/check-mark-svgrepo-com.svg" alt="Check Mark" class="w-4 h-4" />
               </div>
@@ -49,7 +49,7 @@ useLoadAnimation(heroRight, { x: 60, y: 0, duration: 1 })
                 <h3 class="font-bold text-gray-900 text-sm">Kingfisher identified!</h3>
               </div>
               <div
-                class="bg-forest-green text-white text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                class="bg-forest-green text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0"
               >
                 Match
               </div>

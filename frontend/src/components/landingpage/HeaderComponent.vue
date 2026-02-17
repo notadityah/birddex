@@ -18,7 +18,7 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <!-- Logo -->
-        <router-link to="/" class="flex-shrink-0 flex items-center gap-2">
+        <router-link to="/" class="shrink-0 flex items-center gap-2">
           <div
             class="w-8 h-8 bg-primary-green rounded-full flex items-center justify-center text-white"
           >
