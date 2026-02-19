@@ -27,7 +27,7 @@ useScrollAnimation(footerRef, { animateChildren: true, y: 30, start: 'top 90%' }
       <div
         class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4"
       >
-        <p class="text-gray-400 text-sm">Developed by Aditya Hariharan</p>
+        <p class="text-gray-400 text-sm">Developed by Aditya Hairharan</p>
       </div>
     </div>
   </footer>
