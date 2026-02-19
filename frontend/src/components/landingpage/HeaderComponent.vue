@@ -14,10 +14,7 @@ async function handleLogout() {
   router.push('/login')
 }
 
-const navLinks = [
-  { label: 'Try Now', href: '#try' },
-  { label: 'Gallery', href: '#community' },
-]
+const navLinks = []
 
 useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
 </script>
