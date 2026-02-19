@@ -1,13 +1,88 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="">
   <head>
-    <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BirdDex</title>
+    <style>
+      #app-loading,
+      #app-error {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      #app-loading {
+        background-color: #ffffff;
+        color: #00d084;
+      }
+      #app-loading svg {
+        width: 32px;
+        height: 32px;
+        animation: spin 0.75s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      #app-error {
+        display: none;
+        background-color: #ffffff;
+        font-family: sans-serif;
+        text-align: center;
+        padding: 1rem;
+      }
+      #app-error p:first-child {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+      }
+      #app-error p:last-of-type {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+      #app-error button {
+        margin-top: 1rem;
+        padding: 0.5rem 1.25rem;
+        background: #00d084;
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="app-loading">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle
+            style="opacity: 0.25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            style="opacity: 0.75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      </div>
+      <div id="app-error">
+        <div>
+          <p>Unable to connect</p>
+          <p>Please check your connection and try again.</p>
+          <button onclick="window.location.reload()">Retry</button>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

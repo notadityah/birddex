@@ -11,25 +11,51 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
+const formError = ref('')
 const confirmError = ref('')
 
 const { loading, run, authStore, onSuccess } = useAuthAction()
 
 function handleRegister() {
+  formError.value = ''
   confirmError.value = ''
 
+  const trimmedName = name.value.trim()
+  const trimmedEmail = email.value.trim()
+
+  if (!trimmedName) {
+    formError.value = 'Full name is required.'
+    return
+  }
+  if (trimmedName.length > 100) {
+    formError.value = 'Name must be 100 characters or fewer.'
+    return
+  }
+  if (!trimmedEmail) {
+    formError.value = 'Email is required.'
+    return
+  }
+  if (!password.value) {
+    formError.value = 'Password is required.'
+    return
+  }
+  if (password.value.length < 6) {
+    formError.value = 'Password must be at least 6 characters.'
+    return
+  }
   if (password.value !== confirmPassword.value) {
     confirmError.value = 'Passwords do not match.'
     return
   }
 
-  run(() => authStore.register(name.value, email.value, password.value))
+  run(() => authStore.register(trimmedName, trimmedEmail, password.value))
 }
 </script>
 
 <template>
   <AuthLayout title="Create your account" subtitle="Start building your bird collection">
-    <AlertBanner v-if="authStore.error" :message="authStore.error" />
+    <AlertBanner v-if="formError" :message="formError" />
+    <AlertBanner v-else-if="authStore.error" :message="authStore.error" />
 
     <form @submit.prevent="handleRegister" class="space-y-4">
       <AuthFormInput
