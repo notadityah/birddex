@@ -1,7 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
-
-const props = defineProps({
+defineProps({
   label: { type: String, required: true },
   type: { type: String, default: 'text' },
   id: { type: String, required: true },
@@ -11,34 +9,17 @@ const props = defineProps({
 })
 
 const model = defineModel()
-const showPassword = ref(false)
-
-const resolvedType = computed(() => {
-  if (props.type === 'password' && showPassword.value) return 'text'
-  return props.type
-})
 </script>
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-1.5">
-      <label :for="id" class="block text-sm font-medium text-gray-700">
-        {{ label }}
-      </label>
-      <button
-        v-if="type === 'password'"
-        type="button"
-        @click="showPassword = !showPassword"
-        class="text-xs text-gray-400 hover:text-gray-600 transition-colors cursor-pointer select-none"
-        :aria-label="showPassword ? 'Hide password' : 'Show password'"
-      >
-        {{ showPassword ? 'Hide' : 'Show' }}
-      </button>
-    </div>
+    <label :for="id" class="block text-sm font-medium text-gray-700 mb-1.5">
+      {{ label }}
+    </label>
     <input
       :id="id"
       v-model="model"
-      :type="resolvedType"
+      :type="type"
       :placeholder="placeholder"
       :autocomplete="autocomplete"
       :class="[

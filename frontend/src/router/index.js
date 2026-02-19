@@ -2,11 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LandingPage from '../views/LandingPage.vue'
 
-function isSafeRedirect(path) {
-  if (typeof path !== 'string') return false
-  return path.startsWith('/') && !path.startsWith('//') && !path.includes('http')
-}
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior() {
@@ -42,11 +37,6 @@ const router = createRouter({
       component: () => import('../views/DashboardPage.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('../views/NotFoundPage.vue'),
-    },
   ],
 })
 
@@ -54,8 +44,7 @@ router.beforeEach((to) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    const safeRedirect = isSafeRedirect(to.fullPath) ? to.fullPath : '/dashboard'
-    return { name: 'login', query: { redirect: safeRedirect } }
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {

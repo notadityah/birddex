@@ -43,12 +43,10 @@ export function useScrollAnimation(targetRef, options = {}) {
     ease: 'power3.out',
   }
 
-  let animation = null
-
   onMounted(() => {
     if (!targetRef.value) return
     const target = animateChildren ? targetRef.value.children : targetRef.value
-    animation = gsap.from(target, {
+    gsap.from(target, {
       ...defaults,
       ...gsapOptions,
       scrollTrigger: {
@@ -57,15 +55,6 @@ export function useScrollAnimation(targetRef, options = {}) {
         toggleActions: 'play none none none',
       },
     })
-  })
-
-  onUnmounted(() => {
-    if (animation?.scrollTrigger) {
-      animation.scrollTrigger.kill()
-    }
-    if (animation) {
-      animation.kill()
-    }
   })
 }
 

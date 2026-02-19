@@ -9,30 +9,17 @@ import SocialLoginButtons from '@/components/auth/SocialLoginButtons.vue'
 
 const email = ref('')
 const password = ref('')
-const localError = ref('')
 
 const { loading, run, authStore, onSuccess } = useAuthAction()
 
 function handleLogin() {
-  localError.value = ''
-
-  if (!email.value.trim()) {
-    localError.value = 'Email is required.'
-    return
-  }
-  if (!password.value) {
-    localError.value = 'Password is required.'
-    return
-  }
-
-  run(() => authStore.login(email.value.trim(), password.value))
+  run(() => authStore.login(email.value, password.value))
 }
 </script>
 
 <template>
   <AuthLayout title="Welcome back" subtitle="Sign in to your BirdDex account">
-    <AlertBanner v-if="localError" :message="localError" />
-    <AlertBanner v-else-if="authStore.error" :message="authStore.error" />
+    <AlertBanner v-if="authStore.error" :message="authStore.error" />
 
     <form @submit.prevent="handleLogin" class="space-y-4">
       <AuthFormInput

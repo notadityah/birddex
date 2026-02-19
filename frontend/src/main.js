@@ -17,12 +17,6 @@ app.use(router)
 // initAuthListener() caches its promise, so the router guard
 // and any later calls return instantly.
 const authStore = useAuthStore()
-authStore
-  .initAuthListener()
-  .then(() => {
-    app.mount('#app')
-  })
-  .catch(() => {
-    document.getElementById('app-loading')?.style.setProperty('display', 'none')
-    document.getElementById('app-error')?.style.setProperty('display', 'flex')
-  })
+authStore.initAuthListener().then(() => {
+  app.mount('#app')
+})
