@@ -19,7 +19,7 @@ export function useAuthAction(redirect = '/dashboard') {
     loading.value = true
     const ok = await actionFn()
     loading.value = false
-    if (ok && redirect) router.push(redirect)
+    if (ok === true && redirect) router.push(redirect)
     return ok
   }
 

@@ -37,6 +37,17 @@ const router = createRouter({
       component: () => import('../views/DashboardPage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/privacy-policy',
+      name: 'privacy-policy',
+      component: () => import('../views/PrivacyPolicyPage.vue'),
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('../views/VerifyEmailPage.vue'),
+      meta: { guestOnly: true },
+    },
   ],
 })
 

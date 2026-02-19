@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   onAuthStateChanged,
 } from 'firebase/auth'
 import { auth, googleProvider } from '@/firebase/firebase'
@@ -17,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userProfile = ref(null)
   const loading = ref(true) // true until initial auth check completes
   const error = ref(null)
+  const unverifiedUser = ref(null) // holds user object when email not yet verified
   let _authReadyPromise = null // cached so initAuthListener only runs once
 
   // --- Getters ---
@@ -52,6 +54,15 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
+
+      if (!cred.user.emailVerified) {
+        unverifiedUser.value = cred.user
+        await signOut(auth)
+        user.value = null
+        userProfile.value = null
+        return 'unverified'
+      }
+
       user.value = cred.user
       await fetchUserProfile(cred.user.uid)
       return true
@@ -68,9 +79,12 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
-      user.value = cred.user
       await createUserProfile(cred.user.uid, { name, email })
-      await fetchUserProfile(cred.user.uid)
+      await sendEmailVerification(cred.user)
+      // Sign out so the user can't access protected routes until verified
+      await signOut(auth)
+      user.value = null
+      userProfile.value = null
       return true
     } catch (err) {
       setError(err)
@@ -124,6 +138,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function resendVerification() {
+    clearError()
+    try {
+      if (unverifiedUser.value) {
+        await sendEmailVerification(unverifiedUser.value)
+        return true
+      }
+      error.value = 'No unverified account found. Please register or log in again.'
+      return false
+    } catch (err) {
+      setError(err)
+      return false
+    }
+  }
+
   async function fetchUserProfile(uid, force = false) {
     // Skip Firestore read if profile is already cached for this uid
     if (!force && userProfile.value?._uid === uid) return
@@ -162,6 +191,7 @@ export const useAuthStore = defineStore('auth', () => {
     userProfile,
     loading,
     error,
+    unverifiedUser,
     // getters
     isAuthenticated,
     isAdmin,
@@ -172,6 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
     loginWithGoogle,
     logout,
     resetPassword,
+    resendVerification,
     clearError,
     initAuthListener,
   }

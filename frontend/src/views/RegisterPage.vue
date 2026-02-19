@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthAction } from '@/composables/useAuthAction'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import AuthFormInput from '@/components/auth/AuthFormInput.vue'
@@ -11,18 +12,59 @@ const name = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
-const confirmError = ref('')
 
-const { loading, run, authStore, onSuccess } = useAuthAction()
+const errors = reactive({
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+})
 
-function handleRegister() {
-  confirmError.value = ''
+const { loading, run, authStore } = useAuthAction('/verify-email')
+const router = useRouter()
 
-  if (password.value !== confirmPassword.value) {
-    confirmError.value = 'Passwords do not match.'
-    return
+function validate() {
+  let valid = true
+
+  errors.name = ''
+  errors.email = ''
+  errors.password = ''
+  errors.confirmPassword = ''
+
+  if (!name.value.trim()) {
+    errors.name = 'Name is required.'
+    valid = false
   }
 
+  if (!email.value.trim()) {
+    errors.email = 'Email is required.'
+    valid = false
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+    errors.email = 'Please enter a valid email address.'
+    valid = false
+  }
+
+  if (!password.value) {
+    errors.password = 'Password is required.'
+    valid = false
+  } else if (password.value.length < 6) {
+    errors.password = 'Password must be at least 6 characters.'
+    valid = false
+  }
+
+  if (!confirmPassword.value) {
+    errors.confirmPassword = 'Please confirm your password.'
+    valid = false
+  } else if (password.value !== confirmPassword.value) {
+    errors.confirmPassword = 'Passwords do not match.'
+    valid = false
+  }
+
+  return valid
+}
+
+function handleRegister() {
+  if (!validate()) return
   run(() => authStore.register(name.value, email.value, password.value))
 }
 </script>
@@ -39,6 +81,7 @@ function handleRegister() {
         type="text"
         placeholder="Jane Doe"
         autocomplete="name"
+        :error="errors.name"
       />
 
       <AuthFormInput
@@ -48,6 +91,7 @@ function handleRegister() {
         type="email"
         placeholder="you@example.com"
         autocomplete="email"
+        :error="errors.email"
       />
 
       <AuthFormInput
@@ -57,6 +101,7 @@ function handleRegister() {
         type="password"
         placeholder="Create a password"
         autocomplete="new-password"
+        :error="errors.password"
       />
 
       <AuthFormInput
@@ -66,7 +111,7 @@ function handleRegister() {
         type="password"
         placeholder="Confirm your password"
         autocomplete="new-password"
-        :error="confirmError"
+        :error="errors.confirmPassword"
       />
 
       <PrimaryButton
@@ -76,7 +121,7 @@ function handleRegister() {
       />
     </form>
 
-    <SocialLoginButtons @success="onSuccess" />
+    <SocialLoginButtons @success="() => router.push('/dashboard')" />
 
     <p class="text-center text-sm text-gray-500 mt-6">
       Already have an account?
