@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
  * @param {string|null} redirect - Route to navigate to on success, or null to skip
  * @returns {{ loading: Ref<boolean>, run: Function, authStore: Object, onSuccess: Function }}
  */
-export function useAuthAction(redirect = '/dashboard') {
+export function useAuthAction(redirect = '/mydex') {
   const loading = ref(false)
   const authStore = useAuthStore()
   const router = useRouter()

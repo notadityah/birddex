@@ -32,9 +32,27 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: () => import('../views/DashboardPage.vue'),
+      path: '/mydex',
+      name: 'mydex',
+      component: () => import('../views/MyDexPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/detect',
+      name: 'detect',
+      component: () => import('../views/DetectPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/gallery',
+      name: 'gallery',
+      component: () => import('../views/GalleryPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/account',
+      name: 'account',
+      component: () => import('../views/AccountPage.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -51,15 +69,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
+  // Wait for Firebase auth state to resolve before making guard decisions
+  await authStore.initAuthListener()
+
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return { name: 'login' }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return { name: 'dashboard' }
+    return { name: 'mydex' }
   }
 })
 

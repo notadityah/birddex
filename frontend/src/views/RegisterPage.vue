@@ -121,7 +121,7 @@ function handleRegister() {
       />
     </form>
 
-    <SocialLoginButtons @success="() => router.push('/dashboard')" />
+    <SocialLoginButtons @success="() => router.push('/mydex')" />
 
     <p class="text-center text-sm text-gray-500 mt-6">
       Already have an account?

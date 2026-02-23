@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   let _authReadyPromise = null // cached so initAuthListener only runs once
 
   // --- Getters ---
-  const isAuthenticated = computed(() => !!user.value)
+  const isAuthenticated = computed(() => !!user.value && user.value.emailVerified === true)
   const isAdmin = computed(() => userProfile.value?.role === 'admin')
   const displayName = computed(
     () => userProfile.value?.name || user.value?.displayName || user.value?.email || '',
@@ -81,6 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
       const cred = await createUserWithEmailAndPassword(auth, email, password)
       await createUserProfile(cred.user.uid, { name, email })
       await sendEmailVerification(cred.user)
+      unverifiedUser.value = cred.user
       // Sign out so the user can't access protected routes until verified
       await signOut(auth)
       user.value = null
@@ -124,6 +125,7 @@ export const useAuthStore = defineStore('auth', () => {
     await signOut(auth)
     user.value = null
     userProfile.value = null
+    unverifiedUser.value = null
     _authReadyPromise = null // reset so next session re-inits
   }
 
@@ -170,9 +172,11 @@ export const useAuthStore = defineStore('auth', () => {
 
     _authReadyPromise = new Promise((resolve) => {
       onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
+        if (firebaseUser && firebaseUser.emailVerified) {
           user.value = firebaseUser
           await fetchUserProfile(firebaseUser.uid)
+        } else if (firebaseUser && !firebaseUser.emailVerified) {
+          await signOut(auth)
         } else {
           user.value = null
           userProfile.value = null

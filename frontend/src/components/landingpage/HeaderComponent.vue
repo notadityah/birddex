@@ -49,10 +49,10 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
         <div class="hidden md:flex items-center gap-4">
           <template v-if="authStore.isAuthenticated">
             <router-link
-              to="/dashboard"
+              to="/mydex"
               class="text-gray-300 hover:text-white font-medium transition-colors text-sm"
             >
-              Dashboard
+              MyDex
             </router-link>
             <button
               @click="handleLogout"
@@ -126,11 +126,11 @@ useLoadAnimation(headerRef, { y: 0, duration: 0.6 })
         </a>
         <template v-if="authStore.isAuthenticated">
           <router-link
-            to="/dashboard"
+            to="/mydex"
             @click="mobileMenuOpen = false"
             class="block py-3 text-gray-300 hover:text-white font-medium text-sm"
           >
-            Dashboard
+            MyDex
           </router-link>
           <button
             @click="(handleLogout(), (mobileMenuOpen = false))"
