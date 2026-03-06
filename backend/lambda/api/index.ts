@@ -19,10 +19,11 @@ interface AppSecret {
   BETTER_AUTH_SECRET: string;
 }
 
-let auth: ReturnType<typeof betterAuth> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let auth: any = null;
 
-async function getAuth(): Promise<ReturnType<typeof betterAuth>> {
-  if (auth) return auth;
+async function getAuth() {
+  if (auth) return auth as ReturnType<typeof betterAuth>;
   const [pool, appSecret] = await Promise.all([
     getPgPool(3),
     getSecretJson<AppSecret>(process.env.APP_SECRET_ARN!),
@@ -41,7 +42,7 @@ async function getAuth(): Promise<ReturnType<typeof betterAuth>> {
       },
     },
   });
-  return auth;
+  return auth as ReturnType<typeof betterAuth>;
 }
 
 async function getSession(req: Request) {
