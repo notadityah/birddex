@@ -73,19 +73,25 @@ export const useAuthStore = defineStore('auth', () => {
     clearError()
     await authClient.signOut()
     pendingEmail.value = ''
-    // Wait for session to clear before navigating, otherwise the
-    // router guard may still see the stale authenticated state.
+    // Wait for session data to clear before navigating, otherwise the
+    // router guard may still see the stale authenticated state and
+    // redirect back from the guestOnly /login route.
     await new Promise((resolve) => {
-      if (!sessionRef.value.isPending) return resolve()
+      if (!sessionRef.value.data?.user) return resolve()
       const stop = watch(
-        () => sessionRef.value.isPending,
-        (pending) => {
-          if (!pending) {
+        () => sessionRef.value.data?.user,
+        (u) => {
+          if (!u) {
             stop()
             resolve()
           }
         },
       )
+      // Safety timeout — if the reactive update never fires, navigate anyway
+      setTimeout(() => {
+        stop()
+        resolve()
+      }, 500)
     })
     router.push('/login')
   }
