@@ -248,6 +248,16 @@ export class BackendStack extends cdk.Stack {
         APP_BASE_URL: "https://birddex.fun",
         FRONTEND_ORIGIN: "https://birddex.fun,http://localhost:5173",
       },
+      bundling: {
+        ...sharedBundling,
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling: (inputDir: string, outputDir: string) => [
+            `cp ${inputDir}/lambda/rds-ca-bundle.pem ${outputDir}/rds-ca-bundle.pem`,
+          ],
+        },
+      },
     });
 
     const apiLambda = new NodejsFunction(this, "ApiLambda", {

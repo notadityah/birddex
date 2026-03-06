@@ -82,7 +82,7 @@ async function getAuth(): Promise<ReturnType<typeof betterAuth>> {
     database: process.env.DB_NAME!,
     user: creds.username,
     password: creds.password,
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized: true, ca: RDS_CA },
     max: 3,
   });
   auth = betterAuth({ secret, database: pgPool });

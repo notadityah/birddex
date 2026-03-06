@@ -8,8 +8,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handle } from "hono/aws-lambda";
 import { Pool } from "pg";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const sm = new SecretsManagerClient({});
+const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
 
 interface DbSecret {
   username: string;
@@ -46,7 +49,7 @@ async function initAuth() {
     database: process.env.DB_NAME!,
     user: dbCreds.username,
     password: dbCreds.password,
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized: true, ca: RDS_CA },
     max: 5,
   });
 

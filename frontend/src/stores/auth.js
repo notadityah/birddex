@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { authClient } from '@/lib/auth-client'
+import { useRouter } from 'vue-router'
 
 const ERROR_MAP = {
   INVALID_EMAIL_OR_PASSWORD: 'Invalid email or password.',
@@ -12,6 +13,7 @@ const ERROR_MAP = {
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
   const sessionRef = authClient.useSession()
+  const router = useRouter()
   const error = ref(null)
   const pendingEmail = ref('')
 
@@ -69,6 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearError()
     await authClient.signOut()
     pendingEmail.value = ''
+    router.push('/')
   }
 
   async function resetPassword(email) {
