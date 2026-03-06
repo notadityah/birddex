@@ -1,47 +1,30 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  onAuthStateChanged,
-} from 'firebase/auth'
-import { auth, googleProvider } from '@/firebase/firebase'
-import { createUserProfile, getUserProfile } from '@/services/userService'
+import { ref, computed, watch } from 'vue'
+import { authClient } from '@/lib/auth-client'
+
+const ERROR_MAP = {
+  INVALID_EMAIL_OR_PASSWORD: 'Invalid email or password.',
+  EMAIL_NOT_VERIFIED: 'Please verify your email before signing in.',
+  USER_ALREADY_EXISTS: 'An account with this email already exists.',
+  TOO_MANY_REQUESTS: 'Too many attempts. Please try again later.',
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
-  const user = ref(null)
-  const userProfile = ref(null)
-  const loading = ref(true) // true until initial auth check completes
+  const sessionRef = authClient.useSession()
   const error = ref(null)
-  const unverifiedUser = ref(null) // holds user object when email not yet verified
-  let _authReadyPromise = null // cached so initAuthListener only runs once
+  const pendingEmail = ref('')
 
   // --- Getters ---
-  const isAuthenticated = computed(() => !!user.value && user.value.emailVerified === true)
-  const isAdmin = computed(() => userProfile.value?.role === 'admin')
-  const displayName = computed(
-    () => userProfile.value?.name || user.value?.displayName || user.value?.email || '',
-  )
+  const user = computed(() => sessionRef.value.data?.user ?? null)
+  const loading = computed(() => sessionRef.value.isPending)
+  const isAuthenticated = computed(() => !!user.value?.emailVerified)
+  const displayName = computed(() => user.value?.name || user.value?.email || '')
+  const isAdmin = computed(() => false)
 
   // --- Internal helpers ---
   function setError(err) {
-    // Map Firebase error codes to friendly messages
-    const messages = {
-      'auth/email-already-in-use': 'An account with this email already exists.',
-      'auth/invalid-email': 'Please enter a valid email address.',
-      'auth/user-not-found': 'Invalid email or password.',
-      'auth/wrong-password': 'Invalid email or password.',
-      'auth/invalid-credential': 'Invalid email or password.',
-      'auth/weak-password': 'Password should be at least 6 characters.',
-      'auth/too-many-requests': 'Too many attempts. Please try again later.',
-      'auth/popup-closed-by-user': 'Sign-in popup was closed before completing.',
-    }
-    error.value = messages[err.code] || err.message
+    error.value = ERROR_MAP[err?.code] || err?.message || 'Something went wrong.'
   }
 
   function clearError() {
@@ -51,151 +34,96 @@ export const useAuthStore = defineStore('auth', () => {
   // --- Actions ---
   async function login(email, password) {
     clearError()
-    loading.value = true
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password)
-
-      if (!cred.user.emailVerified) {
-        unverifiedUser.value = cred.user
-        await signOut(auth)
-        user.value = null
-        userProfile.value = null
+    const { error: err } = await authClient.signIn.email({ email, password })
+    if (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED') {
+        pendingEmail.value = email
         return 'unverified'
       }
-
-      user.value = cred.user
-      await fetchUserProfile(cred.user.uid)
-      return true
-    } catch (err) {
       setError(err)
       return false
-    } finally {
-      loading.value = false
     }
+    return true
   }
 
   async function register(name, email, password) {
     clearError()
-    loading.value = true
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password)
-      await createUserProfile(cred.user.uid, { name, email })
-      await sendEmailVerification(cred.user)
-      unverifiedUser.value = cred.user
-      // Sign out so the user can't access protected routes until verified
-      await signOut(auth)
-      user.value = null
-      userProfile.value = null
-      return true
-    } catch (err) {
+    const { error: err } = await authClient.signUp.email({
+      email, password, name,
+      callbackURL: window.location.origin + '/login',
+    })
+    if (err) {
       setError(err)
       return false
-    } finally {
-      loading.value = false
     }
+    pendingEmail.value = email
+    return true
   }
 
-  async function loginWithGoogle() {
+  function loginWithGoogle() {
     clearError()
-    loading.value = true
-    try {
-      const cred = await signInWithPopup(auth, googleProvider)
-      user.value = cred.user
-
-      // Check if profile exists, create if first-time Google login
-      const existing = await getUserProfile(cred.user.uid)
-      if (!existing) {
-        await createUserProfile(cred.user.uid, {
-          name: cred.user.displayName || '',
-          email: cred.user.email || '',
-        })
-      }
-      await fetchUserProfile(cred.user.uid)
-      return true
-    } catch (err) {
-      setError(err)
-      return false
-    } finally {
-      loading.value = false
-    }
+    authClient.signIn.social({ provider: 'google', callbackURL: window.location.origin + '/mydex' })
   }
 
   async function logout() {
     clearError()
-    await signOut(auth)
-    user.value = null
-    userProfile.value = null
-    unverifiedUser.value = null
-    _authReadyPromise = null // reset so next session re-inits
+    await authClient.signOut()
+    pendingEmail.value = ''
   }
 
   async function resetPassword(email) {
     clearError()
-    try {
-      await sendPasswordResetEmail(auth, email)
-      return true
-    } catch (err) {
+    const { error: err } = await authClient.forgetPassword({
+      email,
+      redirectTo: window.location.origin + '/reset-password',
+    })
+    if (err) {
       setError(err)
       return false
     }
+    return true
   }
 
   async function resendVerification() {
     clearError()
-    try {
-      if (unverifiedUser.value) {
-        await sendEmailVerification(unverifiedUser.value)
-        return true
-      }
+    const email = pendingEmail.value
+    if (!email) {
       error.value = 'No unverified account found. Please register or log in again.'
       return false
-    } catch (err) {
+    }
+    const { error: err } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: window.location.origin + '/login',
+    })
+    if (err) {
       setError(err)
       return false
     }
+    return true
   }
 
-  async function fetchUserProfile(uid, force = false) {
-    // Skip Firestore read if profile is already cached for this uid
-    if (!force && userProfile.value?._uid === uid) return
-    const profile = await getUserProfile(uid)
-    if (profile) {
-      userProfile.value = { ...profile, _uid: uid }
-    }
-  }
-
-  // --- Auth state listener ---
-  // Returns a cached promise that resolves once the initial auth state is known.
-  // Subsequent calls return the same promise instantly.
+  // Keep for router guard compatibility — resolves once session is no longer pending
   function initAuthListener() {
-    if (_authReadyPromise) return _authReadyPromise
-
-    _authReadyPromise = new Promise((resolve) => {
-      onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser && firebaseUser.emailVerified) {
-          user.value = firebaseUser
-          await fetchUserProfile(firebaseUser.uid)
-        } else if (firebaseUser && !firebaseUser.emailVerified) {
-          await signOut(auth)
-        } else {
-          user.value = null
-          userProfile.value = null
-        }
-        loading.value = false
-        resolve()
-      })
+    if (!sessionRef.value.isPending) return Promise.resolve()
+    return new Promise((resolve) => {
+      const stop = watch(
+        () => sessionRef.value.isPending,
+        (pending) => {
+          if (!pending) {
+            stop()
+            resolve()
+          }
+        },
+      )
     })
-
-    return _authReadyPromise
   }
 
   return {
     // state
     user,
-    userProfile,
     loading,
     error,
-    unverifiedUser,
+    pendingEmail,
     // getters
     isAuthenticated,
     isAdmin,

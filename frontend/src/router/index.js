@@ -66,13 +66,19 @@ const router = createRouter({
       component: () => import('../views/VerifyEmailPage.vue'),
       meta: { guestOnly: true },
     },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('../views/ResetPasswordPage.vue'),
+      meta: { guestOnly: true },
+    },
   ],
 })
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  // Wait for Firebase auth state to resolve before making guard decisions
+  // Wait for auth session to resolve before making guard decisions
   await authStore.initAuthListener()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

@@ -1,0 +1,8 @@
+{
+  "availability-zones:account=159987617860:region=ap-southeast-2": [
+    "ap-southeast-2a",
+    "ap-southeast-2b",
+    "ap-southeast-2c"
+  ],
+  "certArn": "arn:aws:acm:us-east-1:159987617860:certificate/36269934-5045-47b3-83cf-d440278eef47"
+}

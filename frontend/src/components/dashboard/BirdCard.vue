@@ -1,11 +1,19 @@
 <script setup>
+import { useBirdStore } from '@/stores/birds'
+
+const birdStore = useBirdStore()
+
 defineProps({
   bird: { type: Object, required: true },
 })
 </script>
 
 <template>
-  <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+  <div
+    @click="birdStore.markFound(bird.slug)"
+    :class="bird.found ? 'cursor-default' : 'cursor-pointer hover:ring-2 hover:ring-primary-green'"
+    class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+  >
     <div class="aspect-square relative">
       <img
         v-if="bird.found && bird.imageUrl"

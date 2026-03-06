@@ -2,11 +2,13 @@
 import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useBirdStore } from '@/stores/birds'
 import Header from '@/components/landingpage/HeaderComponent.vue'
 import Sidebar from '@/components/dashboard/SidebarComponent.vue'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
 const authStore = useAuthStore()
+const birdStore = useBirdStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -15,6 +17,15 @@ watch(
   (shouldRedirect) => {
     if (shouldRedirect) router.replace('/mydex')
   },
+)
+
+watch(
+  () => authStore.isAuthenticated,
+  (authed) => {
+    if (authed) birdStore.loadSightings()
+    else birdStore.resetFound()
+  },
+  { immediate: true },
 )
 </script>
 
