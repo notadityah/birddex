@@ -51,7 +51,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function register(name, email, password) {
     clearError()
     const { error: err } = await authClient.signUp.email({
-      email, password, name,
+      email,
+      password,
+      name,
       callbackURL: window.location.origin + '/login',
     })
     if (err) {
@@ -71,7 +73,21 @@ export const useAuthStore = defineStore('auth', () => {
     clearError()
     await authClient.signOut()
     pendingEmail.value = ''
-    router.push('/')
+    // Wait for session to clear before navigating, otherwise the
+    // router guard may still see the stale authenticated state.
+    await new Promise((resolve) => {
+      if (!sessionRef.value.isPending) return resolve()
+      const stop = watch(
+        () => sessionRef.value.isPending,
+        (pending) => {
+          if (!pending) {
+            stop()
+            resolve()
+          }
+        },
+      )
+    })
+    router.push('/login')
   }
 
   async function resetPassword(email) {
