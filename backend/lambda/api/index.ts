@@ -27,7 +27,20 @@ async function getAuth(): Promise<ReturnType<typeof betterAuth>> {
     getPgPool(3),
     getSecretJson<AppSecret>(process.env.APP_SECRET_ARN!),
   ]);
-  auth = betterAuth({ secret: appSecret.BETTER_AUTH_SECRET, database: pool });
+  auth = betterAuth({
+    secret: appSecret.BETTER_AUTH_SECRET,
+    baseURL: process.env.APP_BASE_URL,
+    trustedOrigins: (process.env.FRONTEND_ORIGIN ?? "")
+      .split(",")
+      .filter(Boolean),
+    database: pool,
+    advanced: {
+      defaultCookieAttributes: {
+        sameSite: "none",
+        secure: true,
+      },
+    },
+  });
   return auth;
 }
 
@@ -66,7 +79,12 @@ app.post("/api/sightings", async (c) => {
   const session = await getSession(c.req.raw);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
-  let body: { birdId?: number; imageExt?: string; detectedAt?: string; notes?: string };
+  let body: {
+    birdId?: number;
+    imageExt?: string;
+    detectedAt?: string;
+    notes?: string;
+  };
   try {
     body = await c.req.json();
   } catch {
@@ -82,7 +100,10 @@ app.post("/api/sightings", async (c) => {
   if (body.imageExt !== undefined) {
     const rawExt = body.imageExt.trim().toLowerCase();
     if (!ALLOWED_EXTS.has(rawExt)) {
-      return c.json({ error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" }, 400);
+      return c.json(
+        { error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" },
+        400,
+      );
     }
     imageKey = `images/${session.user.id}/${randomUUID()}.${rawExt}`;
     uploadUrl = await getSignedUrl(
@@ -153,7 +174,10 @@ app.get("/api/upload-url", async (c) => {
 
   const rawExt = (c.req.query("ext") ?? "jpg").trim().toLowerCase();
   if (!ALLOWED_EXTS.has(rawExt)) {
-    return c.json({ error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" }, 400);
+    return c.json(
+      { error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" },
+      400,
+    );
   }
   const key = `images/${session.user.id}/${randomUUID()}.${rawExt}`;
   const url = await getSignedUrl(

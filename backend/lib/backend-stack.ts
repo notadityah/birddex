@@ -49,7 +49,9 @@ export class BackendStack extends cdk.Stack {
 
     // Override with context values if provided
     const certArn = this.node.tryGetContext("certArn") as string | undefined;
-    const webAclArn = this.node.tryGetContext("webAclArn") as string | undefined;
+    const webAclArn = this.node.tryGetContext("webAclArn") as
+      | string
+      | undefined;
     if (certArn) envConfig.certArn = certArn;
     if (webAclArn) envConfig.webAclArn = webAclArn;
 
@@ -323,6 +325,8 @@ export class BackendStack extends cdk.Stack {
         ...dbEnv,
         BUCKET_NAME: bucket.bucketName,
         APP_SECRET_ARN: appSecret.secretArn,
+        APP_BASE_URL: appBaseUrl,
+        FRONTEND_ORIGIN: envConfig.allowedOrigins.join(","),
       },
       bundling: {
         ...sharedBundling,
@@ -410,8 +414,7 @@ export class BackendStack extends cdk.Stack {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket, {
           originAccessControl: oac,
         }),
-        viewerProtocolPolicy:
-          cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
       },
       additionalBehaviors: {
