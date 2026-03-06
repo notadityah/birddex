@@ -2,7 +2,6 @@ import * as cdk from "aws-cdk-lib/core";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import {
@@ -15,14 +14,49 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as cw_actions from "aws-cdk-lib/aws-cloudwatch-actions";
 import { Construct } from "constructs";
 import * as path from "path";
 
 const DB_NAME = "birddex";
 
+interface EnvConfig {
+  domain?: string;
+  allowedOrigins: string[];
+  certArn?: string;
+  webAclArn?: string;
+}
+
+const ENV_CONFIGS: Record<string, EnvConfig> = {
+  prod: {
+    domain: "birddex.fun",
+    allowedOrigins: ["https://birddex.fun"],
+  },
+  dev: {
+    allowedOrigins: ["http://localhost:5173"],
+  },
+};
+
 export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const envName = (this.node.tryGetContext("env") as string) ?? "prod";
+    const envConfig = ENV_CONFIGS[envName] ?? ENV_CONFIGS.prod;
+
+    // Override with context values if provided
+    const certArn = this.node.tryGetContext("certArn") as string | undefined;
+    const webAclArn = this.node.tryGetContext("webAclArn") as string | undefined;
+    if (certArn) envConfig.certArn = certArn;
+    if (webAclArn) envConfig.webAclArn = webAclArn;
+
+    // In dev mode, add localhost to allowed origins
+    if (envName === "prod") {
+      envConfig.allowedOrigins.push("http://localhost:5173");
+    }
 
     // =========================================================
     // === S3 ===
@@ -33,11 +67,16 @@ export class BackendStack extends cdk.Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: [
+        {
+          noncurrentVersionExpiration: cdk.Duration.days(30),
+        },
+      ],
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT],
-          allowedOrigins: ["https://birddex.fun", "http://localhost:5173"],
-          allowedHeaders: ["*"],
+          allowedOrigins: envConfig.allowedOrigins,
+          allowedHeaders: ["Content-Type", "Authorization", "x-amz-*"],
           maxAge: 3000,
         },
       ],
@@ -73,6 +112,15 @@ export class BackendStack extends cdk.Stack {
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         },
       ],
+    });
+
+    // VPC Endpoints to reduce NAT Gateway data transfer costs
+    vpc.addGatewayEndpoint("S3Endpoint", {
+      service: ec2.GatewayVpcEndpointAwsService.S3,
+    });
+
+    vpc.addInterfaceEndpoint("SecretsManagerEndpoint", {
+      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
     });
 
     // =========================================================
@@ -122,7 +170,7 @@ export class BackendStack extends cdk.Stack {
     });
 
     // =========================================================
-    // === APP SECRET (Google OAuth + better-auth + SES) ===
+    // === APP SECRET (Google OAuth + better-auth + Resend) ===
     // =========================================================
 
     const appSecret = new secretsmanager.Secret(this, "AppSecret", {
@@ -144,7 +192,6 @@ export class BackendStack extends cdk.Stack {
     // === API GATEWAY ===
     // =========================================================
 
-    // Created here (before lambdas) so APP_BASE_URL can be passed in lambda env vars.
     const httpApi = new apigwv2.HttpApi(this, "BirddexApi", {
       apiName: "birddex-api",
       corsPreflight: {
@@ -162,11 +209,7 @@ export class BackendStack extends cdk.Stack {
           apigwv2.CorsHttpMethod.DELETE,
           apigwv2.CorsHttpMethod.OPTIONS,
         ],
-        allowOrigins: [
-          // Replace with your frontend domain in production
-          "http://localhost:5173",
-          "https://birddex.fun",
-        ],
+        allowOrigins: envConfig.allowedOrigins,
         maxAge: cdk.Duration.hours(1),
       },
     });
@@ -174,6 +217,8 @@ export class BackendStack extends cdk.Stack {
     // =========================================================
     // === SHARED LAMBDA CONFIG ===
     // =========================================================
+
+    const LOG_RETENTION = logs.RetentionDays.TWO_WEEKS;
 
     const sharedBundling: NodejsFunctionProps["bundling"] = {
       externalModules: ["@aws-sdk/*"],
@@ -188,6 +233,7 @@ export class BackendStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       bundling: sharedBundling,
+      logRetention: LOG_RETENTION,
     };
 
     const dbEnv = {
@@ -195,6 +241,10 @@ export class BackendStack extends cdk.Stack {
       DB_HOST: db.dbInstanceEndpointAddress,
       DB_NAME,
     };
+
+    const appBaseUrl = envConfig.domain
+      ? `https://${envConfig.domain}`
+      : "http://localhost:5173";
 
     // =========================================================
     // === MIGRATION (Custom Resource) ===
@@ -215,6 +265,7 @@ export class BackendStack extends cdk.Stack {
           beforeInstall: () => [],
           afterBundling: (inputDir: string, outputDir: string) => [
             `cp ${inputDir}/lambda/migrate/schema.sql ${outputDir}/schema.sql`,
+            `cp ${inputDir}/lambda/rds-ca-bundle.pem ${outputDir}/rds-ca-bundle.pem`,
           ],
         },
       },
@@ -222,6 +273,7 @@ export class BackendStack extends cdk.Stack {
 
     const migrateProvider = new cr.Provider(this, "MigrateProvider", {
       onEventHandler: migrateLambda,
+      logRetention: LOG_RETENTION,
     });
 
     new cdk.CustomResource(this, "MigrateResource", {
@@ -245,8 +297,8 @@ export class BackendStack extends cdk.Stack {
       environment: {
         ...dbEnv,
         APP_SECRET_ARN: appSecret.secretArn,
-        APP_BASE_URL: "https://birddex.fun",
-        FRONTEND_ORIGIN: "https://birddex.fun,http://localhost:5173",
+        APP_BASE_URL: appBaseUrl,
+        FRONTEND_ORIGIN: envConfig.allowedOrigins.join(","),
       },
       bundling: {
         ...sharedBundling,
@@ -294,9 +346,10 @@ export class BackendStack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       securityGroups: [lambdaSg],
       architecture: lambda.Architecture.X86_64,
-      memorySize: 3008,
+      memorySize: 1536,
       timeout: cdk.Duration.seconds(30),
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
+      logRetention: LOG_RETENTION,
       environment: {
         ...dbEnv,
         BUCKET_NAME: bucket.bucketName,
@@ -348,14 +401,11 @@ export class BackendStack extends cdk.Stack {
     // === CLOUDFRONT ===
     // =========================================================
 
-    const certArn = this.node.tryGetContext("certArn") as string | undefined;
-
     const oac = new cloudfront.S3OriginAccessControl(this, "FrontendOAC", {
       signing: cloudfront.Signing.SIGV4_NO_OVERRIDE,
     });
 
-    const distribution = new cloudfront.Distribution(this, "Distribution", {
-      webAclId: "arn:aws:wafv2:us-east-1:159987617860:global/webacl/CreatedByCloudFront-d6eca98a/e2e78ffa-77a6-456d-bb06-fda1aaddac97",
+    const distributionProps: cloudfront.DistributionProps = {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket, {
           originAccessControl: oac,
@@ -377,16 +427,6 @@ export class BackendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         },
       },
-      ...(certArn
-        ? {
-            domainNames: ["birddex.fun", "www.birddex.fun"],
-            certificate: acm.Certificate.fromCertificateArn(
-              this,
-              "Cert",
-              certArn,
-            ),
-          }
-        : {}),
       errorResponses: [
         {
           httpStatus: 403,
@@ -399,7 +439,70 @@ export class BackendStack extends cdk.Stack {
           responsePagePath: "/index.html",
         },
       ],
+    };
+
+    // Conditionally add domain + cert + WAF
+    if (envConfig.certArn && envConfig.domain) {
+      Object.assign(distributionProps, {
+        domainNames: [envConfig.domain, `www.${envConfig.domain}`],
+        certificate: acm.Certificate.fromCertificateArn(
+          this,
+          "Cert",
+          envConfig.certArn,
+        ),
+      });
+    }
+
+    if (envConfig.webAclArn) {
+      Object.assign(distributionProps, {
+        webAclId: envConfig.webAclArn,
+      });
+    }
+
+    const distribution = new cloudfront.Distribution(
+      this,
+      "Distribution",
+      distributionProps,
+    );
+
+    // =========================================================
+    // === MONITORING ===
+    // =========================================================
+
+    const alarmTopic = new sns.Topic(this, "AlarmTopic", {
+      topicName: "birddex-alarms",
     });
+
+    const alarmAction = new cw_actions.SnsAction(alarmTopic);
+
+    // Lambda error alarms
+    for (const [name, fn] of Object.entries({
+      Auth: authLambda,
+      Api: apiLambda,
+      Detect: detectLambda,
+      Migrate: migrateLambda,
+    })) {
+      const alarm = fn
+        .metricErrors({ period: cdk.Duration.minutes(5) })
+        .createAlarm(this, `${name}ErrorAlarm`, {
+          alarmName: `birddex-${name.toLowerCase()}-errors`,
+          threshold: 1,
+          evaluationPeriods: 1,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        });
+      alarm.addAlarmAction(alarmAction);
+    }
+
+    // RDS CPU alarm
+    const cpuAlarm = db
+      .metricCPUUtilization({ period: cdk.Duration.minutes(5) })
+      .createAlarm(this, "RdsCpuAlarm", {
+        alarmName: "birddex-rds-cpu",
+        threshold: 80,
+        evaluationPeriods: 3,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+    cpuAlarm.addAlarmAction(alarmAction);
 
     // =========================================================
     // === OUTPUTS ===
@@ -433,6 +536,12 @@ export class BackendStack extends cdk.Stack {
       description: "Frontend S3 bucket name",
       value: frontendBucket.bucketName,
       exportName: "BirddexFrontendBucketName",
+    });
+
+    new cdk.CfnOutput(this, "AlarmTopicArn", {
+      description: "SNS topic for alarms — subscribe your email",
+      value: alarmTopic.topicArn,
+      exportName: "BirddexAlarmTopicArn",
     });
   }
 }

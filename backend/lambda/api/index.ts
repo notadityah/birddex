@@ -1,8 +1,4 @@
 import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager";
-import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
@@ -11,85 +7,30 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { betterAuth } from "better-auth";
 import { Hono } from "hono";
 import { handle } from "hono/aws-lambda";
-import { Pool } from "pg";
-import postgres from "postgres";
 import { randomUUID } from "crypto";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { getDb, getPgPool } from "../lib/db.js";
+import { getSecretJson } from "../lib/secrets.js";
 
-const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
-
-const sm = new SecretsManagerClient({});
 const s3 = new S3Client({});
 
 const ALLOWED_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
-
-interface DbSecret {
-  username: string;
-  password: string;
-}
 
 interface AppSecret {
   BETTER_AUTH_SECRET: string;
 }
 
-let sql: ReturnType<typeof postgres> | null = null;
-let pgPool: Pool | null = null;
 let auth: ReturnType<typeof betterAuth> | null = null;
-let betterAuthSecret: string | null = null;
-
-async function getDb(): Promise<ReturnType<typeof postgres>> {
-  if (sql) return sql;
-
-  const res = await sm.send(
-    new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN! }),
-  );
-  const creds: DbSecret = JSON.parse(res.SecretString!);
-
-  sql = postgres({
-    host: process.env.DB_HOST!,
-    port: 5432,
-    database: process.env.DB_NAME!,
-    username: creds.username,
-    password: creds.password,
-    ssl: { rejectUnauthorized: true, ca: RDS_CA },
-    max: 5,
-  });
-
-  return sql;
-}
-
-async function getAppSecret(): Promise<string> {
-  if (betterAuthSecret) return betterAuthSecret;
-  const res = await sm.send(
-    new GetSecretValueCommand({ SecretId: process.env.APP_SECRET_ARN! }),
-  );
-  betterAuthSecret = (JSON.parse(res.SecretString!) as AppSecret)
-    .BETTER_AUTH_SECRET;
-  return betterAuthSecret;
-}
 
 async function getAuth(): Promise<ReturnType<typeof betterAuth>> {
   if (auth) return auth;
-  const [creds, secret] = await Promise.all([
-    sm.send(new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN! }))
-      .then((r) => JSON.parse(r.SecretString!) as DbSecret),
-    getAppSecret(),
+  const [pool, appSecret] = await Promise.all([
+    getPgPool(3),
+    getSecretJson<AppSecret>(process.env.APP_SECRET_ARN!),
   ]);
-  pgPool ??= new Pool({
-    host: process.env.DB_HOST!,
-    port: 5432,
-    database: process.env.DB_NAME!,
-    user: creds.username,
-    password: creds.password,
-    ssl: { rejectUnauthorized: true, ca: RDS_CA },
-    max: 3,
-  });
-  auth = betterAuth({ secret, database: pgPool });
+  auth = betterAuth({ secret: appSecret.BETTER_AUTH_SECRET, database: pool });
   return auth;
 }
 
-// Middleware: verify session
 async function getSession(req: Request) {
   const a = await getAuth();
   return a.api.getSession({ headers: req.headers });
@@ -125,18 +66,21 @@ app.post("/api/sightings", async (c) => {
   const session = await getSession(c.req.raw);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
-  const body = await c.req.json<{
-    birdId: number;
-    imageExt?: string;
-    detectedAt?: string;
-    notes?: string;
-  }>();
+  let body: { birdId?: number; imageExt?: string; detectedAt?: string; notes?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
 
-  // Server-generates the image key so client cannot supply arbitrary S3 paths
+  if (!body.birdId || typeof body.birdId !== "number" || body.birdId < 1) {
+    return c.json({ error: "birdId must be a positive number" }, 400);
+  }
+
   let imageKey: string | null = null;
   let uploadUrl: string | undefined;
   if (body.imageExt !== undefined) {
-    const rawExt = body.imageExt.toLowerCase();
+    const rawExt = body.imageExt.trim().toLowerCase();
     if (!ALLOWED_EXTS.has(rawExt)) {
       return c.json({ error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" }, 400);
     }
@@ -151,6 +95,11 @@ app.post("/api/sightings", async (c) => {
     );
   }
 
+  const detectedAt = body.detectedAt ? new Date(body.detectedAt) : new Date();
+  if (isNaN(detectedAt.getTime())) {
+    return c.json({ error: "Invalid detectedAt date" }, 400);
+  }
+
   const db = await getDb();
   const id = randomUUID();
   await db`
@@ -160,7 +109,7 @@ app.post("/api/sightings", async (c) => {
       ${session.user.id},
       ${body.birdId},
       ${imageKey},
-      ${body.detectedAt ? new Date(body.detectedAt) : new Date()},
+      ${detectedAt},
       ${body.notes ?? null}
     )
   `;
@@ -181,15 +130,18 @@ app.delete("/api/sightings/:id", async (c) => {
 
   if (result.length === 0) return c.json({ error: "Not found" }, 404);
 
-  // Clean up S3 image if present
   const imageKey = result[0].image_key as string | null;
   if (imageKey) {
-    await s3.send(
-      new DeleteObjectCommand({
-        Bucket: process.env.BUCKET_NAME!,
-        Key: imageKey,
-      }),
-    );
+    try {
+      await s3.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.BUCKET_NAME!,
+          Key: imageKey,
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to delete S3 object:", imageKey, err);
+    }
   }
 
   return c.json({ ok: true });
@@ -199,7 +151,7 @@ app.get("/api/upload-url", async (c) => {
   const session = await getSession(c.req.raw);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
-  const rawExt = (c.req.query("ext") ?? "jpg").toLowerCase();
+  const rawExt = (c.req.query("ext") ?? "jpg").trim().toLowerCase();
   if (!ALLOWED_EXTS.has(rawExt)) {
     return c.json({ error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" }, 400);
   }

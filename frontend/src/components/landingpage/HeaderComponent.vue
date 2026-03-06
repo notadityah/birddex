@@ -11,7 +11,6 @@ const headerRef = ref(null)
 
 async function handleLogout() {
   await authStore.logout()
-  router.push('/login')
 }
 
 const navLinks = []

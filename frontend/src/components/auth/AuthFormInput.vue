@@ -32,6 +32,8 @@ const inputType = computed(() => {
         :type="inputType"
         :placeholder="placeholder"
         :autocomplete="autocomplete"
+        :aria-describedby="error ? `${id}-error` : undefined"
+        :aria-invalid="!!error"
         :class="[
           'w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-colors',
           type === 'password' ? 'pr-10' : '',
@@ -56,6 +58,6 @@ const inputType = computed(() => {
         <img v-else src="/eye-close-svgrepo-com.svg" alt="Hide password" class="w-5 h-5" />
       </button>
     </div>
-    <p v-if="error" class="text-xs text-red-600 mt-1">{{ error }}</p>
+    <p v-if="error" :id="`${id}-error`" class="text-xs text-red-600 mt-1" role="alert">{{ error }}</p>
   </div>
 </template>

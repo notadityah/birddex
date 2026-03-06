@@ -8,7 +8,7 @@ import Footer from '@/components/landingpage/FooterComponent.vue'
       <h1 class="text-3xl font-bold text-forest-green mb-8">Privacy Policy</h1>
 
       <div class="space-y-6 text-gray-700 text-sm leading-relaxed">
-        <p>Last updated: February 2026</p>
+        <p>Last updated: March 2026</p>
 
         <section>
           <h2 class="text-lg font-semibold text-forest-green mb-2">Information We Collect</h2>
@@ -42,9 +42,9 @@ import Footer from '@/components/landingpage/FooterComponent.vue'
         <section>
           <h2 class="text-lg font-semibold text-forest-green mb-2">Data Storage & Security</h2>
           <p>
-            Your data is stored securely using Google Firebase services, including Firebase
-            Authentication and Cloud Firestore. Passwords are hashed and never stored in plain text.
-            All data is transmitted over encrypted HTTPS connections.
+            Your data is stored securely using AWS cloud services, including a managed PostgreSQL
+            database and encrypted object storage. Passwords are hashed and never stored in plain
+            text. All data is transmitted over encrypted HTTPS connections.
           </p>
         </section>
 
@@ -72,8 +72,8 @@ import Footer from '@/components/landingpage/FooterComponent.vue'
         <section>
           <h2 class="text-lg font-semibold text-forest-green mb-2">Cookies & Analytics</h2>
           <p>
-            BirdDex uses Firebase, which may set essential cookies for authentication purposes. We
-            do not use tracking cookies or third-party analytics.
+            BirdDex uses essential cookies for authentication and session management. We do not use
+            tracking cookies or third-party analytics.
           </p>
         </section>
 

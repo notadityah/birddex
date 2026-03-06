@@ -1,7 +1,9 @@
 <script setup>
+import { ref } from 'vue'
 import { useBirdStore } from '@/stores/birds'
 
 const birdStore = useBirdStore()
+const imgError = ref(false)
 
 defineProps({
   bird: { type: Object, required: true },
@@ -16,10 +18,12 @@ defineProps({
   >
     <div class="aspect-square relative">
       <img
-        v-if="bird.found && bird.imageUrl"
+        v-if="bird.found && bird.imageUrl && !imgError"
         :src="bird.imageUrl"
         :alt="bird.name"
         class="w-full h-full object-cover"
+        loading="lazy"
+        @error="imgError = true"
       />
       <div v-else class="w-full h-full bg-gray-100 flex items-center justify-center">
         <img src="/bird-in-flight-origami-svgrepo-com.svg" alt="Not found" class="w-16 h-16 opacity-30" />

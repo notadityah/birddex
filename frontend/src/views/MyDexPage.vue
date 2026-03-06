@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/stores/auth'
 import { useBirdStore } from '@/stores/birds'
 import BirdCard from '@/components/dashboard/BirdCard.vue'
+import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
 const authStore = useAuthStore()
 const birdStore = useBirdStore()
@@ -28,6 +29,20 @@ const filters = [
       </p>
     </div>
 
+    <!-- Error banner -->
+    <div
+      v-if="birdStore.error"
+      class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
+    >
+      <p class="text-sm text-red-700">{{ birdStore.error }}</p>
+      <button
+        @click="birdStore.loadSightings()"
+        class="text-sm font-medium text-red-700 hover:text-red-900 underline cursor-pointer"
+      >
+        Retry
+      </button>
+    </div>
+
     <!-- Filters -->
     <div class="flex gap-2 mb-6">
       <button
@@ -45,9 +60,14 @@ const filters = [
       </button>
     </div>
 
+    <!-- Loading state -->
+    <div v-if="birdStore.loading" class="flex justify-center py-16">
+      <SpinnerIcon />
+    </div>
+
     <!-- Bird grid -->
     <div
-      v-if="birdStore.filteredBirds.length"
+      v-else-if="birdStore.filteredBirds.length"
       class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
     >
       <BirdCard v-for="bird in birdStore.filteredBirds" :key="bird.id" :bird="bird" />

@@ -43,6 +43,8 @@ export function useScrollAnimation(targetRef, options = {}) {
     ease: 'power3.out',
   }
 
+  let triggers = []
+
   onMounted(() => {
     if (!targetRef.value) return
     const target = animateChildren ? targetRef.value.children : targetRef.value
@@ -55,6 +57,11 @@ export function useScrollAnimation(targetRef, options = {}) {
         toggleActions: 'play none none none',
       },
     })
+    triggers = ScrollTrigger.getAll().slice(-1)
+  })
+
+  onUnmounted(() => {
+    triggers.forEach((t) => t.kill())
   })
 }
 

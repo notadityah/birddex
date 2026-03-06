@@ -1,7 +1,3 @@
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { InferenceSession, Tensor } from "onnxruntime-node";
 import sharp from "sharp";
@@ -10,14 +6,15 @@ import { createWriteStream, existsSync, readFileSync } from "fs";
 import { pipeline } from "stream/promises";
 import { Readable } from "stream";
 import { join } from "path";
-
-const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
+import { getSecretJson } from "../lib/secrets.js";
+import type { DbSecret } from "../lib/db.js";
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
 
-const sm = new SecretsManagerClient({});
+const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
+
 const s3 = new S3Client({});
 
 const MODEL_TMP = "/tmp/model.onnx";
@@ -25,10 +22,7 @@ const CLASSES_TMP = "/tmp/classes.txt";
 const MODEL_S3_KEY = "models/model.onnx";
 const CLASSES_S3_KEY = "models/classes.txt";
 
-interface DbSecret {
-  username: string;
-  password: string;
-}
+const MAX_TOP_N = 36;
 
 // Module-scope singletons
 let session: InferenceSession | null = null;
@@ -49,7 +43,6 @@ async function getInferenceSession(): Promise<{
 }> {
   if (session && classes) return { session, classes };
 
-  // Download model if not cached in /tmp
   if (!existsSync(MODEL_TMP)) {
     console.log("Downloading model from S3...");
     await downloadFromS3(MODEL_S3_KEY, MODEL_TMP);
@@ -70,10 +63,7 @@ async function getInferenceSession(): Promise<{
 async function getDb(): Promise<ReturnType<typeof postgres>> {
   if (sql) return sql;
 
-  const res = await sm.send(
-    new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN! }),
-  );
-  const creds: DbSecret = JSON.parse(res.SecretString!);
+  const creds = await getSecretJson<DbSecret>(process.env.DB_SECRET_ARN!);
 
   sql = postgres({
     host: process.env.DB_HOST!,
@@ -104,7 +94,7 @@ async function requireSession(
   return rows.length > 0;
 }
 
-// Letterbox-resize to 640×640, convert HWC uint8 → CHW float32 [0,1]
+// Letterbox-resize to 640x640, convert HWC uint8 -> CHW float32 [0,1]
 async function preprocessImage(imageData: Buffer): Promise<Float32Array> {
   const size = 640;
   const { data } = await sharp(imageData)
@@ -124,7 +114,6 @@ async function preprocessImage(imageData: Buffer): Promise<Float32Array> {
 }
 
 // Parse YOLO output [1, 40, 8400]: 4 bbox coords + numClasses scores per anchor.
-// Returns the highest-confidence detection per unique class, sorted by confidence.
 function parseDetections(
   raw: Float32Array,
   classLabels: string[],
@@ -168,28 +157,37 @@ export async function handler(
       };
     }
 
-    const body = event.body
-      ? JSON.parse(
-          event.isBase64Encoded
-            ? Buffer.from(event.body, "base64").toString()
-            : event.body,
-        )
-      : {};
+    let body: { imageBase64?: string; imageKey?: string; topN?: number };
+    try {
+      body = event.body
+        ? JSON.parse(
+            event.isBase64Encoded
+              ? Buffer.from(event.body, "base64").toString()
+              : event.body,
+          )
+        : {};
+    } catch {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid JSON body" }),
+      };
+    }
 
-    const {
-      imageBase64,
-      imageKey,
-      topN = 3,
-    } = body as {
-      imageBase64?: string;
-      imageKey?: string;
-      topN?: number;
-    };
+    const { imageBase64, imageKey } = body;
+    const topN = Math.min(Math.max(body.topN ?? 3, 1), MAX_TOP_N);
 
     if (!imageBase64 && !imageKey) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: "imageBase64 or imageKey required" }),
+      };
+    }
+
+    // Validate imageKey format to prevent path traversal
+    if (imageKey && !/^images\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.\w+$/.test(imageKey)) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Invalid imageKey format" }),
       };
     }
 
@@ -221,7 +219,6 @@ export async function handler(
     const raw = results[onnxSession.outputNames[0]].data as Float32Array;
     const topPredictions = parseDetections(raw, classLabels, 0.25, topN);
 
-    // Optionally look up bird by slug for the top prediction
     const topSlug = topPredictions[0]?.label;
     type BirdRow = {
       id: number;

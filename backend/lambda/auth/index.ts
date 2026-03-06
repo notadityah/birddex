@@ -1,23 +1,10 @@
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from "@aws-sdk/client-secrets-manager";
 import { Resend } from "resend";
 import { betterAuth } from "better-auth";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handle } from "hono/aws-lambda";
-import { Pool } from "pg";
-import { readFileSync } from "fs";
-import { join } from "path";
-
-const sm = new SecretsManagerClient({});
-const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
-
-interface DbSecret {
-  username: string;
-  password: string;
-}
+import { getPgPool } from "../lib/db.js";
+import { getSecretJson } from "../lib/secrets.js";
 
 interface AppSecret {
   BETTER_AUTH_SECRET: string;
@@ -27,31 +14,15 @@ interface AppSecret {
   FROM_EMAIL: string;
 }
 
-// Module-scope singletons — initialized once per cold start
 let auth: ReturnType<typeof betterAuth> | null = null;
-
-async function getSecretJson<T>(arn: string): Promise<T> {
-  const res = await sm.send(new GetSecretValueCommand({ SecretId: arn }));
-  return JSON.parse(res.SecretString!) as T;
-}
 
 async function initAuth() {
   if (auth) return auth;
 
-  const [dbCreds, appSecret] = await Promise.all([
-    getSecretJson<DbSecret>(process.env.DB_SECRET_ARN!),
+  const [pool, appSecret] = await Promise.all([
+    getPgPool(5),
     getSecretJson<AppSecret>(process.env.APP_SECRET_ARN!),
   ]);
-
-  const pool = new Pool({
-    host: process.env.DB_HOST!,
-    port: 5432,
-    database: process.env.DB_NAME!,
-    user: dbCreds.username,
-    password: dbCreds.password,
-    ssl: { rejectUnauthorized: true, ca: RDS_CA },
-    max: 5,
-  });
 
   const instance = betterAuth({
     secret: appSecret.BETTER_AUTH_SECRET,
@@ -77,14 +48,18 @@ async function initAuth() {
     emailVerification: {
       callbackURL: (process.env.FRONTEND_ORIGIN ?? "http://localhost:5173").split(",")[0] + "/login",
       sendVerificationEmail: async ({ user, url }) => {
-        const resend = new Resend(appSecret.RESEND_API_KEY);
-        await resend.emails.send({
-          from: appSecret.FROM_EMAIL,
-          to: user.email,
-          subject: "Verify your BirdDex email",
-          html: `<p>Click <a href="${url}">here</a> to verify your email address.</p>`,
-          text: `Verify your email: ${url}`,
-        });
+        try {
+          const resend = new Resend(appSecret.RESEND_API_KEY);
+          await resend.emails.send({
+            from: appSecret.FROM_EMAIL,
+            to: user.email,
+            subject: "Verify your BirdDex email",
+            html: `<p>Click <a href="${url}">here</a> to verify your email address.</p>`,
+            text: `Verify your email: ${url}`,
+          });
+        } catch (err) {
+          console.error("Failed to send verification email:", err);
+        }
       },
     },
   });

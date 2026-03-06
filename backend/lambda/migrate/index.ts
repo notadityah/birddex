@@ -1,17 +1,10 @@
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager';
 import postgres from 'postgres';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { getSecretJson } from '../lib/secrets.js';
+import type { DbSecret } from '../lib/db.js';
 
-const sm = new SecretsManagerClient({});
-
-interface DbSecret {
-  username: string;
-  password: string;
-}
+const RDS_CA = readFileSync(join(__dirname, 'rds-ca-bundle.pem'), 'utf-8');
 
 interface CloudFormationEvent {
   RequestType: 'Create' | 'Update' | 'Delete';
@@ -32,22 +25,15 @@ export async function handler(
     return { PhysicalResourceId: 'migrate' };
   }
 
-  const secretArn = process.env.DB_SECRET_ARN!;
-  const dbHost = process.env.DB_HOST!;
-  const dbName = process.env.DB_NAME!;
-
-  const secretValue = await sm.send(
-    new GetSecretValueCommand({ SecretId: secretArn }),
-  );
-  const creds: DbSecret = JSON.parse(secretValue.SecretString!);
+  const creds = await getSecretJson<DbSecret>(process.env.DB_SECRET_ARN!);
 
   const sql = postgres({
-    host: dbHost,
+    host: process.env.DB_HOST!,
     port: 5432,
-    database: dbName,
+    database: process.env.DB_NAME!,
     username: creds.username,
     password: creds.password,
-    ssl: 'require',
+    ssl: { rejectUnauthorized: true, ca: RDS_CA },
     max: 1,
   });
 

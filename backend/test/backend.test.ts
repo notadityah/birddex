@@ -45,6 +45,19 @@ describe('BackendStack', () => {
     });
   });
 
+  test('S3 bucket has lifecycle rule for noncurrent version expiration', () => {
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      LifecycleConfiguration: {
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            NoncurrentVersionExpiration: { NoncurrentDays: 30 },
+            Status: 'Enabled',
+          }),
+        ]),
+      },
+    });
+  });
+
   // =========================================================
   // VPC
   // =========================================================
@@ -54,6 +67,20 @@ describe('BackendStack', () => {
 
   test('NAT Gateway is created (1)', () => {
     template.resourceCountIs('AWS::EC2::NatGateway', 1);
+  });
+
+  test('S3 VPC Gateway Endpoint is created', () => {
+    template.hasResourceProperties('AWS::EC2::VPCEndpoint', {
+      ServiceName: Match.objectLike({
+        'Fn::Join': Match.arrayWith([
+          Match.arrayWith([
+            Match.stringLikeRegexp('com\\.amazonaws\\.'),
+            Match.stringLikeRegexp('s3'),
+          ]),
+        ]),
+      }),
+      VpcEndpointType: 'Gateway',
+    });
   });
 
   // =========================================================
@@ -92,11 +119,11 @@ describe('BackendStack', () => {
     });
   });
 
-  test('Detect Lambda is created as container image with 3 GiB memory', () => {
+  test('Detect Lambda is created as container image with 1.5 GiB memory', () => {
     template.hasResourceProperties('AWS::Lambda::Function', {
       FunctionName: 'birddex-detect',
       PackageType: 'Image',
-      MemorySize: 3008,
+      MemorySize: 1536,
     });
   });
 
@@ -137,6 +164,19 @@ describe('BackendStack', () => {
     template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
       RouteKey: 'ANY /api/{proxy+}',
     });
+  });
+
+  // =========================================================
+  // Monitoring
+  // =========================================================
+  test('SNS alarm topic is created', () => {
+    template.hasResourceProperties('AWS::SNS::Topic', {
+      TopicName: 'birddex-alarms',
+    });
+  });
+
+  test('Lambda error alarms are created', () => {
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 5); // 4 lambda + 1 RDS CPU
   });
 
   // =========================================================
