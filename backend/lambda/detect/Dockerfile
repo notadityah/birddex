@@ -11,10 +11,11 @@ COPY package.json ./
 RUN npm install --ignore-scripts
 
 COPY lambda/tsconfig.json ./tsconfig.json
-COPY lambda/detect/index.ts ./
+COPY lambda/lib/ ./lib/
+COPY lambda/detect/index.ts ./detect/index.ts
 
 # Bundle everything except onnxruntime-node (native binary, installed in stage 2)
-RUN esbuild index.ts \
+RUN esbuild detect/index.ts \
   --bundle \
   --platform=node \
   --target=node22 \
