@@ -84,7 +84,7 @@ async function requireSession(
   const cookie = event.headers["cookie"] ?? "";
   const authHeader = event.headers["authorization"] ?? "";
   const tokenMatch =
-    cookie.match(/better-auth\.session_token=([^;]+)/) ??
+    cookie.match(/(?:__Secure-)?better-auth\.session_token=([^;]+)/) ??
     authHeader.match(/^Bearer (.+)$/);
   if (!tokenMatch) return false;
   const db = await getDb();
