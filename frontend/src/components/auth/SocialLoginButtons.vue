@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
+const googleEnabled = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true'
+
 const authStore = useAuthStore()
 const redirecting = ref(false)
 
@@ -13,7 +15,7 @@ function handleGoogleLogin() {
 </script>
 
 <template>
-  <div>
+  <div v-if="googleEnabled">
     <!-- Divider -->
     <div class="relative my-6">
       <div class="absolute inset-0 flex items-center">

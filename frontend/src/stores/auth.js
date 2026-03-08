@@ -10,9 +10,24 @@ const ERROR_MAP = {
   TOO_MANY_REQUESTS: 'Too many attempts. Please try again later.',
 }
 
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
+
 export const useAuthStore = defineStore('auth', () => {
   // --- State ---
-  const sessionRef = authClient.useSession()
+  const sessionRef = DEV_BYPASS
+    ? ref({
+        data: {
+          user: {
+            id: 'dev-user',
+            name: 'Dev User',
+            email: 'dev@localhost',
+            emailVerified: true,
+            role: 'admin',
+          },
+        },
+        isPending: false,
+      })
+    : authClient.useSession()
   const router = useRouter()
   const error = ref(null)
   const pendingEmail = ref('')
