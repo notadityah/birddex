@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = computed(() => sessionRef.value.isPending)
   const isAuthenticated = computed(() => !!user.value?.emailVerified)
   const displayName = computed(() => user.value?.name || user.value?.email || '')
-  const isAdmin = computed(() => false)
+  const isAdmin = computed(() => user.value?.role === 'admin')
 
   // --- Internal helpers ---
   function setError(err) {

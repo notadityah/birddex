@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { betterAuth } from "better-auth";
+import { admin } from "better-auth/plugins/admin";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { handle } from "hono/aws-lambda";
@@ -29,6 +30,7 @@ async function initAuth() {
     baseURL: process.env.APP_BASE_URL,
     trustedOrigins: (process.env.FRONTEND_ORIGIN ?? "http://localhost:5173").split(","),
     database: pool,
+    plugins: [admin()],
     advanced: {
       defaultCookieAttributes: {
         sameSite: "none",

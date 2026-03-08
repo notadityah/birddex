@@ -1,12 +1,5 @@
--- Drop in reverse dependency order so FK constraints don't block
-DROP TABLE IF EXISTS sighting CASCADE;
-DROP TABLE IF EXISTS verification CASCADE;
-DROP TABLE IF EXISTS account CASCADE;
-DROP TABLE IF EXISTS session CASCADE;
-DROP TABLE IF EXISTS "user" CASCADE;
-
 -- better-auth v1.5 tables — camelCase columns required by Kysely adapter
-CREATE TABLE "user" (
+CREATE TABLE IF NOT EXISTS "user" (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
@@ -16,7 +9,7 @@ CREATE TABLE "user" (
   "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE session (
+CREATE TABLE IF NOT EXISTS session (
   id TEXT PRIMARY KEY,
   "expiresAt" TIMESTAMP NOT NULL,
   token TEXT NOT NULL UNIQUE,
@@ -27,7 +20,7 @@ CREATE TABLE session (
   "userId" TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE
 );
 
-CREATE TABLE account (
+CREATE TABLE IF NOT EXISTS account (
   id TEXT PRIMARY KEY,
   "accountId" TEXT NOT NULL,
   "providerId" TEXT NOT NULL,
@@ -43,7 +36,7 @@ CREATE TABLE account (
   "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE verification (
+CREATE TABLE IF NOT EXISTS verification (
   id TEXT PRIMARY KEY,
   identifier TEXT NOT NULL,
   value TEXT NOT NULL,
@@ -52,15 +45,22 @@ CREATE TABLE verification (
   "updatedAt" TIMESTAMP
 );
 
+-- Admin plugin columns (better-auth admin plugin)
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT FALSE;
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "banReason" TEXT;
+ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "banExpires" TIMESTAMP;
+ALTER TABLE session ADD COLUMN IF NOT EXISTS "impersonatedBy" TEXT;
+
 -- App tables — snake_case, queried directly with postgres.js
 CREATE TABLE IF NOT EXISTS bird (
-  id INT PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
   scientific_name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE sighting (
+CREATE TABLE IF NOT EXISTS sighting (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
   bird_id INT NOT NULL REFERENCES bird(id),
@@ -112,3 +112,10 @@ INSERT INTO bird (id, name, scientific_name, slug) VALUES
   (35, 'Willie Wagtail', 'Rhipidura leucophrys', 'willie_wagtail'),
   (36, 'Yellow-tailed Black Cockatoo', 'Zanda funerea', 'yellow_tailed_black_cockatoo')
 ON CONFLICT (id) DO NOTHING;
+
+-- Ensure bird id sequence is in sync with seed data
+SELECT setval(pg_get_serial_sequence('bird', 'id'), GREATEST((SELECT MAX(id) FROM bird), 1));
+
+-- Seed initial admin
+UPDATE "user" SET role = 'admin'
+WHERE email = 'imadityahariharan@gmail.com' AND role IS DISTINCT FROM 'admin';
