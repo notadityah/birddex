@@ -79,7 +79,7 @@ onMounted(() => doSearch())
       />
       <button
         @click="doSearch"
-        class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 transition-colors"
+        class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 transition-colors cursor-pointer"
       >
         Filter
       </button>
@@ -143,7 +143,7 @@ onMounted(() => doSearch())
       <button
         @click="prevPage"
         :disabled="page === 0"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
       >
         Previous
       </button>
@@ -151,7 +151,7 @@ onMounted(() => doSearch())
       <button
         @click="nextPage"
         :disabled="adminStore.sightings.length < pageSize"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
       >
         Next
       </button>

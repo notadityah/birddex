@@ -19,13 +19,13 @@ defineEmits(['confirm', 'cancel'])
         <div class="flex justify-end gap-3">
           <button
             @click="$emit('cancel')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             @click="$emit('confirm')"
-            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
           >
             {{ confirmLabel }}
           </button>

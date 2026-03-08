@@ -95,7 +95,7 @@ onMounted(() => doSearch())
       />
       <button
         @click="openAddForm"
-        class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 transition-colors"
+        class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 transition-colors cursor-pointer"
       >
         Add Bird
       </button>
@@ -129,7 +129,9 @@ onMounted(() => doSearch())
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Slug (auto-generated if empty)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Slug (auto-generated if empty)</label
+              >
               <input
                 v-model="formSlug"
                 type="text"
@@ -140,13 +142,13 @@ onMounted(() => doSearch())
               <button
                 type="button"
                 @click="showForm = false"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90"
+                class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 cursor-pointer"
               >
                 {{ editingBird ? 'Save' : 'Create' }}
               </button>
@@ -184,13 +186,13 @@ onMounted(() => doSearch())
             <td class="px-4 py-3 text-right space-x-2">
               <button
                 @click="openEditForm(bird)"
-                class="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                class="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
               >
                 Edit
               </button>
               <button
                 @click="handleDelete(bird)"
-                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                class="text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer"
               >
                 Delete
               </button>
@@ -208,7 +210,7 @@ onMounted(() => doSearch())
       <button
         @click="prevPage"
         :disabled="page === 0"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
       >
         Previous
       </button>
@@ -216,7 +218,7 @@ onMounted(() => doSearch())
       <button
         @click="nextPage"
         :disabled="adminStore.birds.length < pageSize"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
       >
         Next
       </button>

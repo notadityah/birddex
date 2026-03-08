@@ -46,7 +46,7 @@ onMounted(() => {
           v-for="tab in tabs"
           :key="tab.key"
           @click="activeTab = tab.key"
-          class="pb-3 text-sm font-medium border-b-2 transition-colors"
+          class="pb-3 text-sm font-medium border-b-2 transition-colors cursor-pointer"
           :class="
             activeTab === tab.key
               ? 'border-forest-green text-forest-green'

@@ -59,7 +59,7 @@ function handleBan(userId) {
 
 function handleUnban(userId) {
   confirmTitle.value = 'Unban User'
-  confirmMessage.value = 'This will restore the user\'s access.'
+  confirmMessage.value = "This will restore the user's access."
   confirmAction.value = async () => {
     await adminStore.unbanUser(userId)
     confirmOpen.value = false
@@ -70,7 +70,8 @@ function handleUnban(userId) {
 function handleDelete(userId) {
   if (isSelf(userId)) return
   confirmTitle.value = 'Delete User'
-  confirmMessage.value = 'This will permanently delete the user and all their data. This cannot be undone.'
+  confirmMessage.value =
+    'This will permanently delete the user and all their data. This cannot be undone.'
   confirmAction.value = async () => {
     await adminStore.removeUser(userId)
     confirmOpen.value = false
@@ -145,21 +146,21 @@ onMounted(() => doSearch())
               <button
                 v-if="!u.banned && !isSelf(u.id)"
                 @click="handleBan(u.id)"
-                class="text-xs text-orange-600 hover:text-orange-800 font-medium"
+                class="text-xs text-orange-600 hover:text-orange-800 font-medium cursor-pointer"
               >
                 Ban
               </button>
               <button
                 v-if="u.banned"
                 @click="handleUnban(u.id)"
-                class="text-xs text-green-600 hover:text-green-800 font-medium"
+                class="text-xs text-green-600 hover:text-green-800 font-medium cursor-pointer"
               >
                 Unban
               </button>
               <button
                 v-if="!isSelf(u.id)"
                 @click="handleDelete(u.id)"
-                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                class="text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer"
               >
                 Delete
               </button>
