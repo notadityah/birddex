@@ -162,6 +162,7 @@ function changePhoto() {
     <!-- Error banner -->
     <div
       v-if="error"
+      role="alert"
       class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
     >
       <p class="text-sm text-red-700">{{ error }}</p>
@@ -174,7 +175,7 @@ function changePhoto() {
     </div>
 
     <!-- Saved success -->
-    <div v-if="pageState === 'saved'" class="text-center py-12">
+    <div v-if="pageState === 'saved'" role="status" class="text-center py-12">
       <div class="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
         <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -234,7 +235,7 @@ function changePhoto() {
       </button>
 
       <!-- Detecting spinner -->
-      <div v-if="pageState === 'detecting'" class="text-center py-8">
+      <div v-if="pageState === 'detecting'" aria-live="polite" class="text-center py-8">
         <div class="flex items-center justify-center gap-2 text-gray-600">
           <SpinnerIcon />
           <span class="text-sm">Detecting...</span>

@@ -1,11 +1,52 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const mobileOpen = ref(false)
+const sidebarRef = ref(null)
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function trapFocus(e) {
+  if (e.key === 'Escape') {
+    mobileOpen.value = false
+    return
+  }
+  if (e.key !== 'Tab' || !sidebarRef.value) return
+  const focusable = [...sidebarRef.value.querySelectorAll(FOCUSABLE)]
+  if (!focusable.length) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
+let previouslyFocused = null
+
+watch(mobileOpen, async (open) => {
+  if (open) {
+    previouslyFocused = document.activeElement
+    document.addEventListener('keydown', trapFocus)
+    await nextTick()
+    if (sidebarRef.value) {
+      const first = sidebarRef.value.querySelector(FOCUSABLE)
+      if (first) first.focus()
+    }
+  } else {
+    document.removeEventListener('keydown', trapFocus)
+    if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+      previouslyFocused.focus()
+    }
+  }
+})
 
 const navItems = [
   {
@@ -59,10 +100,11 @@ function closeMobile() {
   </button>
 
   <!-- Mobile backdrop -->
-  <div v-if="mobileOpen" @click="closeMobile" class="md:hidden fixed inset-0 bg-black/50 z-40" />
+  <div v-if="mobileOpen" @click="closeMobile" class="md:hidden fixed inset-0 bg-black/50 z-40" aria-hidden="true" />
 
   <!-- Sidebar -->
   <aside
+    ref="sidebarRef"
     :class="[
       'fixed md:sticky top-0 left-0 z-50 md:z-auto h-screen w-64 bg-forest-green flex flex-col transition-transform duration-300 md:translate-x-0 shrink-0',
       mobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -103,7 +145,7 @@ function closeMobile() {
         :class="
           $route.path === item.to
             ? 'bg-white/15 text-white'
-            : 'text-white/60 hover:bg-white/10 hover:text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
         "
       >
         <img :src="item.icon" :alt="item.label" class="w-5 h-5 shrink-0" />
@@ -119,7 +161,7 @@ function closeMobile() {
         :class="
           $route.path === '/admin'
             ? 'bg-white/15 text-white'
-            : 'text-white/60 hover:bg-white/10 hover:text-white'
+            : 'text-white/70 hover:bg-white/10 hover:text-white'
         "
       >
         <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,7 +180,7 @@ function closeMobile() {
       </div>
       <button
         @click="handleLogout"
-        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-red-500/20 hover:text-red-300 transition-colors cursor-pointer"
+        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-300 transition-colors cursor-pointer"
       >
         <img src="/sign-out-svgrepo-com.svg" alt="Sign Out" class="w-5 h-5 shrink-0" />
         Sign Out

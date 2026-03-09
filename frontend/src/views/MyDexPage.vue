@@ -18,7 +18,7 @@ const filters = [
 </script>
 
 <template>
-  <div class="flex-1 p-6 sm:p-8 md:pl-8">
+  <div class="flex-1 p-6 pt-16 sm:p-8 sm:pt-16 md:pt-8 md:pl-8">
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900">MyDex</h1>
@@ -35,6 +35,7 @@ const filters = [
     <!-- Error banner -->
     <div
       v-if="birdStore.error"
+      role="alert"
       class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between"
     >
       <p class="text-sm text-red-700">{{ birdStore.error }}</p>
@@ -82,7 +83,7 @@ const filters = [
     </div>
 
     <!-- Empty state -->
-    <div v-else class="text-center py-16 text-gray-400">
+    <div v-else class="text-center py-16 text-gray-500">
       <p class="text-lg font-medium">No birds to show</p>
       <p class="text-sm mt-1">Try changing the filter above.</p>
     </div>

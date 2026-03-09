@@ -13,7 +13,10 @@ const emit = defineEmits(['open-detail'])
 <template>
   <div
     @click="emit('open-detail', bird)"
-    class="cursor-pointer hover:ring-2 hover:ring-primary-green bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+    @keydown.enter.space.prevent="emit('open-detail', bird)"
+    role="button"
+    tabindex="0"
+    class="cursor-pointer hover:ring-2 hover:ring-primary-green focus:ring-2 focus:ring-primary-green focus:outline-none bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
   >
     <div class="aspect-square relative">
       <img
@@ -36,7 +39,7 @@ const emit = defineEmits(['open-detail'])
     </div>
     <div class="p-3">
       <p class="font-semibold text-sm text-gray-900 truncate">{{ bird.name }}</p>
-      <p class="text-xs text-gray-400 italic truncate">{{ bird.scientificName }}</p>
+      <p class="text-xs text-gray-500 italic truncate">{{ bird.scientificName }}</p>
     </div>
   </div>
 </template>

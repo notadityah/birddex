@@ -91,6 +91,7 @@ onMounted(() => doSearch())
         @keyup.enter="doSearch"
         type="text"
         placeholder="Search by email..."
+        aria-label="Search users by email"
         class="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
       />
     </div>
@@ -100,7 +101,7 @@ onMounted(() => doSearch())
 
     <!-- Table -->
     <div v-else class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[600px] text-sm">
         <thead>
           <tr class="border-b border-gray-200 bg-gray-50">
             <th class="text-left px-4 py-3 font-medium text-gray-600">Name</th>

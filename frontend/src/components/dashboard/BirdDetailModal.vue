@@ -1,11 +1,15 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useFocusTrap } from '@/composables/useFocusTrap'
 
 defineProps({
   bird: { type: Object, required: true },
 })
 
 const emit = defineEmits(['close'])
+const modalRef = ref(null)
+
+useFocusTrap(modalRef)
 
 function onKeydown(e) {
   if (e.key === 'Escape') emit('close')
@@ -28,17 +32,18 @@ function formatDate(dateStr) {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    class="fixed inset-0 z-50 flex items-center justify-center py-4 bg-black/50"
     @click.self="emit('close')"
     role="dialog"
     aria-modal="true"
+    aria-labelledby="bird-detail-title"
   >
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+    <div ref="modalRef" class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
       <!-- Header -->
       <div class="flex items-start justify-between p-5 border-b border-gray-100">
         <div>
-          <h2 class="text-lg font-bold text-gray-900">{{ bird.name }}</h2>
-          <p class="text-sm text-gray-400 italic">{{ bird.scientificName }}</p>
+          <h2 id="bird-detail-title" class="text-lg font-bold text-gray-900">{{ bird.name }}</h2>
+          <p class="text-sm text-gray-500 italic">{{ bird.scientificName }}</p>
         </div>
         <button
           @click="emit('close')"

@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import ConfirmModal from './ConfirmModal.vue'
+
+const formModalRef = ref(null)
 
 const adminStore = useAdminStore()
 
@@ -79,6 +81,10 @@ function handleDelete(bird) {
   confirmOpen.value = true
 }
 
+function onFormKeydown(e) {
+  if (e.key === 'Escape') showForm.value = false
+}
+
 onMounted(() => doSearch())
 </script>
 
@@ -91,6 +97,7 @@ onMounted(() => doSearch())
         @keyup.enter="doSearch"
         type="text"
         placeholder="Search birds..."
+        aria-label="Search birds"
         class="flex-1 min-w-[200px] max-w-md px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
       />
       <button
@@ -103,10 +110,10 @@ onMounted(() => doSearch())
 
     <!-- Add/Edit Form Modal -->
     <Teleport to="body">
-      <div v-if="showForm" class="fixed inset-0 z-[100] flex items-center justify-center">
-        <div class="fixed inset-0 bg-black/40" @click="showForm = false" />
-        <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+      <div v-if="showForm" class="fixed inset-0 z-[100] flex items-center justify-center" @keydown.escape="showForm = false">
+        <div class="fixed inset-0 bg-black/40" @click="showForm = false" aria-hidden="true" />
+        <div ref="formModalRef" role="dialog" aria-modal="true" aria-labelledby="bird-form-title" class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+          <h3 id="bird-form-title" class="text-lg font-semibold text-gray-900 mb-4">
             {{ editingBird ? 'Edit Bird' : 'Add Bird' }}
           </h3>
           <form @submit.prevent="submitForm" class="space-y-4">
@@ -163,7 +170,7 @@ onMounted(() => doSearch())
 
     <!-- Table -->
     <div v-else class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[600px] text-sm">
         <thead>
           <tr class="border-b border-gray-200 bg-gray-50">
             <th class="text-left px-4 py-3 font-medium text-gray-600">ID</th>

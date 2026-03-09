@@ -68,14 +68,16 @@ onMounted(() => doSearch())
         @keyup.enter="doSearch"
         type="text"
         placeholder="Filter by User ID..."
-        class="max-w-[220px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
+        aria-label="Filter by user ID"
+        class="w-full sm:max-w-[220px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
       />
       <input
         v-model="filterBirdId"
         @keyup.enter="doSearch"
         type="text"
         placeholder="Filter by Bird ID..."
-        class="max-w-[180px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
+        aria-label="Filter by bird ID"
+        class="w-full sm:max-w-[180px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
       />
       <button
         @click="doSearch"
@@ -90,7 +92,7 @@ onMounted(() => doSearch())
 
     <!-- Table -->
     <div v-else class="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-200">
-      <table class="w-full text-sm">
+      <table class="w-full min-w-[700px] text-sm">
         <thead>
           <tr class="border-b border-gray-200 bg-gray-50">
             <th class="text-left px-4 py-3 font-medium text-gray-600">ID</th>

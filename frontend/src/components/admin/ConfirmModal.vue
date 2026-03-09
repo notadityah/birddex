@@ -1,4 +1,7 @@
 <script setup>
+import { ref } from 'vue'
+import { useFocusTrap } from '@/composables/useFocusTrap'
+
 defineProps({
   open: Boolean,
   title: { type: String, default: 'Confirm Action' },
@@ -6,15 +9,18 @@ defineProps({
   confirmLabel: { type: String, default: 'Confirm' },
 })
 
-defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(['confirm', 'cancel'])
+const dialogRef = ref(null)
+
+useFocusTrap(dialogRef)
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-[100] flex items-center justify-center">
-      <div class="fixed inset-0 bg-black/40" @click="$emit('cancel')" />
-      <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
+    <div v-if="open" class="fixed inset-0 z-[100] flex items-center justify-center" @keydown.escape="emit('cancel')">
+      <div class="fixed inset-0 bg-black/40" @click="$emit('cancel')" aria-hidden="true" />
+      <div ref="dialogRef" role="dialog" aria-modal="true" aria-labelledby="confirm-title" class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 id="confirm-title" class="text-lg font-semibold text-gray-900 mb-2">{{ title }}</h3>
         <p class="text-sm text-gray-600 mb-6">{{ message }}</p>
         <div class="flex justify-end gap-3">
           <button
