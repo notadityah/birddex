@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { betterAuth } from "better-auth";
@@ -82,7 +83,25 @@ app.get("/api/sightings", async (c) => {
     WHERE s.user_id = ${session.user.id}
     ORDER BY s.created_at DESC
   `;
-  return c.json(rows);
+
+  const enriched = await Promise.all(
+    rows.map(async (row) => {
+      let image_url: string | null = null;
+      if (row.image_key) {
+        image_url = await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: process.env.BUCKET_NAME!,
+            Key: row.image_key as string,
+          }),
+          { expiresIn: 3600 },
+        );
+      }
+      return { ...row, image_url };
+    }),
+  );
+
+  return c.json(enriched);
 });
 
 app.post("/api/sightings", async (c) => {

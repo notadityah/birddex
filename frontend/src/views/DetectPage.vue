@@ -112,9 +112,12 @@ async function saveSighting(notes) {
       if (!uploadRes.ok) throw new Error('Failed to upload image')
     }
 
-    // Update bird store
+    // Update bird store optimistically
     const bird = birdStore.birds.find((b) => b.slug === matchedBird.value.slug)
     if (bird) bird.found = true
+
+    // Refresh sightings in background to get presigned image URLs
+    birdStore.loadSightings()
 
     pageState.value = 'saved'
   } catch {

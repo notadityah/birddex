@@ -1,11 +1,14 @@
 <script setup>
+import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useBirdStore } from '@/stores/birds'
 import BirdCard from '@/components/dashboard/BirdCard.vue'
+import BirdDetailModal from '@/components/dashboard/BirdDetailModal.vue'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
 const authStore = useAuthStore()
 const birdStore = useBirdStore()
+const selectedBird = ref(null)
 
 const filters = [
   { label: 'All', value: 'all' },
@@ -70,7 +73,12 @@ const filters = [
       v-else-if="birdStore.filteredBirds.length"
       class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
     >
-      <BirdCard v-for="bird in birdStore.filteredBirds" :key="bird.id" :bird="bird" />
+      <BirdCard
+        v-for="bird in birdStore.filteredBirds"
+        :key="bird.id"
+        :bird="bird"
+        @open-detail="selectedBird = $event"
+      />
     </div>
 
     <!-- Empty state -->
@@ -78,5 +86,12 @@ const filters = [
       <p class="text-lg font-medium">No birds to show</p>
       <p class="text-sm mt-1">Try changing the filter above.</p>
     </div>
+
+    <!-- Bird detail modal -->
+    <BirdDetailModal
+      v-if="selectedBird"
+      :bird="selectedBird"
+      @close="selectedBird = null"
+    />
   </div>
 </template>

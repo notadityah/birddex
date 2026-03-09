@@ -1,20 +1,19 @@
 <script setup>
 import { ref } from 'vue'
-import { useBirdStore } from '@/stores/birds'
 
-const birdStore = useBirdStore()
 const imgError = ref(false)
 
 defineProps({
   bird: { type: Object, required: true },
 })
+
+const emit = defineEmits(['open-detail'])
 </script>
 
 <template>
   <div
-    @click="birdStore.markFound(bird.slug)"
-    :class="bird.found ? 'cursor-default' : 'cursor-pointer hover:ring-2 hover:ring-primary-green'"
-    class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+    @click="emit('open-detail', bird)"
+    class="cursor-pointer hover:ring-2 hover:ring-primary-green bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
   >
     <div class="aspect-square relative">
       <img

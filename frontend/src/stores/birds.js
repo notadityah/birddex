@@ -38,6 +38,8 @@ export const useBirdStore = defineStore('birds', () => {
         scientificName: b.scientific_name,
         slug: b.slug,
         found: false,
+        sightings: [],
+        imageUrl: null,
       }))
     } catch {
       error.value = 'Network error loading birds'
@@ -49,7 +51,8 @@ export const useBirdStore = defineStore('birds', () => {
     if (loadController) loadController.abort()
     loadController = new AbortController()
 
-    loading.value = true
+    const isInitialLoad = birds.value.length === 0
+    if (isInitialLoad) loading.value = true
     error.value = null
     try {
       // Ensure birds are loaded first
@@ -64,11 +67,26 @@ export const useBirdStore = defineStore('birds', () => {
         return
       }
       const sightings = await res.json()
-      // Reset found state before applying
-      birds.value.forEach((b) => (b.found = false))
+
+      // Group sightings by slug
+      const sightingsBySlug = {}
       sightings.forEach((s) => {
-        const bird = birds.value.find((b) => b.slug === s.slug)
-        if (bird) bird.found = true
+        if (!sightingsBySlug[s.slug]) sightingsBySlug[s.slug] = []
+        sightingsBySlug[s.slug].push({
+          id: s.id,
+          imageUrl: s.image_url || null,
+          detectedAt: s.detected_at,
+          notes: s.notes,
+          createdAt: s.created_at,
+        })
+      })
+
+      // Apply to birds
+      birds.value.forEach((b) => {
+        const birdSightings = sightingsBySlug[b.slug] || []
+        b.sightings = birdSightings
+        b.found = birdSightings.length > 0
+        b.imageUrl = birdSightings.length > 0 ? birdSightings[0].imageUrl : null
       })
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -81,30 +99,12 @@ export const useBirdStore = defineStore('birds', () => {
 
   function resetFound() {
     if (loadController) loadController.abort()
-    birds.value.forEach((b) => (b.found = false))
+    birds.value.forEach((b) => {
+      b.found = false
+      b.sightings = []
+      b.imageUrl = null
+    })
     error.value = null
-  }
-
-  async function markFound(slug) {
-    const bird = birds.value.find((b) => b.slug === slug)
-    if (!bird || bird.found) return
-
-    bird.found = true
-    try {
-      const res = await fetch(`${API}/api/sightings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ birdId: bird.id }),
-      })
-      if (!res.ok) {
-        bird.found = false
-        error.value = 'Failed to save sighting'
-      }
-    } catch {
-      bird.found = false
-      error.value = 'Network error saving sighting'
-    }
   }
 
   return {
@@ -117,7 +117,6 @@ export const useBirdStore = defineStore('birds', () => {
     totalCount,
     setFilter,
     loadBirds,
-    markFound,
     loadSightings,
     resetFound,
   }

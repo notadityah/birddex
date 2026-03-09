@@ -81,15 +81,16 @@ async function getDb(): Promise<ReturnType<typeof postgres>> {
 async function requireSession(
   event: APIGatewayProxyEventV2,
 ): Promise<boolean> {
-  const cookie = event.headers["cookie"] ?? "";
+  const cookie = event.cookies?.join("; ") ?? event.headers["cookie"] ?? "";
   const authHeader = event.headers["authorization"] ?? "";
   const tokenMatch =
     cookie.match(/(?:__Secure-)?better-auth\.session_token=([^;]+)/) ??
     authHeader.match(/^Bearer (.+)$/);
   if (!tokenMatch) return false;
+  const token = decodeURIComponent(tokenMatch[1]).split(".")[0];
   const db = await getDb();
   const rows = await db`
-    SELECT id FROM session WHERE token = ${tokenMatch[1]} AND "expiresAt" > NOW() LIMIT 1
+    SELECT id FROM session WHERE token = ${token} AND "expiresAt" > NOW() LIMIT 1
   `;
   return rows.length > 0;
 }
