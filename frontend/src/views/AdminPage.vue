@@ -4,6 +4,7 @@ import { useAdminStore } from '@/stores/admin'
 import AdminUsersTab from '@/components/admin/AdminUsersTab.vue'
 import AdminBirdsTab from '@/components/admin/AdminBirdsTab.vue'
 import AdminSightingsTab from '@/components/admin/AdminSightingsTab.vue'
+import AdminFeedbackTab from '@/components/admin/AdminFeedbackTab.vue'
 
 const adminStore = useAdminStore()
 const activeTab = ref('users')
@@ -12,6 +13,7 @@ const tabs = [
   { key: 'users', label: 'Users' },
   { key: 'birds', label: 'Birds' },
   { key: 'sightings', label: 'Sightings' },
+  { key: 'feedback', label: 'Feedback' },
 ]
 
 onMounted(() => {
@@ -24,7 +26,7 @@ onMounted(() => {
     <h1 class="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <p class="text-sm font-medium text-gray-500">Total Users</p>
         <p class="text-3xl font-bold text-gray-900 mt-1">{{ adminStore.stats.users }}</p>
@@ -36,6 +38,10 @@ onMounted(() => {
       <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <p class="text-sm font-medium text-gray-500">Total Sightings</p>
         <p class="text-3xl font-bold text-gray-900 mt-1">{{ adminStore.stats.sightings }}</p>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <p class="text-sm font-medium text-gray-500">Open Feedback</p>
+        <p class="text-3xl font-bold text-gray-900 mt-1">{{ adminStore.stats.feedback }}</p>
       </div>
     </div>
 
@@ -83,6 +89,9 @@ onMounted(() => {
     </div>
     <div v-else-if="activeTab === 'sightings'" role="tabpanel" id="tabpanel-sightings" aria-labelledby="tab-sightings">
       <AdminSightingsTab />
+    </div>
+    <div v-else-if="activeTab === 'feedback'" role="tabpanel" id="tabpanel-feedback" aria-labelledby="tab-feedback">
+      <AdminFeedbackTab />
     </div>
   </div>
 </template>

@@ -122,6 +122,19 @@ ALTER TABLE "user" ADD COLUMN IF NOT EXISTS gallery_anonymous BOOLEAN DEFAULT FA
 CREATE INDEX IF NOT EXISTS idx_sighting_public ON sighting(public) WHERE public = TRUE;
 CREATE INDEX IF NOT EXISTS idx_bird_slug ON bird(slug);
 
+-- Feedback table
+CREATE TABLE IF NOT EXISTS feedback (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  message TEXT NOT NULL,
+  page_url TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  admin_notes TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+
 -- Seed initial admin
 UPDATE "user" SET role = 'admin'
 WHERE email = 'imadityahariharan@gmail.com' AND role IS DISTINCT FROM 'admin';

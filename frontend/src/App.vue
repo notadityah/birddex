@@ -6,6 +6,7 @@ import { useBirdStore } from '@/stores/birds'
 import Header from '@/components/landingpage/HeaderComponent.vue'
 import Sidebar from '@/components/dashboard/SidebarComponent.vue'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
+import FeedbackButton from '@/components/FeedbackButton.vue'
 
 const authStore = useAuthStore()
 const birdStore = useBirdStore()
@@ -44,6 +45,7 @@ watch(
     <main class="flex-1 overflow-y-auto">
       <router-view />
     </main>
+    <FeedbackButton />
   </div>
 
   <!-- Public layout: header + content -->

@@ -6,10 +6,11 @@ const API = import.meta.env.VITE_API_URL
 
 export const useAdminStore = defineStore('admin', () => {
   // --- State ---
-  const stats = ref({ users: 0, birds: 0, sightings: 0 })
+  const stats = ref({ users: 0, birds: 0, sightings: 0, feedback: 0 })
   const users = ref([])
   const birds = ref([])
   const sightings = ref([])
+  const feedback = ref([])
   const loading = ref(false)
   const error = ref(null)
   let controller = null
@@ -259,11 +260,78 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  // --- Feedback ---
+  async function loadFeedback({ status = '', limit = 50, offset = 0 } = {}) {
+    const signal = abortPrevious()
+    loading.value = true
+    error.value = null
+    try {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+      if (status) params.set('status', status)
+      const res = await fetch(`${API}/api/admin/feedback?${params}`, {
+        credentials: 'include',
+        signal,
+      })
+      if (!res.ok) throw new Error('Failed to load feedback')
+      const data = await res.json()
+      feedback.value = data.feedback
+    } catch (err) {
+      if (err.name !== 'AbortError') error.value = err.message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateFeedback(id, data) {
+    error.value = null
+    try {
+      const res = await fetch(`${API}/api/admin/feedback/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to update feedback')
+      }
+      const updated = await res.json()
+      const idx = feedback.value.findIndex((f) => f.id === id)
+      if (idx !== -1) {
+        feedback.value[idx] = { ...feedback.value[idx], ...updated }
+      }
+      return true
+    } catch (err) {
+      error.value = err.message
+      return false
+    }
+  }
+
+  async function deleteFeedback(id) {
+    error.value = null
+    try {
+      const res = await fetch(`${API}/api/admin/feedback/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to delete feedback')
+      }
+      feedback.value = feedback.value.filter((f) => f.id !== id)
+      return true
+    } catch (err) {
+      error.value = err.message
+      return false
+    }
+  }
+
   return {
     stats,
     users,
     birds,
     sightings,
+    feedback,
     loading,
     error,
     clearError,
@@ -279,5 +347,8 @@ export const useAdminStore = defineStore('admin', () => {
     deleteBird,
     loadSightings,
     deleteSighting,
+    loadFeedback,
+    updateFeedback,
+    deleteFeedback,
   }
 })

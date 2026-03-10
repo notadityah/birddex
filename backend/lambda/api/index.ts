@@ -386,6 +386,42 @@ app.get("/api/upload-url", async (c) => {
   return c.json({ key, url });
 });
 
+// POST /api/feedback — submit feedback
+const FEEDBACK_CATEGORIES = new Set(["bug", "detection", "suggestion", "other"]);
+
+app.post("/api/feedback", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  let body: { category?: string; message?: string; pageUrl?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const category = body.category?.trim();
+  if (!category || !FEEDBACK_CATEGORIES.has(category)) {
+    return c.json({ error: "category must be one of: bug, detection, suggestion, other" }, 400);
+  }
+
+  const message = body.message?.trim();
+  if (!message || message.length > 2000) {
+    return c.json({ error: "message is required and must be at most 2000 characters" }, 400);
+  }
+
+  const pageUrl = body.pageUrl?.trim()?.slice(0, 500) ?? null;
+
+  const db = await getDb();
+  const id = randomUUID();
+  await db`
+    INSERT INTO feedback (id, user_id, category, message, page_url)
+    VALUES (${id}, ${session.user.id}, ${category}, ${message}, ${pageUrl})
+  `;
+
+  return c.json({ id }, 201);
+});
+
 // =========================================================
 // === ADMIN ENDPOINTS ===
 // =========================================================
@@ -396,16 +432,18 @@ app.get("/api/admin/stats", async (c) => {
   if (!session) return c.json({ error: "Forbidden" }, 403);
 
   const db = await getDb();
-  const [users, birds, sightings] = await Promise.all([
+  const [users, birds, sightings, feedback] = await Promise.all([
     db`SELECT COUNT(*)::int AS count FROM "user"`,
     db`SELECT COUNT(*)::int AS count FROM bird`,
     db`SELECT COUNT(*)::int AS count FROM sighting`,
+    db`SELECT COUNT(*)::int AS count FROM feedback WHERE status = 'open'`,
   ]);
 
   return c.json({
     users: users[0].count,
     birds: birds[0].count,
     sightings: sightings[0].count,
+    feedback: feedback[0].count,
   });
 });
 
@@ -629,6 +667,94 @@ app.delete("/api/admin/sightings/:id", async (c) => {
   console.log(
     `[ADMIN] Sighting deleted by ${session.user.id}: id=${c.req.param("id")}`,
   );
+  return c.json({ ok: true });
+});
+
+// GET /api/admin/feedback
+const FEEDBACK_STATUSES = new Set(["open", "reviewed", "closed"]);
+
+app.get("/api/admin/feedback", async (c) => {
+  const session = await requireAdmin(c.req.raw);
+  if (!session) return c.json({ error: "Forbidden" }, 403);
+
+  const db = await getDb();
+  const status = c.req.query("status")?.trim();
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "50", 10), 100);
+  const offset = Math.min(parseInt(c.req.query("offset") ?? "0", 10), MAX_OFFSET);
+
+  const where = status && FEEDBACK_STATUSES.has(status)
+    ? db`WHERE f.status = ${status}`
+    : db``;
+
+  const [rows, totalResult] = await Promise.all([
+    db`
+      SELECT f.id, f.user_id, u.name AS user_name, u.email AS user_email,
+             f.category, f.message, f.page_url, f.status, f.admin_notes, f.created_at
+      FROM feedback f
+      JOIN "user" u ON u.id = f.user_id
+      ${where}
+      ORDER BY f.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `,
+    db`
+      SELECT COUNT(*)::int AS count FROM feedback f ${where}
+    `,
+  ]);
+
+  return c.json({ feedback: rows, total: totalResult[0].count });
+});
+
+// PATCH /api/admin/feedback/:id
+app.patch("/api/admin/feedback/:id", async (c) => {
+  const session = await requireAdmin(c.req.raw);
+  if (!session) return c.json({ error: "Forbidden" }, 403);
+
+  let body: { status?: string; adminNotes?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  const status = body.status?.trim();
+  if (status && !FEEDBACK_STATUSES.has(status)) {
+    return c.json({ error: "status must be one of: open, reviewed, closed" }, 400);
+  }
+
+  const adminNotes = body.adminNotes !== undefined ? body.adminNotes.trim().slice(0, 2000) : undefined;
+
+  if (!status && adminNotes === undefined) {
+    return c.json({ error: "At least one of status or adminNotes is required" }, 400);
+  }
+
+  const db = await getDb();
+  const result = await db`
+    UPDATE feedback SET
+      status = COALESCE(${status ?? null}, status),
+      admin_notes = COALESCE(${adminNotes ?? null}, admin_notes)
+    WHERE id = ${c.req.param("id")}
+    RETURNING id, status, admin_notes
+  `;
+
+  if (result.length === 0) return c.json({ error: "Not found" }, 404);
+
+  console.log(`[ADMIN] Feedback updated by ${session.user.id}: id=${c.req.param("id")}`);
+  return c.json(result[0]);
+});
+
+// DELETE /api/admin/feedback/:id
+app.delete("/api/admin/feedback/:id", async (c) => {
+  const session = await requireAdmin(c.req.raw);
+  if (!session) return c.json({ error: "Forbidden" }, 403);
+
+  const db = await getDb();
+  const result = await db`
+    DELETE FROM feedback WHERE id = ${c.req.param("id")} RETURNING id
+  `;
+
+  if (result.length === 0) return c.json({ error: "Not found" }, 404);
+
+  console.log(`[ADMIN] Feedback deleted by ${session.user.id}: id=${c.req.param("id")}`);
   return c.json({ ok: true });
 });
 
