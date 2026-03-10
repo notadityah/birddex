@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import ConfirmModal from './ConfirmModal.vue'
 
@@ -81,10 +81,6 @@ function handleDelete(bird) {
   confirmOpen.value = true
 }
 
-function onFormKeydown(e) {
-  if (e.key === 'Escape') showForm.value = false
-}
-
 onMounted(() => doSearch())
 </script>
 
@@ -98,11 +94,11 @@ onMounted(() => doSearch())
         type="text"
         placeholder="Search birds..."
         aria-label="Search birds"
-        class="flex-1 min-w-[200px] max-w-md px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50 focus:border-forest-green"
+        class="flex-1 min-w-[200px] max-w-md px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50 focus:border-primary-green"
       />
       <button
         @click="openAddForm"
-        class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 transition-colors cursor-pointer"
+        class="px-4 py-2 text-sm font-medium text-white bg-primary-green rounded-lg hover:bg-primary-green/90 transition-colors cursor-pointer"
       >
         Add Bird
       </button>
@@ -123,7 +119,7 @@ onMounted(() => doSearch())
                 v-model="formName"
                 required
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50"
               />
             </div>
             <div>
@@ -132,7 +128,7 @@ onMounted(() => doSearch())
                 v-model="formScientific"
                 required
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50"
               />
             </div>
             <div>
@@ -142,7 +138,7 @@ onMounted(() => doSearch())
               <input
                 v-model="formSlug"
                 type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-forest-green/50"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-green/50"
               />
             </div>
             <div class="flex justify-end gap-3 pt-2">
@@ -155,7 +151,7 @@ onMounted(() => doSearch())
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 text-sm font-medium text-white bg-forest-green rounded-lg hover:bg-forest-green/90 cursor-pointer"
+                class="px-4 py-2 text-sm font-medium text-white bg-primary-green rounded-lg hover:bg-primary-green/90 cursor-pointer"
               >
                 {{ editingBird ? 'Save' : 'Create' }}
               </button>

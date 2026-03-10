@@ -47,8 +47,8 @@ function validate() {
   if (!password.value) {
     errors.password = 'Password is required.'
     valid = false
-  } else if (password.value.length < 6) {
-    errors.password = 'Password must be at least 6 characters.'
+  } else if (password.value.length < 8) {
+    errors.password = 'Password must be at least 8 characters.'
     valid = false
   }
 

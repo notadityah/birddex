@@ -1,6 +1,8 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { useModalLifecycle } from '@/composables/useModalLifecycle'
+import { formatDateLong as formatDate } from '@/utils/dateFormat'
 
 defineProps({
   sighting: { type: Object, required: true },
@@ -10,28 +12,7 @@ const emit = defineEmits(['close'])
 const modalRef = ref(null)
 
 useFocusTrap(modalRef)
-
-function onKeydown(e) {
-  if (e.key === 'Escape') emit('close')
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onKeydown)
-  document.body.style.overflow = 'hidden'
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown)
-  document.body.style.overflow = ''
-})
-
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
-}
+useModalLifecycle(() => emit('close'))
 </script>
 
 <template>

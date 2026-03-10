@@ -16,6 +16,21 @@ import { getSecretJson } from "../lib/secrets.js";
 const s3 = new S3Client({});
 
 const ALLOWED_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_OFFSET = 100_000;
+
+async function deleteS3Object(key: string) {
+  try {
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.BUCKET_NAME!,
+        Key: key,
+      }),
+    );
+  } catch (err) {
+    console.error("Failed to delete S3 object:", key, err);
+  }
+}
 
 interface AppSecret {
   BETTER_AUTH_SECRET: string;
@@ -204,7 +219,7 @@ app.get("/api/gallery", async (c) => {
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
   const limit = Math.min(parseInt(c.req.query("limit") ?? "20", 10), 100);
-  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const offset = Math.min(parseInt(c.req.query("offset") ?? "0", 10), MAX_OFFSET);
   const birdId = c.req.query("birdId")?.trim();
 
   const db = await getDb();
@@ -321,18 +336,7 @@ app.delete("/api/sightings", async (c) => {
   await Promise.all(
     rows
       .filter((r) => r.image_key)
-      .map(async (r) => {
-        try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: process.env.BUCKET_NAME!,
-              Key: r.image_key as string,
-            }),
-          );
-        } catch (err) {
-          console.error("Failed to delete S3 object:", r.image_key, err);
-        }
-      }),
+      .map((r) => deleteS3Object(r.image_key as string)),
   );
 
   const result = await db`
@@ -356,18 +360,7 @@ app.delete("/api/sightings/:id", async (c) => {
   if (result.length === 0) return c.json({ error: "Not found" }, 404);
 
   const imageKey = result[0].image_key as string | null;
-  if (imageKey) {
-    try {
-      await s3.send(
-        new DeleteObjectCommand({
-          Bucket: process.env.BUCKET_NAME!,
-          Key: imageKey,
-        }),
-      );
-    } catch (err) {
-      console.error("Failed to delete S3 object:", imageKey, err);
-    }
-  }
+  if (imageKey) await deleteS3Object(imageKey);
 
   return c.json({ ok: true });
 });
@@ -424,7 +417,7 @@ app.get("/api/admin/birds", async (c) => {
   const db = await getDb();
   const q = c.req.query("q")?.trim() ?? "";
   const limit = Math.min(parseInt(c.req.query("limit") ?? "50", 10), 200);
-  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const offset = Math.min(parseInt(c.req.query("offset") ?? "0", 10), MAX_OFFSET);
 
   let rows;
   if (q) {
@@ -517,9 +510,6 @@ app.put("/api/admin/birds/:id", async (c) => {
   }
 
   const db = await getDb();
-  const existing = await db`SELECT id FROM bird WHERE id = ${birdId}`;
-  if (existing.length === 0) return c.json({ error: "Bird not found" }, 404);
-
   try {
     const result = await db`
       UPDATE bird SET
@@ -529,6 +519,7 @@ app.put("/api/admin/birds/:id", async (c) => {
       WHERE id = ${birdId}
       RETURNING id, name, scientific_name, slug
     `;
+    if (result.length === 0) return c.json({ error: "Bird not found" }, 404);
     console.log(
       `[ADMIN] Bird updated by ${session.user.id}: id=${birdId}`,
     );
@@ -585,56 +576,39 @@ app.get("/api/admin/sightings", async (c) => {
   const userId = c.req.query("userId")?.trim();
   const birdId = c.req.query("birdId")?.trim();
   const limit = Math.min(parseInt(c.req.query("limit") ?? "50", 10), 200);
-  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const offset = Math.min(parseInt(c.req.query("offset") ?? "0", 10), MAX_OFFSET);
 
-  if (userId && birdId) {
-    const rows = await db`
-      SELECT s.id, s.user_id, u.name AS user_name, u.email AS user_email,
-             s.bird_id, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
-      FROM sighting s
-      JOIN "user" u ON u.id = s.user_id
-      JOIN bird b ON b.id = s.bird_id
-      WHERE s.user_id = ${userId} AND s.bird_id = ${parseInt(birdId, 10)}
-      ORDER BY s.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    return c.json(rows);
-  } else if (userId) {
-    const rows = await db`
-      SELECT s.id, s.user_id, u.name AS user_name, u.email AS user_email,
-             s.bird_id, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
-      FROM sighting s
-      JOIN "user" u ON u.id = s.user_id
-      JOIN bird b ON b.id = s.bird_id
-      WHERE s.user_id = ${userId}
-      ORDER BY s.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    return c.json(rows);
-  } else if (birdId) {
-    const rows = await db`
-      SELECT s.id, s.user_id, u.name AS user_name, u.email AS user_email,
-             s.bird_id, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
-      FROM sighting s
-      JOIN "user" u ON u.id = s.user_id
-      JOIN bird b ON b.id = s.bird_id
-      WHERE s.bird_id = ${parseInt(birdId, 10)}
-      ORDER BY s.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    return c.json(rows);
-  } else {
-    const rows = await db`
-      SELECT s.id, s.user_id, u.name AS user_name, u.email AS user_email,
-             s.bird_id, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
-      FROM sighting s
-      JOIN "user" u ON u.id = s.user_id
-      JOIN bird b ON b.id = s.bird_id
-      ORDER BY s.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    return c.json(rows);
+  if (userId && !UUID_RE.test(userId)) {
+    return c.json({ error: "Invalid userId format" }, 400);
   }
+
+  const parsedBirdId = birdId ? parseInt(birdId, 10) : null;
+  if (birdId && isNaN(parsedBirdId!)) {
+    return c.json({ error: "Invalid birdId format" }, 400);
+  }
+
+  const conditions = [];
+  if (userId) conditions.push(db`s.user_id = ${userId}`);
+  if (parsedBirdId) conditions.push(db`s.bird_id = ${parsedBirdId}`);
+
+  const where =
+    conditions.length === 0
+      ? db``
+      : conditions.length === 1
+        ? db`WHERE ${conditions[0]}`
+        : db`WHERE ${conditions[0]} AND ${conditions[1]}`;
+
+  const rows = await db`
+    SELECT s.id, s.user_id, u.name AS user_name, u.email AS user_email,
+           s.bird_id, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
+    FROM sighting s
+    JOIN "user" u ON u.id = s.user_id
+    JOIN bird b ON b.id = s.bird_id
+    ${where}
+    ORDER BY s.created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+  return c.json(rows);
 });
 
 // DELETE /api/admin/sightings/:id
@@ -650,18 +624,7 @@ app.delete("/api/admin/sightings/:id", async (c) => {
   if (result.length === 0) return c.json({ error: "Not found" }, 404);
 
   const imageKey = result[0].image_key as string | null;
-  if (imageKey) {
-    try {
-      await s3.send(
-        new DeleteObjectCommand({
-          Bucket: process.env.BUCKET_NAME!,
-          Key: imageKey,
-        }),
-      );
-    } catch (err) {
-      console.error("Failed to delete S3 object:", imageKey, err);
-    }
-  }
+  if (imageKey) await deleteS3Object(imageKey);
 
   console.log(
     `[ADMIN] Sighting deleted by ${session.user.id}: id=${c.req.param("id")}`,

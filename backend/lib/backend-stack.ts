@@ -55,11 +55,6 @@ export class BackendStack extends cdk.Stack {
     if (certArn) envConfig.certArn = certArn;
     if (webAclArn) envConfig.webAclArn = webAclArn;
 
-    // In dev mode, add localhost to allowed origins
-    if (envName === "prod") {
-      envConfig.allowedOrigins.push("http://localhost:5173");
-    }
-
     // =========================================================
     // === S3 ===
     // =========================================================
@@ -281,7 +276,7 @@ export class BackendStack extends cdk.Stack {
     new cdk.CustomResource(this, "MigrateResource", {
       serviceToken: migrateProvider.serviceToken,
       properties: {
-        schemaVersion: "4",
+        schemaVersion: "5",
       },
     });
 

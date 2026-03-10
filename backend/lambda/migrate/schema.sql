@@ -120,6 +120,7 @@ SELECT setval(pg_get_serial_sequence('bird', 'id'), GREATEST((SELECT MAX(id) FRO
 ALTER TABLE sighting ADD COLUMN IF NOT EXISTS public BOOLEAN DEFAULT FALSE;
 ALTER TABLE "user" ADD COLUMN IF NOT EXISTS gallery_anonymous BOOLEAN DEFAULT FALSE;
 CREATE INDEX IF NOT EXISTS idx_sighting_public ON sighting(public) WHERE public = TRUE;
+CREATE INDEX IF NOT EXISTS idx_bird_slug ON bird(slug);
 
 -- Seed initial admin
 UPDATE "user" SET role = 'admin'

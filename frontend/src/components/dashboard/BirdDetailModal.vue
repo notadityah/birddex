@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import { useModalLifecycle } from '@/composables/useModalLifecycle'
 import { useBirdStore } from '@/stores/birds'
+import { formatDateShort as formatDate } from '@/utils/dateFormat'
 
 defineProps({
   bird: { type: Object, required: true },
@@ -13,29 +15,12 @@ const birdStore = useBirdStore()
 const togglingIds = ref(new Set())
 
 useFocusTrap(modalRef)
+useModalLifecycle(() => emit('close'))
 
 async function togglePublic(sighting) {
   togglingIds.value.add(sighting.id)
   await birdStore.toggleSightingPublic(sighting.id, !sighting.public)
   togglingIds.value.delete(sighting.id)
-}
-
-function onKeydown(e) {
-  if (e.key === 'Escape') emit('close')
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', onKeydown)
-  document.body.style.overflow = 'hidden'
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', onKeydown)
-  document.body.style.overflow = ''
-})
-
-function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString()
 }
 </script>
 
