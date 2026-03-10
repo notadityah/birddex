@@ -123,22 +123,30 @@ onMounted(() => doSearch())
             :key="fb.id"
             class="border-b border-gray-100 hover:bg-gray-50"
           >
-            <td class="px-4 py-3 text-gray-500 font-mono text-xs max-w-[100px] truncate">
-              {{ fb.id.slice(0, 8) }}...
+            <td class="px-4 py-3 text-gray-500 font-mono text-xs break-all">
+              {{ fb.id }}
             </td>
             <td class="px-4 py-3">
               <div class="font-medium">{{ fb.user_name }}</div>
               <div class="text-xs text-gray-500">{{ fb.user_email }}</div>
             </td>
             <td class="px-4 py-3">
-              <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium" :class="categoryColor[fb.category] || categoryColor.other">
+              <span
+                class="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="categoryColor[fb.category] || categoryColor.other"
+              >
                 {{ fb.category }}
               </span>
             </td>
             <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate">{{ fb.message }}</td>
-            <td class="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">{{ fb.page_url || '-' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">
+              {{ fb.page_url || '-' }}
+            </td>
             <td class="px-4 py-3">
-              <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium" :class="statusColor[fb.status] || statusColor.open">
+              <span
+                class="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="statusColor[fb.status] || statusColor.open"
+              >
                 {{ fb.status }}
               </span>
             </td>
@@ -146,13 +154,13 @@ onMounted(() => doSearch())
             <td class="px-4 py-3 text-right space-x-2">
               <button
                 @click="handleView(fb)"
-                class="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                class="text-xs text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
               >
                 View
               </button>
               <button
                 @click="handleDelete(fb)"
-                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                class="text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer"
               >
                 Delete
               </button>

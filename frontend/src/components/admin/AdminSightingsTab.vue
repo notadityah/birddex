@@ -110,8 +110,8 @@ onMounted(() => doSearch())
             :key="s.id"
             class="border-b border-gray-100 hover:bg-gray-50"
           >
-            <td class="px-4 py-3 text-gray-500 font-mono text-xs max-w-[100px] truncate">
-              {{ s.id.slice(0, 8) }}...
+            <td class="px-4 py-3 text-gray-500 font-mono text-xs break-all">
+              {{ s.id }}
             </td>
             <td class="px-4 py-3">
               <div class="font-medium">{{ s.user_name }}</div>
@@ -127,7 +127,7 @@ onMounted(() => doSearch())
             <td class="px-4 py-3 text-right">
               <button
                 @click="handleDelete(s)"
-                class="text-xs text-red-600 hover:text-red-800 font-medium"
+                class="text-xs text-red-600 hover:text-red-800 font-medium cursor-pointer"
               >
                 Delete
               </button>
