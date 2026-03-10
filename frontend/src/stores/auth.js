@@ -142,6 +142,33 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
+  async function changePassword(currentPassword, newPassword) {
+    clearError()
+    const { error: err } = await authClient.changePassword({
+      currentPassword,
+      newPassword,
+    })
+    if (err) {
+      setError(err)
+      return false
+    }
+    return true
+  }
+
+  async function deleteAccount(password) {
+    clearError()
+    const { error: err } = await authClient.deleteUser({
+      password,
+    })
+    if (err) {
+      setError(err)
+      return false
+    }
+    pendingEmail.value = ''
+    router.push('/login')
+    return true
+  }
+
   // Keep for router guard compatibility — resolves once session is no longer pending
   function initAuthListener() {
     if (!sessionRef.value.isPending) return Promise.resolve()
@@ -175,6 +202,8 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     resetPassword,
     resendVerification,
+    changePassword,
+    deleteAccount,
     clearError,
     initAuthListener,
   }

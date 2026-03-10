@@ -78,6 +78,7 @@ export const useBirdStore = defineStore('birds', () => {
           detectedAt: s.detected_at,
           notes: s.notes,
           createdAt: s.created_at,
+          public: s.public,
         })
       })
 
@@ -107,6 +108,42 @@ export const useBirdStore = defineStore('birds', () => {
     error.value = null
   }
 
+  async function toggleSightingPublic(sightingId, isPublic) {
+    // Optimistic update
+    let found = null
+    for (const bird of birds.value) {
+      const s = bird.sightings.find((s) => s.id === sightingId)
+      if (s) {
+        found = s
+        s.public = isPublic
+        break
+      }
+    }
+    if (!found) return
+
+    try {
+      const res = await fetch(`${API}/api/sightings/${sightingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ public: isPublic }),
+      })
+      if (!res.ok) throw new Error('Failed to toggle public')
+    } catch {
+      // Rollback
+      found.public = !isPublic
+    }
+  }
+
+  async function deleteAllSightings() {
+    const res = await fetch(`${API}/api/sightings`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to delete sightings')
+    resetFound()
+  }
+
   return {
     birds,
     filter,
@@ -119,5 +156,7 @@ export const useBirdStore = defineStore('birds', () => {
     loadBirds,
     loadSightings,
     resetFound,
+    toggleSightingPublic,
+    deleteAllSightings,
   }
 })

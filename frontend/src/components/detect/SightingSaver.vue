@@ -9,6 +9,7 @@ defineProps({
 
 const emit = defineEmits(['save'])
 const notes = ref('')
+const shareToGallery = ref(false)
 </script>
 
 <template>
@@ -33,10 +34,19 @@ const notes = ref('')
       placeholder="Where did you spot it?"
     />
 
+    <label class="flex items-center gap-2 mt-3">
+      <input
+        type="checkbox"
+        v-model="shareToGallery"
+        class="rounded border-gray-300 text-primary-green focus:ring-primary-green"
+      />
+      <span class="text-sm text-gray-700">Share to Community Gallery</span>
+    </label>
+
     <button
       type="button"
       :disabled="saving"
-      @click="emit('save', notes)"
+      @click="emit('save', notes, shareToGallery)"
       class="mt-3 px-5 py-2 bg-primary-green text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 cursor-pointer"
     >
       <span v-if="saving">Saving...</span>

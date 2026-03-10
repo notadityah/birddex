@@ -81,7 +81,7 @@ async function detect() {
   }
 }
 
-async function saveSighting(notes) {
+async function saveSighting(notes, isPublic) {
   if (!matchedBird.value) return
   pageState.value = 'saving'
   error.value = null
@@ -96,6 +96,7 @@ async function saveSighting(notes) {
         birdId: matchedBird.value.id,
         imageExt: 'jpg',
         notes: notes || undefined,
+        public: isPublic || undefined,
       }),
     })
 

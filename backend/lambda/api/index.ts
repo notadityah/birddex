@@ -77,7 +77,7 @@ app.get("/api/sightings", async (c) => {
 
   const db = await getDb();
   const rows = await db`
-    SELECT s.id, s.bird_id, b.slug, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at
+    SELECT s.id, s.bird_id, b.slug, b.name AS bird_name, s.image_key, s.detected_at, s.notes, s.created_at, s.public
     FROM sighting s
     JOIN bird b ON b.id = s.bird_id
     WHERE s.user_id = ${session.user.id}
@@ -113,6 +113,7 @@ app.post("/api/sightings", async (c) => {
     imageExt?: string;
     detectedAt?: string;
     notes?: string;
+    public?: boolean;
   };
   try {
     body = await c.req.json();
@@ -150,21 +151,195 @@ app.post("/api/sightings", async (c) => {
     return c.json({ error: "Invalid detectedAt date" }, 400);
   }
 
+  const isPublic = body.public === true;
+
   const db = await getDb();
   const id = randomUUID();
   await db`
-    INSERT INTO sighting (id, user_id, bird_id, image_key, detected_at, notes)
+    INSERT INTO sighting (id, user_id, bird_id, image_key, detected_at, notes, public)
     VALUES (
       ${id},
       ${session.user.id},
       ${body.birdId},
       ${imageKey},
       ${detectedAt},
-      ${body.notes ?? null}
+      ${body.notes ?? null},
+      ${isPublic}
     )
   `;
 
   return c.json({ id, imageKey, uploadUrl }, 201);
+});
+
+// PATCH /api/sightings/:id — toggle public flag
+app.patch("/api/sightings/:id", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  let body: { public?: boolean };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  if (typeof body.public !== "boolean") {
+    return c.json({ error: "public must be a boolean" }, 400);
+  }
+
+  const db = await getDb();
+  const result = await db`
+    UPDATE sighting SET public = ${body.public}
+    WHERE id = ${c.req.param("id")} AND user_id = ${session.user.id}
+    RETURNING id, public
+  `;
+
+  if (result.length === 0) return c.json({ error: "Not found" }, 404);
+  return c.json(result[0]);
+});
+
+// GET /api/gallery — paginated public sightings feed
+app.get("/api/gallery", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  const limit = Math.min(parseInt(c.req.query("limit") ?? "20", 10), 100);
+  const offset = parseInt(c.req.query("offset") ?? "0", 10);
+  const birdId = c.req.query("birdId")?.trim();
+
+  const db = await getDb();
+
+  let rows;
+  let totalResult;
+
+  if (birdId) {
+    const bid = parseInt(birdId, 10);
+    rows = await db`
+      SELECT s.id, s.bird_id, b.name AS bird_name, b.scientific_name, b.slug,
+             s.image_key, s.detected_at, s.notes, s.created_at,
+             CASE WHEN u.gallery_anonymous THEN 'Anonymous' ELSE u.name END AS user_name
+      FROM sighting s
+      JOIN bird b ON b.id = s.bird_id
+      JOIN "user" u ON u.id = s.user_id
+      WHERE s.public = TRUE AND s.bird_id = ${bid}
+      ORDER BY s.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    totalResult = await db`
+      SELECT COUNT(*)::int AS count FROM sighting WHERE public = TRUE AND bird_id = ${bid}
+    `;
+  } else {
+    rows = await db`
+      SELECT s.id, s.bird_id, b.name AS bird_name, b.scientific_name, b.slug,
+             s.image_key, s.detected_at, s.notes, s.created_at,
+             CASE WHEN u.gallery_anonymous THEN 'Anonymous' ELSE u.name END AS user_name
+      FROM sighting s
+      JOIN bird b ON b.id = s.bird_id
+      JOIN "user" u ON u.id = s.user_id
+      WHERE s.public = TRUE
+      ORDER BY s.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    totalResult = await db`
+      SELECT COUNT(*)::int AS count FROM sighting WHERE public = TRUE
+    `;
+  }
+
+  const enriched = await Promise.all(
+    rows.map(async (row) => {
+      let image_url: string | null = null;
+      if (row.image_key) {
+        image_url = await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: process.env.BUCKET_NAME!,
+            Key: row.image_key as string,
+          }),
+          { expiresIn: 3600 },
+        );
+      }
+      return { ...row, image_url };
+    }),
+  );
+
+  return c.json({
+    sightings: enriched,
+    total: totalResult[0].count,
+    limit,
+    offset,
+  });
+});
+
+// GET /api/account/settings
+app.get("/api/account/settings", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  const db = await getDb();
+  const result = await db`
+    SELECT gallery_anonymous FROM "user" WHERE id = ${session.user.id}
+  `;
+
+  return c.json({ galleryAnonymous: result[0]?.gallery_anonymous ?? false });
+});
+
+// PATCH /api/account/settings
+app.patch("/api/account/settings", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  let body: { galleryAnonymous?: boolean };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  if (typeof body.galleryAnonymous !== "boolean") {
+    return c.json({ error: "galleryAnonymous must be a boolean" }, 400);
+  }
+
+  const db = await getDb();
+  await db`
+    UPDATE "user" SET gallery_anonymous = ${body.galleryAnonymous} WHERE id = ${session.user.id}
+  `;
+
+  return c.json({ galleryAnonymous: body.galleryAnonymous });
+});
+
+// DELETE /api/sightings — bulk delete all user's sightings
+app.delete("/api/sightings", async (c) => {
+  const session = await getSession(c.req.raw);
+  if (!session) return c.json({ error: "Unauthorized" }, 401);
+
+  const db = await getDb();
+  const rows = await db`
+    SELECT image_key FROM sighting WHERE user_id = ${session.user.id}
+  `;
+
+  // Delete S3 objects in parallel
+  await Promise.all(
+    rows
+      .filter((r) => r.image_key)
+      .map(async (r) => {
+        try {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.BUCKET_NAME!,
+              Key: r.image_key as string,
+            }),
+          );
+        } catch (err) {
+          console.error("Failed to delete S3 object:", r.image_key, err);
+        }
+      }),
+  );
+
+  const result = await db`
+    DELETE FROM sighting WHERE user_id = ${session.user.id}
+  `;
+
+  return c.json({ ok: true, deleted: result.count });
 });
 
 app.delete("/api/sightings/:id", async (c) => {
