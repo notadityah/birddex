@@ -17,19 +17,13 @@ useScrollAnimation(contentRef, { animateChildren: true })
         Create a free account and start collecting birds today. Join a growing community of
         birdwatchers and build your personal collection.
       </p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <div class="flex justify-center">
         <router-link
           to="/register"
           class="inline-flex items-center justify-center bg-forest-green text-white px-10 py-4 rounded-lg font-semibold text-lg hover:shadow-lg hover:shadow-forest-green/25 transition-all"
         >
           Sign Up - It's Free
         </router-link>
-        <a
-          href="#try"
-          class="inline-flex items-center justify-center border-2 border-gray-600 text-gray-900 px-10 py-4 rounded-lg font-semibold text-lg hover:border-gray-400 transition-all"
-        >
-          Try It First
-        </a>
       </div>
     </div>
   </section>

@@ -281,7 +281,7 @@ export class BackendStack extends cdk.Stack {
     new cdk.CustomResource(this, "MigrateResource", {
       serviceToken: migrateProvider.serviceToken,
       properties: {
-        schemaVersion: "3",
+        schemaVersion: "4",
       },
     });
 

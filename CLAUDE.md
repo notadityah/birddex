@@ -32,6 +32,9 @@ npx cdk deploy       # Deploy (requires CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGI
 - `@` alias maps to `src/`
 - Auth via `better-auth` client (`src/lib/auth-client.js`), session state in `src/stores/auth.js`
 - Bird collection state in `src/stores/birds.js` — talks to `/api/sightings`, has loading/error state with optimistic update + rollback
+- Gallery state in `src/stores/gallery.js` — paginated public sightings feed with bird filtering
+- Admin state in `src/stores/admin.js` — user management (via better-auth admin client), bird CRUD, sighting management
+- Composables: `useFocusTrap` (modal tab trapping), `useImageResize` (client-side resize to max 1280px JPEG), `useAuthAction` (loading state wrapper)
 - Vite proxies `/api` to `VITE_API_PROXY_TARGET` in dev mode
 - Linting: oxlint first, then eslint (flat config), prettier for formatting
 
@@ -52,7 +55,7 @@ All use Hono as HTTP framework. Shared utilities in `lambda/lib/` (db connection
 |--------|---------|------|---------|
 | `migrate/` | Node 22 | ARM64 | Custom Resource — runs `schema.sql` on deploy |
 | `auth/` | Node 22 | ARM64 | better-auth (email/password + Google OAuth + Resend email) |
-| `api/` | Node 22 | ARM64 | REST CRUD for birds/sightings, S3 presigned URLs |
+| `api/` | Node 22 | ARM64 | REST CRUD for birds/sightings/gallery/account, admin endpoints, S3 presigned URLs |
 | `detect/` | Docker | x86_64 | ONNX bird detection inference (onnxruntime-node requires x86) |
 
 ### Shared Lambda Utilities (`lambda/lib/`)
@@ -60,7 +63,22 @@ All use Hono as HTTP framework. Shared utilities in `lambda/lib/` (db connection
 - `secrets.ts` — `getSecretJson<T>()` with in-memory caching
 
 ### Database Schema (`lambda/migrate/schema.sql`)
-better-auth tables (`user`, `session`, `account`, `verification`) + app tables (`bird`, `sighting`). 36 Australian birds seeded.
+better-auth tables (`user`, `session`, `account`, `verification`) + app tables (`bird`, `sighting`). 36 Australian birds seeded. Gallery columns: `sighting.public` (boolean), `user.gallery_anonymous` (boolean).
+
+### API Routes (`lambda/api/index.ts`)
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `GET /api/birds` | No | List all birds |
+| `GET /api/sightings` | Yes | User's sightings with presigned image URLs |
+| `POST /api/sightings` | Yes | Create sighting (optional `public` flag) |
+| `PATCH /api/sightings/:id` | Yes | Toggle sighting `public` flag |
+| `DELETE /api/sightings/:id` | Yes | Delete single sighting + S3 cleanup |
+| `DELETE /api/sightings` | Yes | Bulk delete all user's sightings + S3 cleanup |
+| `GET /api/gallery` | Yes | Paginated public sightings feed (limit/offset/birdId) |
+| `GET /api/account/settings` | Yes | Fetch `galleryAnonymous` |
+| `PATCH /api/account/settings` | Yes | Update `galleryAnonymous` |
+| `GET /api/upload-url` | Yes | Presigned S3 upload URL |
+| `GET/POST/PUT/DELETE /api/admin/*` | Admin | Stats, bird CRUD, sighting management |
 
 ## Key Gotchas
 
@@ -72,6 +90,8 @@ better-auth tables (`user`, `session`, `account`, `verification`) + app tables (
 - **CDK test assertions** — `Match.arrayWith` is order-sensitive; match elements in their declaration order.
 - Lambda `tsconfig.json` is separate from the CDK one (`lambda/tsconfig.json` uses `ESNext`/`bundler` for esbuild; root `tsconfig.json` uses `NodeNext` for CDK code).
 - **`logRetention` deprecation warning** — CDK warns about `logRetention` in favor of `logGroup`, but it still works. Can migrate later.
+- **DB migration trigger** — The `MigrateResource` Custom Resource in `backend-stack.ts` only re-runs when its `schemaVersion` property changes. After modifying `schema.sql`, bump this value (currently `"4"`) or the migration won't execute on deploy.
+- **ESLint v10 broken** — `eslint-plugin-vue` incompatible with eslint v10 (`scopeManager.addGlobals` error). Pre-existing issue.
 
 ## CI/CD
 
