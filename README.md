@@ -22,7 +22,6 @@ A Pokedex-style bird-tracking web app that lets you identify Australian birds us
 | Detection      | ONNX Runtime inference on Lambda (Docker, x86_64)          |
 | Database       | PostgreSQL 16 on RDS                                       |
 | Infrastructure | AWS CDK (TypeScript), HTTP API Gateway v2, CloudFront, S3  |
-| CI/CD          | GitHub Actions                                             |
 
 ## Project Structure
 
