@@ -1,19 +1,14 @@
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { InferenceSession, Tensor } from "onnxruntime-node";
 import sharp from "sharp";
-import postgres from "postgres";
 import { createWriteStream, existsSync, readFileSync } from "fs";
 import { pipeline } from "stream/promises";
 import { Readable } from "stream";
-import { join } from "path";
-import { getSecretJson } from "../lib/secrets.js";
-import type { DbSecret } from "../lib/db.js";
+import { getDb } from "../lib/db.js";
 import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
-
-const RDS_CA = readFileSync(join(__dirname, "rds-ca-bundle.pem"), "utf-8");
 
 const s3 = new S3Client({});
 
@@ -27,7 +22,6 @@ const MAX_TOP_N = 36;
 // Module-scope singletons
 let session: InferenceSession | null = null;
 let classes: string[] | null = null;
-let sql: ReturnType<typeof postgres> | null = null;
 
 async function downloadFromS3(key: string, dest: string): Promise<void> {
   const res = await s3.send(
@@ -60,24 +54,6 @@ async function getInferenceSession(): Promise<{
   return { session, classes };
 }
 
-async function getDb(): Promise<ReturnType<typeof postgres>> {
-  if (sql) return sql;
-
-  const creds = await getSecretJson<DbSecret>(process.env.DB_SECRET_ARN!);
-
-  sql = postgres({
-    host: process.env.DB_HOST!,
-    port: 5432,
-    database: process.env.DB_NAME!,
-    username: creds.username,
-    password: creds.password,
-    ssl: { rejectUnauthorized: true, ca: RDS_CA },
-    max: 2,
-  });
-
-  return sql;
-}
-
 async function requireSession(
   event: APIGatewayProxyEventV2,
 ): Promise<boolean> {
@@ -88,7 +64,7 @@ async function requireSession(
     authHeader.match(/^Bearer (.+)$/);
   if (!tokenMatch) return false;
   const token = decodeURIComponent(tokenMatch[1]).split(".")[0];
-  const db = await getDb();
+  const db = await getDb(2);
   const rows = await db`
     SELECT id FROM session WHERE token = ${token} AND "expiresAt" > NOW() LIMIT 1
   `;
@@ -229,7 +205,7 @@ export async function handler(
     };
     let bird: BirdRow | null = null;
     if (topSlug) {
-      const db = await getDb();
+      const db = await getDb(2);
       const rows = await db<BirdRow[]>`
         SELECT id, name, scientific_name, slug FROM bird WHERE slug = ${topSlug} LIMIT 1
       `;

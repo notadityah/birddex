@@ -59,45 +59,18 @@ describe('BackendStack', () => {
   });
 
   // =========================================================
-  // VPC
+  // No VPC/RDS (Neon serverless Postgres)
   // =========================================================
-  test('VPC is created', () => {
-    template.resourceCountIs('AWS::EC2::VPC', 1);
+  test('No VPC is created (using Neon)', () => {
+    template.resourceCountIs('AWS::EC2::VPC', 0);
   });
 
-  test('NAT Gateway is created (1)', () => {
-    template.resourceCountIs('AWS::EC2::NatGateway', 1);
+  test('No RDS instance is created (using Neon)', () => {
+    template.resourceCountIs('AWS::RDS::DBInstance', 0);
   });
 
-  test('S3 VPC Gateway Endpoint is created', () => {
-    template.hasResourceProperties('AWS::EC2::VPCEndpoint', {
-      ServiceName: Match.objectLike({
-        'Fn::Join': Match.arrayWith([
-          Match.arrayWith([
-            Match.stringLikeRegexp('com\\.amazonaws\\.'),
-            Match.stringLikeRegexp('s3'),
-          ]),
-        ]),
-      }),
-      VpcEndpointType: 'Gateway',
-    });
-  });
-
-  // =========================================================
-  // RDS PostgreSQL
-  // =========================================================
-  test('RDS instance is created with PostgreSQL 16', () => {
-    template.hasResourceProperties('AWS::RDS::DBInstance', {
-      Engine: 'postgres',
-      EngineVersion: Match.stringLikeRegexp('^16'),
-      DBName: 'birddex',
-      MultiAZ: false,
-      StorageEncrypted: true,
-    });
-  });
-
-  test('No RDS Proxy is created', () => {
-    template.resourceCountIs('AWS::RDS::DBProxy', 0);
+  test('No NAT Gateway is created (using Neon)', () => {
+    template.resourceCountIs('AWS::EC2::NatGateway', 0);
   });
 
   // =========================================================
@@ -124,12 +97,6 @@ describe('BackendStack', () => {
       FunctionName: 'birddex-detect',
       PackageType: 'Image',
       MemorySize: 1536,
-    });
-  });
-
-  test('Migration Lambda is created', () => {
-    template.hasResourceProperties('AWS::Lambda::Function', {
-      FunctionName: 'birddex-migrate',
     });
   });
 
@@ -176,7 +143,7 @@ describe('BackendStack', () => {
   });
 
   test('Lambda error alarms are created', () => {
-    template.resourceCountIs('AWS::CloudWatch::Alarm', 5); // 4 lambda + 1 RDS CPU
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 3); // Auth + Api + Detect
   });
 
   // =========================================================
@@ -191,12 +158,6 @@ describe('BackendStack', () => {
   test('BucketName output is exported', () => {
     template.hasOutput('BucketName', {
       Export: { Name: 'BirddexBucketName' },
-    });
-  });
-
-  test('DbEndpoint output is exported', () => {
-    template.hasOutput('DbEndpoint', {
-      Export: { Name: 'BirddexDbEndpoint' },
     });
   });
 });

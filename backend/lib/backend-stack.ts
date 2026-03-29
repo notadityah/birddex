@@ -1,7 +1,5 @@
 import * as cdk from "aws-cdk-lib/core";
 import * as s3 from "aws-cdk-lib/aws-s3";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as rds from "aws-cdk-lib/aws-rds";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import {
@@ -10,7 +8,6 @@ import {
 } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import * as cr from "aws-cdk-lib/custom-resources";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
@@ -20,8 +17,6 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as cw_actions from "aws-cdk-lib/aws-cloudwatch-actions";
 import { Construct } from "constructs";
 import * as path from "path";
-
-const DB_NAME = "birddex";
 
 interface EnvConfig {
   domain?: string;
@@ -86,93 +81,13 @@ export class BackendStack extends cdk.Stack {
     });
 
     // =========================================================
-    // === VPC ===
-    // =========================================================
-
-    const vpc = new ec2.Vpc(this, "BirddexVpc", {
-      maxAzs: 2,
-      natGateways: 1,
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: "public",
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        {
-          cidrMask: 24,
-          name: "private",
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        },
-        {
-          cidrMask: 28,
-          name: "isolated",
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-        },
-      ],
-    });
-
-    // VPC Endpoints to reduce NAT Gateway data transfer costs
-    vpc.addGatewayEndpoint("S3Endpoint", {
-      service: ec2.GatewayVpcEndpointAwsService.S3,
-    });
-
-    vpc.addInterfaceEndpoint("SecretsManagerEndpoint", {
-      service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
-    });
-
-    // =========================================================
-    // === SECURITY GROUPS ===
-    // =========================================================
-
-    const lambdaSg = new ec2.SecurityGroup(this, "LambdaSg", {
-      vpc,
-      description: "Security group for Lambda functions",
-      allowAllOutbound: true,
-    });
-
-    const dbSg = new ec2.SecurityGroup(this, "DbSg", {
-      vpc,
-      description: "Security group for RDS instance",
-      allowAllOutbound: false,
-    });
-    dbSg.addIngressRule(lambdaSg, ec2.Port.tcp(5432), "Allow Lambda to RDS");
-
-    // =========================================================
-    // === RDS POSTGRESQL ===
-    // =========================================================
-
-    const dbSecret = new rds.DatabaseSecret(this, "DbSecret", {
-      username: "birddex_admin",
-      secretName: "/birddex/db/credentials",
-    });
-
-    const db = new rds.DatabaseInstance(this, "BirddexDb", {
-      engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_16,
-      }),
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T4G,
-        ec2.InstanceSize.MICRO,
-      ),
-      credentials: rds.Credentials.fromSecret(dbSecret),
-      databaseName: DB_NAME,
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-      securityGroups: [dbSg],
-      multiAz: false,
-      storageEncrypted: true,
-      backupRetention: cdk.Duration.days(7),
-      deletionProtection: true,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
-
-    // =========================================================
-    // === APP SECRET (Google OAuth + better-auth + Resend) ===
+    // === APP SECRET (Google OAuth + better-auth + Resend + DB) ===
     // =========================================================
 
     const appSecret = new secretsmanager.Secret(this, "AppSecret", {
       secretName: "/birddex/app/secrets",
-      description: "BirdDex app secrets: better-auth, Google OAuth, Resend",
+      description:
+        "BirdDex app secrets: better-auth, Google OAuth, Resend, DATABASE_URL",
       generateSecretString: {
         secretStringTemplate: JSON.stringify({
           BETTER_AUTH_SECRET: "",
@@ -180,6 +95,7 @@ export class BackendStack extends cdk.Stack {
           GOOGLE_CLIENT_SECRET: "",
           RESEND_API_KEY: "",
           FROM_EMAIL: "noreply@birddex.fun",
+          DATABASE_URL: "",
         }),
         generateStringKey: "_placeholder",
       },
@@ -224,61 +140,15 @@ export class BackendStack extends cdk.Stack {
     };
 
     const sharedLambdaProps: Partial<NodejsFunctionProps> = {
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      securityGroups: [lambdaSg],
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
       bundling: sharedBundling,
       logRetention: LOG_RETENTION,
     };
 
-    const dbEnv = {
-      DB_SECRET_ARN: db.secret!.secretArn,
-      DB_HOST: db.dbInstanceEndpointAddress,
-      DB_NAME,
-    };
-
     const appBaseUrl = envConfig.domain
       ? `https://${envConfig.domain}`
       : "http://localhost:5173";
-
-    // =========================================================
-    // === MIGRATION (Custom Resource) ===
-    // =========================================================
-
-    const migrateLambda = new NodejsFunction(this, "MigrateLambda", {
-      ...sharedLambdaProps,
-      entry: path.join(__dirname, "../lambda/migrate/index.ts"),
-      handler: "handler",
-      functionName: "birddex-migrate",
-      memorySize: 256,
-      timeout: cdk.Duration.minutes(5),
-      environment: dbEnv,
-      bundling: {
-        ...sharedBundling,
-        commandHooks: {
-          beforeBundling: () => [],
-          beforeInstall: () => [],
-          afterBundling: (inputDir: string, outputDir: string) => [
-            `cp ${inputDir}/lambda/migrate/schema.sql ${outputDir}/schema.sql`,
-            `cp ${inputDir}/lambda/rds-ca-bundle.pem ${outputDir}/rds-ca-bundle.pem`,
-          ],
-        },
-      },
-    });
-
-    const migrateProvider = new cr.Provider(this, "MigrateProvider", {
-      onEventHandler: migrateLambda,
-      logRetention: LOG_RETENTION,
-    });
-
-    new cdk.CustomResource(this, "MigrateResource", {
-      serviceToken: migrateProvider.serviceToken,
-      properties: {
-        schemaVersion: "6",
-      },
-    });
 
     // =========================================================
     // === LAMBDAS ===
@@ -292,20 +162,9 @@ export class BackendStack extends cdk.Stack {
       memorySize: 512,
       timeout: cdk.Duration.seconds(15),
       environment: {
-        ...dbEnv,
         APP_SECRET_ARN: appSecret.secretArn,
         APP_BASE_URL: appBaseUrl,
         FRONTEND_ORIGIN: envConfig.allowedOrigins.join(","),
-      },
-      bundling: {
-        ...sharedBundling,
-        commandHooks: {
-          beforeBundling: () => [],
-          beforeInstall: () => [],
-          afterBundling: (inputDir: string, outputDir: string) => [
-            `cp ${inputDir}/lambda/rds-ca-bundle.pem ${outputDir}/rds-ca-bundle.pem`,
-          ],
-        },
       },
     });
 
@@ -317,21 +176,10 @@ export class BackendStack extends cdk.Stack {
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
       environment: {
-        ...dbEnv,
         BUCKET_NAME: bucket.bucketName,
         APP_SECRET_ARN: appSecret.secretArn,
         APP_BASE_URL: appBaseUrl,
         FRONTEND_ORIGIN: envConfig.allowedOrigins.join(","),
-      },
-      bundling: {
-        ...sharedBundling,
-        commandHooks: {
-          beforeBundling: () => [],
-          beforeInstall: () => [],
-          afterBundling: (inputDir: string, outputDir: string) => [
-            `cp ${inputDir}/lambda/rds-ca-bundle.pem ${outputDir}/rds-ca-bundle.pem`,
-          ],
-        },
       },
     });
 
@@ -341,16 +189,13 @@ export class BackendStack extends cdk.Stack {
         file: "lambda/detect/Dockerfile",
       }),
       functionName: "birddex-detect",
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-      securityGroups: [lambdaSg],
       architecture: lambda.Architecture.X86_64,
       memorySize: 1536,
       timeout: cdk.Duration.seconds(30),
       ephemeralStorageSize: cdk.Size.mebibytes(1024),
       logRetention: LOG_RETENTION,
       environment: {
-        ...dbEnv,
+        APP_SECRET_ARN: appSecret.secretArn,
         BUCKET_NAME: bucket.bucketName,
       },
     });
@@ -359,13 +204,9 @@ export class BackendStack extends cdk.Stack {
     // === IAM GRANTS ===
     // =========================================================
 
-    db.secret!.grantRead(authLambda);
-    db.secret!.grantRead(apiLambda);
-    db.secret!.grantRead(detectLambda);
-    db.secret!.grantRead(migrateLambda);
-
     appSecret.grantRead(authLambda);
     appSecret.grantRead(apiLambda);
+    appSecret.grantRead(detectLambda);
 
     bucket.grantPut(apiLambda, "images/*");
     bucket.grantRead(apiLambda, "images/*");
@@ -478,7 +319,6 @@ export class BackendStack extends cdk.Stack {
       Auth: authLambda,
       Api: apiLambda,
       Detect: detectLambda,
-      Migrate: migrateLambda,
     })) {
       const alarm = fn
         .metricErrors({ period: cdk.Duration.minutes(5) })
@@ -490,17 +330,6 @@ export class BackendStack extends cdk.Stack {
         });
       alarm.addAlarmAction(alarmAction);
     }
-
-    // RDS CPU alarm
-    const cpuAlarm = db
-      .metricCPUUtilization({ period: cdk.Duration.minutes(5) })
-      .createAlarm(this, "RdsCpuAlarm", {
-        alarmName: "birddex-rds-cpu",
-        threshold: 80,
-        evaluationPeriods: 3,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      });
-    cpuAlarm.addAlarmAction(alarmAction);
 
     // =========================================================
     // === OUTPUTS ===
@@ -516,12 +345,6 @@ export class BackendStack extends cdk.Stack {
       description: "S3 bucket name",
       value: bucket.bucketName,
       exportName: "BirddexBucketName",
-    });
-
-    new cdk.CfnOutput(this, "DbEndpoint", {
-      description: "RDS instance endpoint",
-      value: db.dbInstanceEndpointAddress,
-      exportName: "BirddexDbEndpoint",
     });
 
     new cdk.CfnOutput(this, "CloudFrontUrl", {

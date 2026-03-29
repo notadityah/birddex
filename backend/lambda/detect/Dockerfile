@@ -33,6 +33,5 @@ COPY lambda/detect/package.json ./
 RUN npm install --omit=dev
 
 COPY --from=build /build/index.js ./
-COPY lambda/rds-ca-bundle.pem ./
 
 CMD ["index.handler"]
