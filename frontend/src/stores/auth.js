@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'vue-router'
 
+// Maps better-auth error codes to user-friendly messages.
+// better-auth returns machine-readable codes; this provides the UI copy.
 const ERROR_MAP = {
   INVALID_EMAIL_OR_PASSWORD: 'Invalid email or password.',
   EMAIL_NOT_VERIFIED: 'Please verify your email before signing in.',
@@ -10,10 +12,13 @@ const ERROR_MAP = {
   TOO_MANY_REQUESTS: 'Too many attempts. Please try again later.',
 }
 
+// DEV_BYPASS: when true, skips the real better-auth session and creates a fake
+// admin user. Lets you develop the frontend without running the backend.
 const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS_AUTH === 'true'
 
 export const useAuthStore = defineStore('auth', () => {
-  // --- State ---
+  // sessionRef wraps better-auth's reactive useSession() — a ref with { data, isPending }.
+  // In DEV_BYPASS mode, it's a static ref with a fake admin user.
   const sessionRef = DEV_BYPASS
     ? ref({
         data: {
@@ -169,7 +174,9 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
-  // Keep for router guard compatibility — resolves once session is no longer pending
+  // Router guard calls this before checking auth state. Returns immediately if
+  // session is already resolved; otherwise waits for the initial session fetch to
+  // complete. This prevents flash-of-wrong-page on hard refresh.
   function initAuthListener() {
     if (!sessionRef.value.isPending) return Promise.resolve()
     return new Promise((resolve) => {

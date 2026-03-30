@@ -1,3 +1,10 @@
+/**
+ * Client-side image resizer for bird photos before upload/detection.
+ * - maxDim=1280: large enough for good detection accuracy, small enough for fast upload.
+ * - quality=0.85: JPEG compression — good visual quality with ~60-70% size reduction.
+ * - JPEG format: universal browser support, good compression for photos.
+ * Returns { base64, blob, previewUrl } — base64 for detect API, blob for S3 upload.
+ */
 export function useImageResize() {
   async function resizeImage(file, maxDim = 1280, quality = 0.85) {
     const url = URL.createObjectURL(file)

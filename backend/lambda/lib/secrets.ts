@@ -5,6 +5,8 @@ import {
 
 const sm = new SecretsManagerClient({});
 
+// In-memory cache: avoids repeated Secrets Manager API calls on Lambda warm starts.
+// Secrets are static for the lifetime of a Lambda instance, so caching is safe.
 const cache = new Map<string, unknown>();
 
 export async function getSecretJson<T>(arn: string): Promise<T> {

@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LandingPage from '../views/LandingPage.vue'
 
+/**
+ * Route meta fields control access:
+ * - guestOnly:     redirect authenticated users to /mydex (login, register, etc.)
+ * - requiresAuth:  redirect unauthenticated users to /login
+ * - requiresAdmin: redirect non-admin users to /mydex (checked after requiresAuth)
+ *
+ * The beforeEach guard below enforces these. It awaits initAuthListener() first
+ * so the session is fully resolved before making redirect decisions.
+ */
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior() {

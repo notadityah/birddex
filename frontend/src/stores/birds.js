@@ -8,6 +8,9 @@ export const useBirdStore = defineStore('birds', () => {
   const filter = ref('all')
   const loading = ref(false)
   const error = ref(null)
+  // AbortController: cancels in-flight sighting fetches when loadSightings() is called
+  // again (e.g., navigating away and back) or on logout (resetFound). Prevents stale
+  // responses from overwriting newer data.
   let loadController = null
 
   const filteredBirds = computed(() => {
@@ -68,7 +71,8 @@ export const useBirdStore = defineStore('birds', () => {
       }
       const sightings = await res.json()
 
-      // Group sightings by slug
+      // Group sightings by bird slug so we can merge them into the birds array.
+      // This avoids O(n*m) lookups when matching sightings to birds.
       const sightingsBySlug = {}
       sightings.forEach((s) => {
         if (!sightingsBySlug[s.slug]) sightingsBySlug[s.slug] = []
@@ -108,8 +112,9 @@ export const useBirdStore = defineStore('birds', () => {
     error.value = null
   }
 
+  // Optimistic update: flip the public flag in local state immediately for instant UI
+  // feedback. If the API call fails, rollback to the previous value.
   async function toggleSightingPublic(sightingId, isPublic) {
-    // Optimistic update
     let found = null
     for (const bird of birds.value) {
       const s = bird.sightings.find((s) => s.id === sightingId)

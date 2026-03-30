@@ -1,44 +1,62 @@
-# frontend-vue
+# BirdDex Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 single-page application for BirdDex — a Pokedex-style bird-tracking app for Australian birds. Built with Vite, Tailwind CSS v4, Pinia for state management, and better-auth for authentication.
 
-## Recommended IDE Setup
+## Directory Structure
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+```
+src/
+  views/          # Page-level components (one per route)
+  components/     # Reusable UI components, organized by feature
+  stores/         # Pinia stores (auth, birds)
+  composables/    # Shared reactive logic (useAnimation, useImageResize)
+  router/         # Vue Router config with auth guards
+  lib/            # Auth client setup (better-auth)
+  assets/         # Static assets, CSS
+  utils/          # Utility functions
+  data/           # Static data files
+```
 
-## Recommended Browser Setup
+## Dev Setup
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
 npm install
+cp .env.example .env    # Edit with your API URL
+npm run dev             # Starts on http://localhost:5173
 ```
 
-### Compile and Hot-Reload for Development
+### Environment Variables
 
-```sh
-npm run dev
+See `.env.example` for all variables. Key ones:
+
+- `VITE_API_URL` — Backend API base URL (CloudFront or API Gateway)
+- `VITE_DEV_BYPASS_AUTH` — Set `true` to skip auth in local dev (auto-logs in as admin)
+- `VITE_ENABLE_GOOGLE_AUTH` — Show/hide Google OAuth button
+
+## Key Patterns
+
+### Auth Guards (`router/index.js`)
+Routes use `meta` fields: `requiresAuth`, `requiresAdmin`, `guestOnly`. The global `beforeEach` guard waits for the session to resolve, then redirects based on auth state.
+
+### Store Structure (`stores/`)
+- **auth.js** — Wraps better-auth's reactive `useSession()`. Provides login/register/logout actions with error mapping. `DEV_BYPASS` flag creates a fake admin session for local dev.
+- **birds.js** — Loads bird catalog + user sightings. Uses `AbortController` to cancel in-flight requests on re-fetch. Optimistic updates with rollback on failure for toggling public sightings.
+
+### Composables
+- **useAnimation.js** — GSAP + ScrollTrigger with automatic cleanup on unmount.
+- **useImageResize.js** — Client-side image resize before upload (max 1280px, JPEG at 0.85 quality).
+
+### Detection Flow (`views/DetectPage.vue`)
+State machine: `idle -> selected -> detecting -> results -> saving -> saved`. Uses `AbortController` to cancel in-flight detection requests on unmount.
+
+## Build & Deploy
+
+```bash
+npm run build    # Output in dist/
 ```
 
-### Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
+Deploy to S3 + CloudFront:
+```bash
+aws s3 sync dist/ s3://<frontend-bucket-name> --delete
+aws cloudfront create-invalidation --distribution-id <dist-id> --paths "/*"
 ```

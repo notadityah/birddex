@@ -23,6 +23,8 @@ const predictions = ref([])
 const matchedBird = ref(null)
 const error = ref(null)
 
+// AbortController: cancels in-flight detect API call on unmount or new photo selection,
+// preventing stale results from appearing after the user has moved on.
 let abortController = null
 
 function cleanup() {
@@ -61,6 +63,8 @@ async function detect() {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       signal: abortController.signal,
+      // topN=5: show top 5 predictions — enough for the user to pick the right bird
+      // without overwhelming the UI. Max is 36 (all species) on the backend.
       body: JSON.stringify({ imageBase64: resizedBase64.value, topN: 5 }),
     })
 

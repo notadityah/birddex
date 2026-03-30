@@ -1,4 +1,11 @@
--- better-auth v1.5 tables — camelCase columns required by Kysely adapter
+-- ==========================================================================
+-- better-auth tables
+-- ==========================================================================
+-- These tables use camelCase column names (e.g. "emailVerified", "createdAt")
+-- because better-auth's Kysely adapter expects this exact casing. Do not
+-- rename to snake_case — it will break auth.
+-- ==========================================================================
+
 CREATE TABLE IF NOT EXISTS "user" (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -52,7 +59,9 @@ ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "banReason" TEXT;
 ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "banExpires" TIMESTAMP;
 ALTER TABLE session ADD COLUMN IF NOT EXISTS "impersonatedBy" TEXT;
 
--- App tables — snake_case, queried directly with postgres.js
+-- ==========================================================================
+-- App tables — snake_case, queried directly with postgres.js tagged templates
+-- ==========================================================================
 CREATE TABLE IF NOT EXISTS bird (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -73,7 +82,9 @@ CREATE TABLE IF NOT EXISTS sighting (
 CREATE INDEX IF NOT EXISTS sighting_user_id_idx ON sighting(user_id);
 CREATE INDEX IF NOT EXISTS sighting_bird_id_idx ON sighting(bird_id);
 
--- Seed bird data
+-- Seed data: 36 common Australian bird species.
+-- These match the ONNX model's class labels (slug = model output label).
+-- ON CONFLICT DO NOTHING so re-running the migration is safe.
 INSERT INTO bird (id, name, scientific_name, slug) VALUES
   (1, 'Australian King Parrot', 'Alisterus scapularis', 'australian_king_parrot'),
   (2, 'Australian Magpie', 'Gymnorhina tibicen', 'australian_magpie'),
@@ -113,7 +124,7 @@ INSERT INTO bird (id, name, scientific_name, slug) VALUES
   (36, 'Yellow-tailed Black Cockatoo', 'Zanda funerea', 'yellow_tailed_black_cockatoo')
 ON CONFLICT (id) DO NOTHING;
 
--- Ensure bird id sequence is in sync with seed data
+-- Reset the bird ID sequence to match seed data so new inserts get id > 36
 SELECT setval(pg_get_serial_sequence('bird', 'id'), GREATEST((SELECT MAX(id) FROM bird), 1));
 
 -- Gallery columns

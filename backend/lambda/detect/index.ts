@@ -1,3 +1,12 @@
+/**
+ * Detect Lambda — ONNX bird classification inference pipeline.
+ *
+ * Accepts an image (base64 or S3 key), runs it through a YOLOv8 classification model,
+ * and returns top-N predictions with confidence scores.
+ *
+ * Runs on x86_64 because onnxruntime-node only publishes x86 native binaries.
+ * Uses a Docker container image because the ONNX model + onnxruntime exceeds the 250MB zip limit.
+ */
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { InferenceSession, Tensor } from "onnxruntime-node";
 import sharp from "sharp";
@@ -17,9 +26,11 @@ const CLASSES_TMP = "/tmp/classes.txt";
 const MODEL_S3_KEY = "models/model.onnx";
 const CLASSES_S3_KEY = "models/classes.txt";
 
+// Cap at 36 — matches the number of bird species in the database
 const MAX_TOP_N = 36;
 
-// Module-scope singletons
+// Module-scope singletons: cached across warm Lambda invocations to avoid
+// re-downloading the model from S3 and re-creating the ONNX session on every request.
 let session: InferenceSession | null = null;
 let classes: string[] | null = null;
 
@@ -71,7 +82,8 @@ async function requireSession(
   return rows.length > 0;
 }
 
-// Letterbox-resize to 640x640, convert HWC uint8 -> CHW float32 [0,1]
+// Letterbox-resize to 640x640 (YOLOv8 input size), padded with gray (114,114,114) to
+// preserve aspect ratio. Converts HWC uint8 RGB -> CHW float32 [0,1] tensor layout.
 async function preprocessImage(imageData: Buffer): Promise<Float32Array> {
   const size = 640;
   const { data } = await sharp(imageData)
@@ -90,7 +102,8 @@ async function preprocessImage(imageData: Buffer): Promise<Float32Array> {
   return tensor;
 }
 
-// Parse YOLO output [1, 40, 8400]: 4 bbox coords + numClasses scores per anchor.
+// Parse YOLO output [1, 40, 8400]: 4 bbox coords + numClasses confidence scores per anchor.
+// Keeps only the highest confidence per class (deduplication), then returns topN results.
 function parseDetections(
   raw: Float32Array,
   classLabels: string[],
@@ -160,7 +173,8 @@ export async function handler(
       };
     }
 
-    // Validate imageKey format to prevent path traversal
+    // Validate imageKey format: only allow paths under images/{userId}/{filename}.{ext}
+    // to prevent path traversal attacks (e.g., accessing models/ or other S3 prefixes)
     if (imageKey && !/^images\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.\w+$/.test(imageKey)) {
       return {
         statusCode: 400,

@@ -54,6 +54,8 @@ export class BackendStack extends cdk.Stack {
     // === S3 ===
     // =========================================================
 
+    // Bird images bucket — versioned so accidental overwrites can be recovered.
+    // Old versions auto-expire after 30 days to control storage costs.
     const bucket = new s3.Bucket(this, "BirddexBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
@@ -74,6 +76,7 @@ export class BackendStack extends cdk.Stack {
       ],
     });
 
+    // Frontend static assets bucket — DESTROY policy since it's just build artifacts
     const frontendBucket = new s3.Bucket(this, "FrontendBucket", {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -134,6 +137,7 @@ export class BackendStack extends cdk.Stack {
     const LOG_RETENTION = logs.RetentionDays.TWO_WEEKS;
 
     const sharedBundling: NodejsFunctionProps["bundling"] = {
+      // AWS SDK v3 is pre-installed in the Lambda runtime — exclude from bundle to reduce size
       externalModules: ["@aws-sdk/*"],
       minify: true,
       tsconfig: path.join(__dirname, "../lambda/tsconfig.json"),
@@ -154,6 +158,8 @@ export class BackendStack extends cdk.Stack {
     // === LAMBDAS ===
     // =========================================================
 
+    // Auth Lambda: 512MB because better-auth + Resend email sending is memory-hungry.
+    // 15s timeout allows for cold starts + external calls to Google OAuth / Resend API.
     const authLambda = new NodejsFunction(this, "AuthLambda", {
       ...sharedLambdaProps,
       entry: path.join(__dirname, "../lambda/auth/index.ts"),
@@ -183,7 +189,10 @@ export class BackendStack extends cdk.Stack {
       },
     });
 
-    // Detect Lambda: container image (onnxruntime-node exceeds Lambda zip size limit)
+    // Detect Lambda: Docker image because onnxruntime-node + ONNX model exceeds 250MB zip limit.
+    // x86_64: onnxruntime-node only publishes x86 binaries (no ARM64 support).
+    // 1536MB: right-sized down from 3008MB after load testing — enough for ONNX inference.
+    // 30s timeout: model download from S3 on cold start can take 10-15s.
     const detectLambda = new lambda.DockerImageFunction(this, "DetectLambda", {
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, ".."), {
         file: "lambda/detect/Dockerfile",
@@ -266,6 +275,8 @@ export class BackendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         },
       },
+      // SPA routing: return index.html for 403/404 so Vue Router handles client-side routes.
+      // S3 returns 403 for missing keys (not 404) when using OAC, so both must be caught.
       errorResponses: [
         {
           httpStatus: 403,
@@ -280,7 +291,8 @@ export class BackendStack extends cdk.Stack {
       ],
     };
 
-    // Conditionally add domain + cert + WAF
+    // Custom domain + cert are optional — dev deployments use the default CloudFront domain.
+    // Cert must be in us-east-1 (CloudFront requirement). WAF is also optional.
     if (envConfig.certArn && envConfig.domain) {
       Object.assign(distributionProps, {
         domainNames: [envConfig.domain, `www.${envConfig.domain}`],

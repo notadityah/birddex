@@ -1,3 +1,13 @@
+/**
+ * API Lambda — Hono REST server handling birds, sightings, gallery, feedback, and admin CRUD.
+ *
+ * Auth: Each protected route manually calls getSession()/requireAdmin() to validate the
+ * better-auth session cookie. This is a manual auth guard — there's no middleware because
+ * some routes (GET /api/birds) are public.
+ *
+ * Images: Sighting images are stored in S3 under `images/{userId}/{uuid}.{ext}`.
+ * Clients receive presigned PUT URLs for upload and presigned GET URLs for viewing.
+ */
 import {
   S3Client,
   PutObjectCommand,
@@ -19,6 +29,8 @@ const ALLOWED_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_OFFSET = 100_000;
 
+// S3 delete is best-effort: log and continue on failure so the DB record is still
+// cleaned up. Orphaned S3 objects can be garbage-collected later if needed.
 async function deleteS3Object(key: string) {
   try {
     await s3.send(
@@ -39,6 +51,8 @@ interface AppSecret {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let auth: any = null;
 
+// Lazy-init better-auth on first request (warm starts reuse the cached instance).
+// Uses pg Pool (not postgres.js) because better-auth's Kysely adapter requires node-pg.
 async function getAuth() {
   if (auth) return auth as ReturnType<typeof betterAuth>;
   const [pool, appSecret] = await Promise.all([
