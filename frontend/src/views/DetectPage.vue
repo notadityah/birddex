@@ -19,6 +19,7 @@ const selectedFile = ref(null)
 const previewUrl = ref(null)
 const resizedBase64 = ref(null)
 const resizedBlob = ref(null)
+const uploadBlob = ref(null)
 const predictions = ref([])
 const matchedBird = ref(null)
 const error = ref(null)
@@ -41,10 +42,15 @@ async function onFileSelected(file) {
   pageState.value = 'selected'
 
   try {
-    const result = await resizeImage(file)
-    resizedBase64.value = result.base64
-    resizedBlob.value = result.blob
-    previewUrl.value = result.previewUrl
+    const [detectResult, uploadResult] = await Promise.all([
+      resizeImage(file, 1280, 0.85),
+      resizeImage(file, 2048, 0.92),
+    ])
+    resizedBase64.value = detectResult.base64
+    resizedBlob.value = detectResult.blob
+    uploadBlob.value = uploadResult.blob
+    previewUrl.value = uploadResult.previewUrl
+    URL.revokeObjectURL(detectResult.previewUrl)
   } catch {
     error.value = 'Failed to process image. Try a different photo.'
     pageState.value = 'error'
@@ -107,12 +113,12 @@ async function saveSighting(notes, isPublic) {
     if (!res.ok) throw new Error('Failed to save sighting')
     const { uploadUrl } = await res.json()
 
-    // Upload image to S3 via presigned URL
-    if (uploadUrl && resizedBlob.value) {
+    // Upload image to S3 via presigned URL (higher-quality 2048px version)
+    if (uploadUrl && uploadBlob.value) {
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'image/jpeg' },
-        body: resizedBlob.value,
+        body: uploadBlob.value,
       })
       if (!uploadRes.ok) throw new Error('Failed to upload image')
     }
@@ -145,6 +151,7 @@ function reset() {
   previewUrl.value = null
   resizedBase64.value = null
   resizedBlob.value = null
+  uploadBlob.value = null
   predictions.value = []
   matchedBird.value = null
   error.value = null
@@ -216,7 +223,7 @@ function changePhoto() {
         <img
           :src="previewUrl"
           alt="Selected bird photo"
-          class="w-full rounded-xl object-cover max-h-80"
+          class="w-full rounded-xl object-contain max-h-96 bg-gray-100"
         />
         <button
           v-if="pageState === 'selected' || pageState === 'results'"

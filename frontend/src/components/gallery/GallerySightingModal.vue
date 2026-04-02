@@ -48,7 +48,7 @@ useModalLifecycle(() => emit('close'))
           <img
             :src="sighting.image_url"
             :alt="sighting.bird_name"
-            class="w-full object-cover max-h-72"
+            class="w-full object-contain max-h-96 bg-gray-100"
           />
         </div>
 

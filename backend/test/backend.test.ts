@@ -133,6 +133,16 @@ describe('BackendStack', () => {
     });
   });
 
+  test('API Gateway default stage has throttle settings', () => {
+    template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+      StageName: '$default',
+      DefaultRouteSettings: {
+        ThrottlingBurstLimit: 50,
+        ThrottlingRateLimit: 100,
+      },
+    });
+  });
+
   // =========================================================
   // Monitoring
   // =========================================================

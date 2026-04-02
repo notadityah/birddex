@@ -224,6 +224,14 @@ export class BackendStack extends cdk.Stack {
     bucket.grantRead(detectLambda, "models/*");
     bucket.grantRead(detectLambda, "images/*");
 
+    // Rate limit the default stage: 100 rps steady-state, 50 burst.
+    // Prevents abuse without impacting legitimate users. API GW returns 429 on breach.
+    const defaultStage = httpApi.defaultStage?.node.defaultChild as apigwv2.CfnStage;
+    defaultStage.addPropertyOverride("DefaultRouteSettings", {
+      ThrottlingBurstLimit: 50,
+      ThrottlingRateLimit: 100,
+    });
+
     // =========================================================
     // === API GATEWAY ROUTES ===
     // =========================================================
