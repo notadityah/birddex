@@ -27,7 +27,7 @@ async function initAuth() {
 
   const instance = betterAuth({
     secret: appSecret.BETTER_AUTH_SECRET,
-    baseURL: process.env.APP_BASE_URL,
+    baseURL: process.env.APP_BASE_URL ?? "http://localhost:5173",
     trustedOrigins: (process.env.FRONTEND_ORIGIN ?? "http://localhost:5173").split(","),
     database: pool,
     plugins: [admin()],
@@ -66,7 +66,7 @@ async function initAuth() {
     },
   });
 
-  auth = instance;
+  auth = instance as any;
   return instance;
 }
 

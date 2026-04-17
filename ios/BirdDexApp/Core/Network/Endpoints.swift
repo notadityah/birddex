@@ -1,6 +1,11 @@
-// Core/Network/Endpoints.swift
+/*
+Author: Riley Wade
+Endpoints.swift (c) 2026
+Desc: description
+Created:  2026-04-13 T15:11:41.124Z
+Modified: !date!
+*/
 
-// Created by Riley Wade on 15/04/2026
 
 import Foundation
 
