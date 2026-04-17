@@ -1,39 +1,38 @@
-//Core/Network/Endpoints.swift
+// Core/Network/Endpoints.swift
+
+// Created by Riley Wade on 15/04/2026
 
 import Foundation
 
 enum Endpoint {
-    case auth(path: AuthPath)
+
+    // Auth (better-auth routes)
+    case signIn
+    case signUp
+    case signOut
+    case session
+
+    // Core API
     case detect
     case api(path: String)
 
-    enum AuthPath: String {
-        case login = \"login"
-        case refresh = \"refresh"
-        case logout = \"logout"
-    }
-
-    private static let base = ProcessInfo.processInfo
-        .environment["BASE_API_URL"] = "https://t7kz7k1gz2.execute-api.ap-southeast-2.amazonaws.com"
+    private static let base = "https://YOUR-ID.execute-api.ap-southeast-2.amazonaws.com/prod"
 
     var url: URL {
         switch self {
-            case .auth(let path): return URL(string: Self.base + "/auth" + path.rawValue)!
-            case .detect:         return URL(string: Self.base + "/detect")
-            case .api(let path):  return URL(string: Self.base + "/api" + path)
+        case .signIn:         return URL(string: Self.base + "/api/auth/sign-in/email")!
+        case .signUp:         return URL(string: Self.base + "/api/auth/sign-up/email")!
+        case .signOut:        return URL(string: Self.base + "/api/auth/sign-out")!
+        case .session:        return URL(string: Self.base + "/api/auth/session")!
+        case .detect:         return URL(string: Self.base + "/detect")!
+        case .api(let path):  return URL(string: Self.base + "/api/" + path)!
         }
     }
 
     var method: String {
         switch self {
-            case .auth(let path):
-                return path == .logout ? "DELETE" : "POST"
-            
-            case .detect:
-                return "POST"   //image upload, post image 
-
-            case .api:
-                return "GET"
+        case .session:        return "GET"
+        default:              return "POST"
         }
     }
 }
