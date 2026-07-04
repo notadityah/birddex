@@ -100,6 +100,18 @@ describe('BackendStack', () => {
     });
   });
 
+  test('Detect Lambda points at a versioned model in S3', () => {
+    template.hasResourceProperties('AWS::Lambda::Function', {
+      FunctionName: 'birddex-detect',
+      Environment: {
+        Variables: Match.objectLike({
+          MODEL_S3_KEY: Match.stringLikeRegexp('^models/v\\d+/model\\.onnx$'),
+          CLASSES_S3_KEY: Match.stringLikeRegexp('^models/v\\d+/classes\\.txt$'),
+        }),
+      },
+    });
+  });
+
   // =========================================================
   // API Gateway
   // =========================================================

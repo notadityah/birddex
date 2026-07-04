@@ -23,8 +23,8 @@ const s3 = new S3Client({});
 
 const MODEL_TMP = "/tmp/model.onnx";
 const CLASSES_TMP = "/tmp/classes.txt";
-const MODEL_S3_KEY = "models/model.onnx";
-const CLASSES_S3_KEY = "models/classes.txt";
+const MODEL_S3_KEY = process.env.MODEL_S3_KEY ?? "models/model.onnx";
+const CLASSES_S3_KEY = process.env.CLASSES_S3_KEY ?? "models/classes.txt";
 
 // Cap at 36 — matches the number of bird species in the database
 const MAX_TOP_N = 36;

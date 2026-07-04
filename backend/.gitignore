@@ -3,6 +3,9 @@
 *.d.ts
 node_modules
 
+# Model binaries live in S3 (models/<version>/), not git
+*.onnx
+
 # CDK asset staging directory
 .cdk.staging
 cdk.out

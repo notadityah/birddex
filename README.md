@@ -83,6 +83,19 @@ npx cdk synth        # Synthesize CloudFormation template
 npx cdk deploy       # Deploy (requires CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGION)
 ```
 
+### Updating the detection model
+
+Model binaries are not stored in git — the detect Lambda downloads them from the app S3 bucket at cold start, using the `MODEL_S3_KEY`/`CLASSES_S3_KEY` env vars set by CDK. To roll out a new model:
+
+1. Export the model (Ultralytics YOLO detect, 640×640, 36 classes matching `backend/classes.txt` — labels must equal `bird.slug` values in `schema.sql`).
+2. Upload both artifacts to the next version prefix (bucket name is in the `BirddexBucketName` stack output):
+   ```bash
+   aws s3 cp best.onnx            s3://<bucket>/models/v<N>/model.onnx
+   aws s3 cp backend/classes.txt  s3://<bucket>/models/v<N>/classes.txt
+   ```
+3. Bump the `MODEL_VERSION` constant in `backend/lib/backend-stack.ts` and `npx cdk deploy`. The env var change recycles all Lambda containers, so the new model takes effect atomically.
+4. Rollback: revert `MODEL_VERSION` and redeploy — previous versions stay in S3 untouched.
+
 ## API Routes
 
 | Route                       | Auth  | Description                                |

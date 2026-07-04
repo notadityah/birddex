@@ -193,6 +193,10 @@ export class BackendStack extends cdk.Stack {
     // x86_64: onnxruntime-node only publishes x86 binaries (no ARM64 support).
     // 1536MB: right-sized down from 3008MB after load testing — enough for ONNX inference.
     // 30s timeout: model download from S3 on cold start can take 10-15s.
+    // Model versioning: bump MODEL_VERSION after uploading the new model + classes.txt
+    // to s3://<bucket>/models/<version>/. The env var change recycles warm containers,
+    // so all instances pick up the new model atomically on deploy.
+    const MODEL_VERSION = "v2";
     const detectLambda = new lambda.DockerImageFunction(this, "DetectLambda", {
       code: lambda.DockerImageCode.fromImageAsset(path.join(__dirname, ".."), {
         file: "lambda/detect/Dockerfile",
@@ -206,6 +210,8 @@ export class BackendStack extends cdk.Stack {
       environment: {
         APP_SECRET_ARN: appSecret.secretArn,
         BUCKET_NAME: bucket.bucketName,
+        MODEL_S3_KEY: `models/${MODEL_VERSION}/model.onnx`,
+        CLASSES_S3_KEY: `models/${MODEL_VERSION}/classes.txt`,
       },
     });
 
