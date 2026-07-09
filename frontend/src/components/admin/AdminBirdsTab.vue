@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { useAdminPagination } from '@/composables/useAdminPagination'
+import AdminPagination from './AdminPagination.vue'
 import ConfirmModal from './ConfirmModal.vue'
 
 const formModalRef = ref(null)
@@ -8,8 +10,13 @@ const formModalRef = ref(null)
 const adminStore = useAdminStore()
 
 const search = ref('')
-const page = ref(0)
-const pageSize = 50
+const { page, pageSize, reload } = useAdminPagination(() =>
+  adminStore.loadBirds({
+    query: search.value,
+    limit: pageSize.value,
+    offset: page.value * pageSize.value,
+  }),
+)
 
 // Form state
 const showForm = ref(false)
@@ -23,18 +30,7 @@ const confirmAction = ref(null)
 const confirmMessage = ref('')
 
 function doSearch() {
-  page.value = 0
-  adminStore.loadBirds({ query: search.value, limit: pageSize, offset: 0 })
-}
-
-function nextPage() {
-  page.value++
-  adminStore.loadBirds({ query: search.value, limit: pageSize, offset: page.value * pageSize })
-}
-
-function prevPage() {
-  if (page.value > 0) page.value--
-  adminStore.loadBirds({ query: search.value, limit: pageSize, offset: page.value * pageSize })
+  reload()
 }
 
 function openAddForm() {
@@ -208,24 +204,11 @@ onMounted(() => doSearch())
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-between mt-4">
-      <button
-        @click="prevPage"
-        :disabled="page === 0"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
-      >
-        Previous
-      </button>
-      <span class="text-sm text-gray-500">Page {{ page + 1 }}</span>
-      <button
-        @click="nextPage"
-        :disabled="adminStore.birds.length < pageSize"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
-      >
-        Next
-      </button>
-    </div>
+    <AdminPagination
+      v-model:page="page"
+      v-model:pageSize="pageSize"
+      :item-count="adminStore.birds.length"
+    />
 
     <ConfirmModal
       :open="confirmOpen"

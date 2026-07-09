@@ -210,25 +210,42 @@ export async function handler(
     const raw = results[onnxSession.outputNames[0]].data as Float32Array;
     const topPredictions = parseDetections(raw, classLabels, 0.25, topN);
 
-    const topSlug = topPredictions[0]?.label;
+    // Fetch all predicted birds (with Pokédex stats) in one query so the
+    // frontend can swap the matched bird instantly without extra requests.
     type BirdRow = {
       id: number;
       name: string;
       scientific_name: string;
       slug: string;
+      wingspan: string | null;
+      length: string | null;
+      weight: string | null;
+      conservation_status: string | null;
+      habitat: string | null;
+      diet: string | null;
+      call_description: string | null;
+      fun_fact: string | null;
+      rarity: string | null;
+      appearance: string | null;
     };
+    const slugs = topPredictions.map((p) => p.label);
     let bird: BirdRow | null = null;
-    if (topSlug) {
+    const birds: Record<string, BirdRow> = {};
+    if (slugs.length > 0) {
       const db = await getDb(2);
       const rows = await db<BirdRow[]>`
-        SELECT id, name, scientific_name, slug FROM bird WHERE slug = ${topSlug} LIMIT 1
+        SELECT id, name, scientific_name, slug, wingspan, length, weight,
+               conservation_status, habitat, diet, call_description, fun_fact,
+               rarity, appearance
+        FROM bird WHERE slug = ANY(${slugs})
       `;
-      bird = rows[0] ?? null;
+      for (const row of rows) birds[row.slug] = row;
+      bird = birds[slugs[0]] ?? null;
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ predictions: topPredictions, bird }),
+      body: JSON.stringify({ predictions: topPredictions, bird, birds }),
     };
   } catch (err) {
     console.error("Detect error:", err);

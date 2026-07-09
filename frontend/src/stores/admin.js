@@ -11,6 +11,7 @@ export const useAdminStore = defineStore('admin', () => {
   const birds = ref([])
   const sightings = ref([])
   const feedback = ref([])
+  const feedbackTotal = ref(0)
   const loading = ref(false)
   const error = ref(null)
   let controller = null
@@ -275,6 +276,7 @@ export const useAdminStore = defineStore('admin', () => {
       if (!res.ok) throw new Error('Failed to load feedback')
       const data = await res.json()
       feedback.value = data.feedback
+      feedbackTotal.value = data.total ?? 0
     } catch (err) {
       if (err.name !== 'AbortError') error.value = err.message
     } finally {
@@ -332,6 +334,7 @@ export const useAdminStore = defineStore('admin', () => {
     birds,
     sightings,
     feedback,
+    feedbackTotal,
     loading,
     error,
     clearError,

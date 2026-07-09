@@ -1,14 +1,21 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
+import { useAdminPagination } from '@/composables/useAdminPagination'
+import AdminPagination from './AdminPagination.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import FeedbackDetailModal from './FeedbackDetailModal.vue'
 
 const adminStore = useAdminStore()
 
 const filterStatus = ref('')
-const page = ref(0)
-const pageSize = 50
+const { page, pageSize, reload } = useAdminPagination(() =>
+  adminStore.loadFeedback({
+    status: filterStatus.value,
+    limit: pageSize.value,
+    offset: page.value * pageSize.value,
+  }),
+)
 
 const confirmOpen = ref(false)
 const confirmAction = ref(null)
@@ -17,30 +24,7 @@ const detailOpen = ref(false)
 const selectedFeedback = ref(null)
 
 function doSearch() {
-  page.value = 0
-  adminStore.loadFeedback({
-    status: filterStatus.value,
-    limit: pageSize,
-    offset: 0,
-  })
-}
-
-function nextPage() {
-  page.value++
-  adminStore.loadFeedback({
-    status: filterStatus.value,
-    limit: pageSize,
-    offset: page.value * pageSize,
-  })
-}
-
-function prevPage() {
-  if (page.value > 0) page.value--
-  adminStore.loadFeedback({
-    status: filterStatus.value,
-    limit: pageSize,
-    offset: page.value * pageSize,
-  })
+  reload()
 }
 
 function handleView(fb) {
@@ -173,24 +157,12 @@ onMounted(() => doSearch())
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-between mt-4">
-      <button
-        @click="prevPage"
-        :disabled="page === 0"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
-      >
-        Previous
-      </button>
-      <span class="text-sm text-gray-500">Page {{ page + 1 }}</span>
-      <button
-        @click="nextPage"
-        :disabled="adminStore.feedback.length < pageSize"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 cursor-pointer"
-      >
-        Next
-      </button>
-    </div>
+    <AdminPagination
+      v-model:page="page"
+      v-model:pageSize="pageSize"
+      :item-count="adminStore.feedback.length"
+      :total="adminStore.feedbackTotal"
+    />
 
     <ConfirmModal
       :open="confirmOpen"

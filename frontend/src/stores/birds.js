@@ -3,6 +3,28 @@ import { ref, computed } from 'vue'
 
 const API = import.meta.env.VITE_API_URL
 
+// Single snake_case → camelCase converter for bird rows. Used by the store's
+// loadBirds() and by DetectPage for rows in the /api/detect response, so every
+// bird object in the app has the same shape.
+export function mapBirdRow(b) {
+  return {
+    id: b.id,
+    name: b.name,
+    scientificName: b.scientific_name,
+    slug: b.slug,
+    wingspan: b.wingspan ?? null,
+    length: b.length ?? null,
+    weight: b.weight ?? null,
+    conservationStatus: b.conservation_status ?? null,
+    habitat: b.habitat ?? null,
+    diet: b.diet ?? null,
+    callDescription: b.call_description ?? null,
+    funFact: b.fun_fact ?? null,
+    rarity: b.rarity ?? null,
+    appearance: b.appearance ?? null,
+  }
+}
+
 export const useBirdStore = defineStore('birds', () => {
   const birds = ref([])
   const filter = ref('all')
@@ -36,10 +58,7 @@ export const useBirdStore = defineStore('birds', () => {
       }
       const rows = await res.json()
       birds.value = rows.map((b) => ({
-        id: b.id,
-        name: b.name,
-        scientificName: b.scientific_name,
-        slug: b.slug,
+        ...mapBirdRow(b),
         found: false,
         sightings: [],
         imageUrl: null,

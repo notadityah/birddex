@@ -2,14 +2,21 @@
 import { ref, onMounted } from 'vue'
 import { useAdminStore } from '@/stores/admin'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminPagination } from '@/composables/useAdminPagination'
+import AdminPagination from './AdminPagination.vue'
 import ConfirmModal from './ConfirmModal.vue'
 
 const adminStore = useAdminStore()
 const authStore = useAuthStore()
 
 const search = ref('')
-const page = ref(0)
-const pageSize = 50
+const { page, pageSize, reload } = useAdminPagination(() =>
+  adminStore.loadUsers({
+    query: search.value,
+    limit: pageSize.value,
+    offset: page.value * pageSize.value,
+  }),
+)
 
 const confirmOpen = ref(false)
 const confirmAction = ref(null)
@@ -17,18 +24,7 @@ const confirmTitle = ref('')
 const confirmMessage = ref('')
 
 function doSearch() {
-  page.value = 0
-  adminStore.loadUsers({ query: search.value, limit: pageSize, offset: 0 })
-}
-
-function nextPage() {
-  page.value++
-  adminStore.loadUsers({ query: search.value, limit: pageSize, offset: page.value * pageSize })
-}
-
-function prevPage() {
-  if (page.value > 0) page.value--
-  adminStore.loadUsers({ query: search.value, limit: pageSize, offset: page.value * pageSize })
+  reload()
 }
 
 function isSelf(userId) {
@@ -175,24 +171,11 @@ onMounted(() => doSearch())
       </table>
     </div>
 
-    <!-- Pagination -->
-    <div class="flex items-center justify-between mt-4">
-      <button
-        @click="prevPage"
-        :disabled="page === 0"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-      >
-        Previous
-      </button>
-      <span class="text-sm text-gray-500">Page {{ page + 1 }}</span>
-      <button
-        @click="nextPage"
-        :disabled="adminStore.users.length < pageSize"
-        class="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-      >
-        Next
-      </button>
-    </div>
+    <AdminPagination
+      v-model:page="page"
+      v-model:pageSize="pageSize"
+      :item-count="adminStore.users.length"
+    />
 
     <ConfirmModal
       :open="confirmOpen"

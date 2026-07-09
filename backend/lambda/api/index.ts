@@ -94,8 +94,12 @@ const app = new Hono();
 // GET /api/birds — public endpoint
 app.get("/api/birds", async (c) => {
   const db = await getDb();
-  const rows =
-    await db`SELECT id, name, scientific_name, slug FROM bird ORDER BY name`;
+  const rows = await db`
+    SELECT id, name, scientific_name, slug, wingspan, length, weight,
+           conservation_status, habitat, diet, call_description, fun_fact,
+           rarity, appearance
+    FROM bird ORDER BY name
+  `;
   return c.json(rows);
 });
 
