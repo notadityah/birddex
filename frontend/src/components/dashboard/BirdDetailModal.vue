@@ -4,6 +4,7 @@ import { useFocusTrap } from '@/composables/useFocusTrap'
 import { useModalLifecycle } from '@/composables/useModalLifecycle'
 import { useBirdStore } from '@/stores/birds'
 import { formatDateShort as formatDate } from '@/utils/dateFormat'
+import BirdStatsCard from '@/components/detect/BirdStatsCard.vue'
 
 defineProps({
   bird: { type: Object, required: true },
@@ -13,6 +14,7 @@ const emit = defineEmits(['close'])
 const modalRef = ref(null)
 const birdStore = useBirdStore()
 const togglingIds = ref(new Set())
+const imgError = ref(false)
 
 useFocusTrap(modalRef)
 useModalLifecycle(() => emit('close'))
@@ -32,7 +34,7 @@ async function togglePublic(sighting) {
     aria-modal="true"
     aria-labelledby="bird-detail-title"
   >
-    <div ref="modalRef" class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[85vh] flex flex-col">
+    <div ref="modalRef" class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col">
       <!-- Header -->
       <div class="flex items-start justify-between p-5 border-b border-gray-100">
         <div>
@@ -67,6 +69,18 @@ async function togglePublic(sighting) {
             Not yet found
           </span>
         </div>
+
+        <!-- User's own sighting photo, uncropped -->
+        <img
+          v-if="bird.found && bird.imageUrl && !imgError"
+          :src="bird.imageUrl"
+          :alt="bird.name"
+          class="w-full max-h-72 object-contain bg-gray-100 rounded-xl mb-4"
+          @error="imgError = true"
+        />
+
+        <!-- Pokédex stats (unlocked once the bird has been found) -->
+        <BirdStatsCard v-if="bird.found" :bird="bird" :show-photo="false" class="mb-4" />
 
         <!-- Sightings list -->
         <div v-if="bird.sightings?.length" class="space-y-3">
