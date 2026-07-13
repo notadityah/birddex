@@ -231,7 +231,7 @@ app.patch("/api/sightings/:id", async (c) => {
   return c.json(result[0]);
 });
 
-// GET /api/gallery — paginated public sightings feed
+// GET /api/gallery — paginated feed of non-anonymous sightings (auth required)
 app.get("/api/gallery", async (c) => {
   const session = await getSession(c.req.raw);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
@@ -383,27 +383,6 @@ app.delete("/api/sightings/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-app.get("/api/upload-url", async (c) => {
-  const session = await getSession(c.req.raw);
-  if (!session) return c.json({ error: "Unauthorized" }, 401);
-
-  const rawExt = (c.req.query("ext") ?? "jpg").trim().toLowerCase();
-  if (!ALLOWED_EXTS.has(rawExt)) {
-    return c.json(
-      { error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" },
-      400,
-    );
-  }
-  const key = `images/${session.user.id}/${randomUUID()}.${rawExt}`;
-  const url = await getSignedUrl(
-    s3,
-    new PutObjectCommand({ Bucket: process.env.BUCKET_NAME!, Key: key }),
-    { expiresIn: 300 },
-  );
-
-  return c.json({ key, url });
-});
-
 // POST /api/feedback — submit feedback
 const FEEDBACK_CATEGORIES = new Set(["bug", "detection", "suggestion", "other"]);
 
@@ -495,101 +474,8 @@ app.get("/api/admin/birds", async (c) => {
   return c.json(rows);
 });
 
-// POST /api/admin/birds
-app.post("/api/admin/birds", async (c) => {
-  const session = await requireAdmin(c.req.raw);
-  if (!session) return c.json({ error: "Forbidden" }, 403);
-
-  let body: { name?: string; scientificName?: string; slug?: string };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400);
-  }
-
-  const name = body.name?.trim();
-  const scientificName = body.scientificName?.trim();
-  if (!name || !scientificName) {
-    return c.json({ error: "name and scientificName are required" }, 400);
-  }
-
-  const slug =
-    body.slug?.trim() ||
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_|_$/g, "");
-
-  const db = await getDb();
-  try {
-    const result = await db`
-      INSERT INTO bird (name, scientific_name, slug)
-      VALUES (${name}, ${scientificName}, ${slug})
-      RETURNING id, name, scientific_name, slug
-    `;
-    console.log(
-      `[ADMIN] Bird created by ${session.user.id}: id=${result[0].id}, name=${name}`,
-    );
-    return c.json(result[0], 201);
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      err.message.includes("duplicate key value violates unique constraint")
-    ) {
-      return c.json({ error: "A bird with this slug already exists" }, 409);
-    }
-    throw err;
-  }
-});
-
-// PUT /api/admin/birds/:id
-app.put("/api/admin/birds/:id", async (c) => {
-  const session = await requireAdmin(c.req.raw);
-  if (!session) return c.json({ error: "Forbidden" }, 403);
-
-  const birdId = parseInt(c.req.param("id"), 10);
-  if (isNaN(birdId)) return c.json({ error: "Invalid bird ID" }, 400);
-
-  let body: { name?: string; scientificName?: string; slug?: string };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400);
-  }
-
-  const name = body.name?.trim();
-  const scientificName = body.scientificName?.trim();
-  const slug = body.slug?.trim();
-
-  if (!name && !scientificName && !slug) {
-    return c.json({ error: "At least one field is required" }, 400);
-  }
-
-  const db = await getDb();
-  try {
-    const result = await db`
-      UPDATE bird SET
-        name = COALESCE(${name ?? null}, name),
-        scientific_name = COALESCE(${scientificName ?? null}, scientific_name),
-        slug = COALESCE(${slug ?? null}, slug)
-      WHERE id = ${birdId}
-      RETURNING id, name, scientific_name, slug
-    `;
-    if (result.length === 0) return c.json({ error: "Bird not found" }, 404);
-    console.log(
-      `[ADMIN] Bird updated by ${session.user.id}: id=${birdId}`,
-    );
-    return c.json(result[0]);
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      err.message.includes("duplicate key value violates unique constraint")
-    ) {
-      return c.json({ error: "A bird with this slug already exists" }, 409);
-    }
-    throw err;
-  }
-});
+// Bird create/update is intentionally not exposed: birds are seeded via
+// schema.sql, and rows created here would lack the Pokédex stat columns.
 
 // DELETE /api/admin/birds/:id
 app.delete("/api/admin/birds/:id", async (c) => {

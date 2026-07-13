@@ -36,7 +36,10 @@ export const useAdminStore = defineStore('admin', () => {
         credentials: 'include',
         signal,
       })
-      if (!res.ok) throw new Error('Failed to load stats')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to load stats')
+      }
       stats.value = await res.json()
     } catch (err) {
       if (err.name !== 'AbortError') error.value = err.message
@@ -146,58 +149,15 @@ export const useAdminStore = defineStore('admin', () => {
         credentials: 'include',
         signal,
       })
-      if (!res.ok) throw new Error('Failed to load birds')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to load birds')
+      }
       birds.value = await res.json()
     } catch (err) {
       if (err.name !== 'AbortError') error.value = err.message
     } finally {
       loading.value = false
-    }
-  }
-
-  async function createBird(data) {
-    error.value = null
-    try {
-      const res = await fetch(`${API}/api/admin/birds`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Failed to create bird')
-      }
-      const bird = await res.json()
-      birds.value.push(bird)
-      birds.value.sort((a, b) => a.name.localeCompare(b.name))
-      return bird
-    } catch (err) {
-      error.value = err.message
-      return null
-    }
-  }
-
-  async function updateBird(id, data) {
-    error.value = null
-    try {
-      const res = await fetch(`${API}/api/admin/birds/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Failed to update bird')
-      }
-      const updated = await res.json()
-      const idx = birds.value.findIndex((b) => b.id === id)
-      if (idx !== -1) birds.value[idx] = updated
-      return updated
-    } catch (err) {
-      error.value = err.message
-      return null
     }
   }
 
@@ -233,7 +193,10 @@ export const useAdminStore = defineStore('admin', () => {
         credentials: 'include',
         signal,
       })
-      if (!res.ok) throw new Error('Failed to load sightings')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to load sightings')
+      }
       sightings.value = await res.json()
     } catch (err) {
       if (err.name !== 'AbortError') error.value = err.message
@@ -273,7 +236,10 @@ export const useAdminStore = defineStore('admin', () => {
         credentials: 'include',
         signal,
       })
-      if (!res.ok) throw new Error('Failed to load feedback')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to load feedback')
+      }
       const data = await res.json()
       feedback.value = data.feedback
       feedbackTotal.value = data.total ?? 0
@@ -345,8 +311,6 @@ export const useAdminStore = defineStore('admin', () => {
     unbanUser,
     removeUser,
     loadBirds,
-    createBird,
-    updateBird,
     deleteBird,
     loadSightings,
     deleteSighting,

@@ -119,7 +119,6 @@ Model binaries are not stored in git — the detect Lambda downloads them from t
 | `GET /api/gallery`            | Yes   | Paginated public sightings feed                |
 | `GET /api/account/settings`   | Yes   | Get account settings                           |
 | `PATCH /api/account/settings` | Yes   | Update account settings (e.g. gallery privacy) |
-| `GET /api/upload-url`         | Yes   | Presigned S3 upload URL                        |
 | `POST /api/detect`            | Yes   | Run bird detection on an uploaded image        |
 | `POST /api/feedback`          | Yes   | Submit user feedback                           |
 | `ANY /api/auth/{proxy+}`      | —     | Auth endpoints (better-auth)                   |

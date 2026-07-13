@@ -1,7 +1,7 @@
 /**
- * Detect Lambda — ONNX bird classification inference pipeline.
+ * Detect Lambda — ONNX bird detection inference pipeline.
  *
- * Accepts an image (base64 or S3 key), runs it through a YOLOv8 classification model,
+ * Accepts an image (base64 or S3 key), runs it through a YOLOv8 detection model,
  * and returns top-N predictions with confidence scores.
  *
  * Runs on x86_64 because onnxruntime-node only publishes x86 native binaries.
@@ -20,6 +20,12 @@ import type {
 } from "aws-lambda";
 
 const s3 = new S3Client({});
+
+const jsonResponse = (statusCode: number, body: unknown) => ({
+  statusCode,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
 
 const MODEL_TMP = "/tmp/model.onnx";
 const CLASSES_TMP = "/tmp/classes.txt";
@@ -141,10 +147,7 @@ export async function handler(
   try {
     const authed = await requireSession(event);
     if (!authed) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: "Unauthorized" }),
-      };
+      return jsonResponse(401, { error: "Unauthorized" });
     }
 
     let body: { imageBase64?: string; imageKey?: string; topN?: number };
@@ -157,29 +160,20 @@ export async function handler(
           )
         : {};
     } catch {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Invalid JSON body" }),
-      };
+      return jsonResponse(400, { error: "Invalid JSON body" });
     }
 
     const { imageBase64, imageKey } = body;
     const topN = Math.min(Math.max(body.topN ?? 3, 1), MAX_TOP_N);
 
     if (!imageBase64 && !imageKey) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "imageBase64 or imageKey required" }),
-      };
+      return jsonResponse(400, { error: "imageBase64 or imageKey required" });
     }
 
     // Validate imageKey format: only allow paths under images/{userId}/{filename}.{ext}
     // to prevent path traversal attacks (e.g., accessing models/ or other S3 prefixes)
     if (imageKey && !/^images\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.\w+$/.test(imageKey)) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Invalid imageKey format" }),
-      };
+      return jsonResponse(400, { error: "Invalid imageKey format" });
     }
 
     let imageBuffer: Buffer;
@@ -243,15 +237,9 @@ export async function handler(
       bird = birds[slugs[0]] ?? null;
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ predictions: topPredictions, bird, birds }),
-    };
+    return jsonResponse(200, { predictions: topPredictions, bird, birds });
   } catch (err) {
     console.error("Detect error:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Internal server error" }),
-    };
+    return jsonResponse(500, { error: "Internal server error" });
   }
 }
