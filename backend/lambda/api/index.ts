@@ -422,7 +422,9 @@ app.post("/api/feedback", async (c) => {
         400,
       );
     }
-    imageKey = `feedback/${session.user.id}/${randomUUID()}.${rawExt}`;
+    // Under images/ so it's covered by the lambda's existing S3 grants
+    // (bucket.grantPut/Read/Delete on "images/*" in backend-stack.ts).
+    imageKey = `images/feedback/${session.user.id}/${randomUUID()}.${rawExt}`;
     uploadUrl = await getSignedUrl(
       s3,
       new PutObjectCommand({
