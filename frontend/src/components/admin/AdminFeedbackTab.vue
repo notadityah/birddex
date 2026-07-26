@@ -122,7 +122,9 @@ onMounted(() => doSearch())
                 {{ fb.category }}
               </span>
             </td>
-            <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate">{{ fb.message }}</td>
+            <td class="px-4 py-3 text-gray-600 max-w-[200px] truncate">
+              <span v-if="fb.image_url" title="Has attached photo">📷 </span>{{ fb.message }}
+            </td>
             <td class="px-4 py-3 text-gray-500 text-xs max-w-[120px] truncate">
               {{ fb.page_url || '-' }}
             </td>

@@ -390,7 +390,7 @@ app.post("/api/feedback", async (c) => {
   const session = await getSession(c.req.raw);
   if (!session) return c.json({ error: "Unauthorized" }, 401);
 
-  let body: { category?: string; message?: string; pageUrl?: string };
+  let body: { category?: string; message?: string; pageUrl?: string; imageExt?: string };
   try {
     body = await c.req.json();
   } catch {
@@ -409,14 +409,38 @@ app.post("/api/feedback", async (c) => {
 
   const pageUrl = body.pageUrl?.trim()?.slice(0, 500) ?? null;
 
+  // Optional attached image (e.g. the user's photo from a "wrong match" detect
+  // report). Mirrors the sighting upload flow: return a presigned PUT URL and the
+  // client uploads the blob directly to S3.
+  let imageKey: string | null = null;
+  let uploadUrl: string | undefined;
+  if (body.imageExt !== undefined) {
+    const rawExt = body.imageExt.trim().toLowerCase();
+    if (!ALLOWED_EXTS.has(rawExt)) {
+      return c.json(
+        { error: "Invalid image extension. Allowed: jpg, jpeg, png, webp" },
+        400,
+      );
+    }
+    imageKey = `feedback/${session.user.id}/${randomUUID()}.${rawExt}`;
+    uploadUrl = await getSignedUrl(
+      s3,
+      new PutObjectCommand({
+        Bucket: process.env.BUCKET_NAME!,
+        Key: imageKey,
+      }),
+      { expiresIn: 300 },
+    );
+  }
+
   const db = await getDb();
   const id = randomUUID();
   await db`
-    INSERT INTO feedback (id, user_id, category, message, page_url)
-    VALUES (${id}, ${session.user.id}, ${category}, ${message}, ${pageUrl})
+    INSERT INTO feedback (id, user_id, category, message, page_url, image_key)
+    VALUES (${id}, ${session.user.id}, ${category}, ${message}, ${pageUrl}, ${imageKey})
   `;
 
-  return c.json({ id }, 201);
+  return c.json({ id, uploadUrl }, 201);
 });
 
 // =========================================================
@@ -593,7 +617,8 @@ app.get("/api/admin/feedback", async (c) => {
   const [rows, totalResult] = await Promise.all([
     db`
       SELECT f.id, f.user_id, u.name AS user_name, u.email AS user_email,
-             f.category, f.message, f.page_url, f.status, f.admin_notes, f.created_at
+             f.category, f.message, f.page_url, f.status, f.admin_notes,
+             f.image_key, f.created_at
       FROM feedback f
       JOIN "user" u ON u.id = f.user_id
       ${where}
@@ -605,7 +630,26 @@ app.get("/api/admin/feedback", async (c) => {
     `,
   ]);
 
-  return c.json({ feedback: rows, total: totalResult[0].count });
+  // Attach a presigned GET URL for any report with an image, so admins can view
+  // the uploaded photo inline (mirrors the sighting image flow).
+  const feedback = await Promise.all(
+    rows.map(async (row) => {
+      let image_url: string | null = null;
+      if (row.image_key) {
+        image_url = await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: process.env.BUCKET_NAME!,
+            Key: row.image_key as string,
+          }),
+          { expiresIn: 3600 },
+        );
+      }
+      return { ...row, image_url };
+    }),
+  );
+
+  return c.json({ feedback, total: totalResult[0].count });
 });
 
 // PATCH /api/admin/feedback/:id
@@ -653,10 +697,13 @@ app.delete("/api/admin/feedback/:id", async (c) => {
 
   const db = await getDb();
   const result = await db`
-    DELETE FROM feedback WHERE id = ${c.req.param("id")} RETURNING id
+    DELETE FROM feedback WHERE id = ${c.req.param("id")} RETURNING image_key
   `;
 
   if (result.length === 0) return c.json({ error: "Not found" }, 404);
+
+  const imageKey = result[0].image_key as string | null;
+  if (imageKey) await deleteS3Object(imageKey);
 
   console.log(`[ADMIN] Feedback deleted by ${session.user.id}: id=${c.req.param("id")}`);
   return c.json({ ok: true });

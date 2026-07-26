@@ -87,6 +87,18 @@ const statusColor = {
           <div class="p-3 bg-gray-50 rounded-lg text-sm text-gray-800 whitespace-pre-wrap break-words">{{ feedback.message }}</div>
         </div>
 
+        <!-- Attached image (e.g. a reported wrong-match photo) -->
+        <div v-if="feedback.image_url" class="mb-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Attached photo</label>
+          <a :href="feedback.image_url" target="_blank" rel="noopener noreferrer">
+            <img
+              :src="feedback.image_url"
+              alt="Attached feedback photo"
+              class="w-full max-h-80 rounded-lg object-contain bg-gray-100"
+            />
+          </a>
+        </div>
+
         <!-- Admin Notes -->
         <div class="mb-5">
           <label class="block text-sm font-medium text-gray-700 mb-1">Admin Notes</label>

@@ -8,6 +8,7 @@ import ImageUploader from '@/components/detect/ImageUploader.vue'
 import DetectionResults from '@/components/detect/DetectionResults.vue'
 import BirdStatsCard from '@/components/detect/BirdStatsCard.vue'
 import SightingSaver from '@/components/detect/SightingSaver.vue'
+import ReportMatchModal from '@/components/detect/ReportMatchModal.vue'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
 const API = import.meta.env.VITE_API_URL
@@ -28,6 +29,8 @@ const matchedBird = ref(null)
 // prediction swaps the matched bird without a network request.
 const birdsBySlug = ref({})
 const error = ref(null)
+// Controls the "report wrong / missing match" modal on the results screen.
+const reportOpen = ref(false)
 
 // Dex completion for the saved screen. Guarded: the store may be empty if
 // loadBirds() failed, and 0/0 must not render as NaN%.
@@ -359,7 +362,29 @@ function changePhoto() {
           :already-found="!!birdStore.birds.find((b) => b.slug === matchedBird.slug)?.found"
           @save="saveSighting"
         />
+
+        <!-- Report a wrong / missing match. Always available on the results screen:
+             the model always returns one of the 36 species even when the real bird
+             isn't among them. -->
+        <div class="mt-4 text-center">
+          <button
+            type="button"
+            @click="reportOpen = true"
+            class="text-sm text-gray-500 hover:text-gray-700 underline cursor-pointer"
+          >
+            Wrong match? Report this bird
+          </button>
+        </div>
       </div>
     </div>
+
+    <ReportMatchModal
+      v-if="reportOpen"
+      :predictions="predictions"
+      :matched-bird="matchedBird"
+      :image-blob="uploadBlob"
+      :preview-url="previewUrl"
+      @close="reportOpen = false"
+    />
   </div>
 </template>

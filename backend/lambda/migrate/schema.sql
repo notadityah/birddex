@@ -145,6 +145,8 @@ CREATE TABLE IF NOT EXISTS feedback (
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status);
+-- Optional image attached to a feedback report (e.g. a "wrong match" detect report)
+ALTER TABLE feedback ADD COLUMN IF NOT EXISTS image_key TEXT;
 
 -- Seed initial admin
 UPDATE "user" SET role = 'admin'
