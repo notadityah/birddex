@@ -2,8 +2,10 @@
 import { ref, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useOnboarding } from '@/composables/useOnboarding'
 
 const authStore = useAuthStore()
+const { openOnboarding } = useOnboarding()
 const router = useRouter()
 const mobileOpen = ref(false)
 const sidebarRef = ref(null)
@@ -79,6 +81,11 @@ async function handleLogout() {
 
 function closeMobile() {
   mobileOpen.value = false
+}
+
+function showHelp() {
+  closeMobile()
+  openOnboarding()
 }
 </script>
 
@@ -170,6 +177,18 @@ function closeMobile() {
         </svg>
         Admin
       </router-link>
+
+      <!-- How it works (re-opens the welcome modal) -->
+      <button
+        @click="showHelp"
+        class="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+      >
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        How it works
+      </button>
     </nav>
 
     <!-- User + Sign Out -->

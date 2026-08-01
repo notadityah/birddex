@@ -1,36 +1,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useScrollAnimation } from '@/composables/useAnimation'
+import { onboardingSteps as steps } from '@/constants/onboardingSteps'
 
 const headingRef = ref(null)
 const stepsRef = ref(null)
-
-const steps = [
-  {
-    number: '01',
-    iconSrc: '/camera-svgrepo-com.svg',
-    iconAlt: 'Camera',
-    title: 'Snap a Photo',
-    description:
-      'Take a picture of any bird you spot — in your backyard, at the park, or anywhere outdoors.',
-  },
-  {
-    number: '02',
-    iconSrc: '/bulb-on-svgrepo-com.svg',
-    iconAlt: 'Identify',
-    title: 'Get Instant ID',
-    description:
-      'Our bird detection model analyses your photo and identifies the bird species in seconds.',
-  },
-  {
-    number: '03',
-    iconSrc: '/collection-data-database-document-svgrepo-com.svg',
-    iconAlt: 'Collection',
-    title: 'Build Your Collection',
-    description:
-      'Every identified bird gets added to your personal collection. Track your progress and share sightings.',
-  },
-]
 
 useScrollAnimation(headingRef, { animateChildren: true, y: 30, start: 'top 75%' })
 useScrollAnimation(stepsRef, { animateChildren: true, y: 50, stagger: 0.15 })

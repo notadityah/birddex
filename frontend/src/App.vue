@@ -7,11 +7,14 @@ import Header from '@/components/landingpage/HeaderComponent.vue'
 import Sidebar from '@/components/dashboard/SidebarComponent.vue'
 import SpinnerIcon from '@/components/SpinnerIcon.vue'
 import FeedbackButton from '@/components/FeedbackButton.vue'
+import WelcomeModal from '@/components/dashboard/WelcomeModal.vue'
+import { useOnboarding } from '@/composables/useOnboarding'
 
 const authStore = useAuthStore()
 const birdStore = useBirdStore()
 const route = useRoute()
 const router = useRouter()
+const onboarding = useOnboarding()
 
 watch(
   () => authStore.isAuthenticated && route.meta.guestOnly,
@@ -23,8 +26,12 @@ watch(
 watch(
   () => authStore.isAuthenticated,
   (authed) => {
-    if (authed) birdStore.loadSightings()
-    else birdStore.resetFound()
+    if (authed) {
+      birdStore.loadSightings()
+      onboarding.maybeAutoOpen()
+    } else {
+      birdStore.resetFound()
+    }
   },
   { immediate: true },
 )
@@ -46,6 +53,7 @@ watch(
       <router-view />
     </main>
     <FeedbackButton />
+    <WelcomeModal v-if="onboarding.open.value" @close="onboarding.dismiss()" />
   </div>
 
   <!-- Public layout: header + content -->
