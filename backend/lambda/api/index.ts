@@ -291,7 +291,11 @@ app.get("/api/gallery", async (c) => {
           { expiresIn: 3600 },
         );
       }
-      return { ...row, image_url };
+      // image_key is deliberately NOT returned here: keys are
+      // `images/{userId}/...`, so exposing it would leak the owner's user id
+      // and defeat gallery_anonymous, which only masks the display name.
+      const { image_key: _omitted, ...safe } = row;
+      return { ...safe, image_url };
     }),
   );
 

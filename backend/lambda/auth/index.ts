@@ -40,6 +40,19 @@ async function initAuth() {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      // Unlike sendVerificationEmail below, failures here are NOT swallowed:
+      // if Resend rejects we let the error propagate so the user sees a real
+      // failure instead of being told to check an inbox nothing was sent to.
+      sendResetPassword: async ({ user, url }) => {
+        const resend = new Resend(appSecret.RESEND_API_KEY);
+        await resend.emails.send({
+          from: appSecret.FROM_EMAIL,
+          to: user.email,
+          subject: "Reset your BirdDex password",
+          html: `<p>Click <a href="${url}">here</a> to reset your password. If you didn't request this, you can ignore this email.</p>`,
+          text: `Reset your password: ${url}\n\nIf you didn't request this, you can ignore this email.`,
+        });
+      },
     },
     socialProviders: {
       google: {

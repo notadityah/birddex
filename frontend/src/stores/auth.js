@@ -10,6 +10,9 @@ const ERROR_MAP = {
   EMAIL_NOT_VERIFIED: 'Please verify your email before signing in.',
   USER_ALREADY_EXISTS: 'An account with this email already exists.',
   TOO_MANY_REQUESTS: 'Too many attempts. Please try again later.',
+  // Surfaces a readable message if the backend is ever deployed without
+  // emailAndPassword.sendResetPassword configured.
+  RESET_PASSWORD_DISABLED: 'Password reset is unavailable right now. Please contact support.',
 }
 
 // DEV_BYPASS: when true, skips the real better-auth session and creates a fake
@@ -118,7 +121,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function resetPassword(email) {
     clearError()
-    const { error: err } = await authClient.forgetPassword({
+    const { error: err } = await authClient.requestPasswordReset({
       email,
       redirectTo: window.location.origin + '/reset-password',
     })
@@ -160,20 +163,6 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
-  async function deleteAccount(password) {
-    clearError()
-    const { error: err } = await authClient.deleteUser({
-      password,
-    })
-    if (err) {
-      setError(err)
-      return false
-    }
-    pendingEmail.value = ''
-    router.push('/login')
-    return true
-  }
-
   // Router guard calls this before checking auth state. Returns immediately if
   // session is already resolved; otherwise waits for the initial session fetch to
   // complete. This prevents flash-of-wrong-page on hard refresh.
@@ -210,7 +199,6 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     resendVerification,
     changePassword,
-    deleteAccount,
     clearError,
     initAuthListener,
   }

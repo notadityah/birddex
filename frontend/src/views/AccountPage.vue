@@ -2,8 +2,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useBirdStore } from '@/stores/birds'
-import { useFocusTrap } from '@/composables/useFocusTrap'
-import SpinnerIcon from '@/components/SpinnerIcon.vue'
 
 const API = import.meta.env.VITE_API_URL
 const authStore = useAuthStore()
@@ -108,50 +106,10 @@ async function onResetCollection() {
   resetting.value = false
 }
 
-const showDeleteModal = ref(false)
-const deleteInput = ref('')
-const deleting = ref(false)
-const deleteError = ref('')
-const deleteModalRef = ref(null)
-
-// Determine if user has a password-based account (not OAuth-only)
-const hasPassword = computed(() => {
-  // If user signed up with email, they have a password
-  // We can't easily determine this from session, so we'll accept both password and "DELETE" keyword
-  return true
-})
-
-async function onDeleteAccount() {
-  deleteError.value = ''
-  if (!deleteInput.value) {
-    deleteError.value = 'Please enter your password or type DELETE to confirm.'
-    return
-  }
-
-  deleting.value = true
-  // Try with password first; if that fails and input is "DELETE", try without
-  const ok = await authStore.deleteAccount(deleteInput.value === 'DELETE' ? undefined : deleteInput.value)
-  deleting.value = false
-
-  if (!ok) {
-    deleteError.value = authStore.error || 'Failed to delete account.'
-    authStore.clearError()
-  }
-}
-
-function openDeleteModal() {
-  showDeleteModal.value = true
-  deleteInput.value = ''
-  deleteError.value = ''
-}
-
-function closeDeleteModal() {
-  showDeleteModal.value = false
-}
-
-function onDeleteKeydown(e) {
-  if (e.key === 'Escape') closeDeleteModal()
-}
+// Self-service account deletion is not offered: better-auth gates the
+// delete-user endpoint behind `user.deleteUser.enabled`, which this backend
+// does not set, so the call could never succeed. Deletion is handled as a
+// manual request instead (see the Privacy Policy).
 </script>
 
 <template>
@@ -299,68 +257,15 @@ function onDeleteKeydown(e) {
         </div>
 
         <!-- Delete Account -->
-        <div class="flex items-center justify-between border-t border-red-100 pt-4">
-          <div>
-            <p class="text-sm font-medium text-gray-900">Delete Account</p>
-            <p class="text-xs text-gray-500">Permanently remove your account and all data.</p>
-          </div>
-          <button
-            @click="openDeleteModal"
-            type="button"
-            class="px-4 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
-          >
-            Delete Account
-          </button>
+        <div class="border-t border-red-100 pt-4">
+          <p class="text-sm font-medium text-gray-900">Delete Account</p>
+          <p class="text-xs text-gray-500 mt-0.5">
+            To permanently delete your account and all associated data, send us a request using the
+            feedback button. We'll confirm once it's done.
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- Delete Account Modal -->
-    <div
-      v-if="showDeleteModal"
-      class="fixed inset-0 z-50 flex items-center justify-center py-4 bg-black/50"
-      @click.self="closeDeleteModal"
-      @keydown="onDeleteKeydown"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-account-title"
-    >
-      <div ref="deleteModalRef" class="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
-        <h3 id="delete-account-title" class="text-lg font-bold text-red-700 mb-2">Delete Account</h3>
-        <p class="text-sm text-gray-600 mb-4">
-          This action is permanent. Enter your password to confirm, or type <span class="font-mono font-bold">DELETE</span> if you use Google sign-in.
-        </p>
-
-        <div v-if="deleteError" class="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          {{ deleteError }}
-        </div>
-
-        <input
-          v-model="deleteInput"
-          :type="deleteInput === 'DELETE' ? 'text' : 'password'"
-          placeholder="Password or DELETE"
-          autocomplete="off"
-          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
-        />
-
-        <div class="flex justify-end gap-2">
-          <button
-            @click="closeDeleteModal"
-            type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            @click="onDeleteAccount"
-            :disabled="deleting || !deleteInput"
-            type="button"
-            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {{ deleting ? 'Deleting...' : 'Delete My Account' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
