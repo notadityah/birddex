@@ -12,4 +12,10 @@
     <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
     <string name="placeholder_account">Sign in, privacy settings and feedback.</string>
+
+    <!-- API status (Account tab, until sign-in lands) -->
+    <string name="api_checking">Checking connection to BirdDex…</string>
+    <string name="api_reachable">Connected · %1$d birds available</string>
+    <string name="api_unreachable">Couldn\'t reach BirdDex: %1$s</string>
+    <string name="retry">Retry</string>
 </resources>

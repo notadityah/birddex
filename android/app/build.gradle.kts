@@ -53,6 +53,11 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        // android.util.Log etc. return defaults instead of throwing in JVM unit tests.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -71,4 +76,15 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.datastore.preferences)
+
+    testImplementation(libs.junit)
 }

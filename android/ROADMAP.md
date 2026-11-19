@@ -40,10 +40,13 @@ same commit. A task is done when its "Done when" line is true.
       *Done when:* you can tap between all four tabs.
       Type-safe routes (`ui/navigation/TopLevelDestination.kt`); tab icons are Material
       icons copied from Android Studio's bundled set into `res/drawable`.
-- [ ] **A1.5 Networking core**: OkHttp + Retrofit + kotlinx.serialization, persistent
+- [x] **A1.5 Networking core**: OkHttp + Retrofit + kotlinx.serialization, persistent
       cookie jar backed by DataStore, debug-only logging interceptor, an interceptor that
       sends `Origin: https://birddex.fun` (only if A2.1 shows it's needed).
       *Done when:* `GET /api/birds` returns data in a debug log.
+      Cookie jar has unit tests (`PersistentCookieJarTest`); the cookie file is excluded
+      from cloud backup. The `Origin` interceptor is left to A2.1. Release (R8) build
+      verified against the live API too.
 - [ ] **A1.6 Docs**: add an Android section to `AGENTS.md` and `README.md`
       (how to build/run, where the API URL lives).
 
