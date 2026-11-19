@@ -5,6 +5,8 @@ import com.birddex.app.data.detect.CacheDetectPhotoStore
 import com.birddex.app.data.detect.CameraTarget
 import com.birddex.app.data.detect.DetectPhotoStore
 import com.birddex.app.data.detect.ImportResult
+import com.birddex.app.data.detect.PhotoPreparer
+import com.birddex.app.data.detect.PreparedPhoto
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -55,13 +57,29 @@ class DetectViewModelTest {
         override fun deleteAllExcept(keep: Set<File>) = CacheDetectPhotoStore.deleteAllExcept(dir, keep)
     }
 
+    /** "Prepares" a photo into its own file name, so tests can tell which photo a result is for. */
+    private class FakePhotoPreparer : PhotoPreparer {
+        val prepared = mutableListOf<String>()
+        var unreadable = false
+        var gate: CompletableDeferred<Unit>? = null
+        override suspend fun prepare(photo: File): PreparedPhoto? {
+            prepared += photo.name
+            gate?.await()
+            return if (unreadable) null else PreparedPhoto(photo.name.toByteArray(), "${photo.name}-upload".toByteArray())
+        }
+    }
+
     private val store = FakeDetectPhotoStore()
+    private val preparer = FakePhotoPreparer()
     private val savedState = SavedStateHandle()
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun open() = DetectViewModel(store, savedState)
+    private fun open() = DetectViewModel(store, preparer, savedState)
+
+    /** Which photo the prepared JPEGs were made from (see FakePhotoPreparer). */
+    private fun DetectViewModel.preparedFrom(): String? = state.value.prepared?.detectJpeg?.decodeToString()
 
     /** What the camera app does: writes the photo into the file behind the Uri. */
     private fun cameraWrites(uri: String) = store.dir.resolve(uri.substringAfterLast('/')).writeText("jpeg")
@@ -144,6 +162,7 @@ class DetectViewModelTest {
 
         assertTrue(store.imported.isEmpty())
         assertEquals(DetectUiState(), vm.state.value)
+        assertTrue(preparer.prepared.isEmpty())
     }
 
     @Test fun importErrorsAreReported() {
@@ -237,5 +256,87 @@ class DetectViewModelTest {
         open()
 
         assertEquals(listOf("picked-0.jpg"), store.dir.list()!!.toList())
+    }
+
+    // --- preparing the photo (A4.2) ---
+
+    @Test fun chosenPhotoIsPreparedStraightAway() {
+        val vm = open()
+        vm.onPhotoPicked("content://media/picker/0/1")
+
+        assertEquals(listOf("picked-0.jpg"), preparer.prepared)
+        assertEquals("picked-0.jpg", vm.preparedFrom())
+        assertFalse(vm.state.value.preparing)
+
+        val uri = vm.prepareCamera()!!
+        cameraWrites(uri)
+        vm.onCameraResult(saved = true)
+        assertEquals("camera-1.jpg", vm.preparedFrom())
+    }
+
+    @Test fun showsPreparingUntilDone() {
+        val gate = CompletableDeferred<Unit>()
+        preparer.gate = gate
+        val vm = open()
+
+        vm.onPhotoPicked("content://media/picker/0/1")
+        assertTrue(vm.state.value.preparing)
+        assertNull(vm.state.value.prepared)
+
+        gate.complete(Unit)
+        assertFalse(vm.state.value.preparing)
+        assertEquals("picked-0.jpg", vm.preparedFrom())
+    }
+
+    @Test fun restoredPhotoIsPreparedAgain() {
+        open().onPhotoPicked("content://media/picker/0/1")
+        preparer.prepared.clear()
+
+        val restored = open() // the app was killed; the JPEGs were only in memory
+
+        assertEquals(listOf("picked-0.jpg"), preparer.prepared)
+        assertEquals("picked-0.jpg", restored.preparedFrom())
+    }
+
+    @Test fun unreadablePhotoIsDroppedAndReported() {
+        preparer.unreadable = true
+        val vm = open()
+
+        vm.onPhotoPicked("content://media/picker/0/1")
+
+        with(vm.state.value) {
+            assertNull(photo)
+            assertFalse(preparing)
+            assertEquals(PhotoInputError.Unreadable, inputError)
+        }
+        assertTrue(store.dir.list()!!.isEmpty())
+        assertNull(open().state.value.photo) // not restored after a restart either
+    }
+
+    @Test fun replacedPhotoNeverShowsTheOldResult() {
+        val gate = CompletableDeferred<Unit>()
+        preparer.gate = gate
+        val vm = open()
+        vm.onPhotoPicked("content://media/picker/0/1")
+
+        val uri = vm.prepareCamera()!!
+        cameraWrites(uri)
+        vm.onCameraResult(saved = true) // a new photo while the first is still being prepared
+        gate.complete(Unit)
+
+        assertEquals(listOf("picked-0.jpg", "camera-1.jpg"), preparer.prepared)
+        assertEquals("camera-1.jpg", vm.preparedFrom())
+    }
+
+    @Test fun changePhotoStopsPreparing() {
+        val gate = CompletableDeferred<Unit>()
+        preparer.gate = gate
+        val vm = open()
+        vm.onPhotoPicked("content://media/picker/0/1")
+
+        vm.clearPhoto()
+        gate.complete(Unit)
+
+        assertEquals(DetectUiState(), vm.state.value)
     }
 }

@@ -116,6 +116,8 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // Photo rotation from the camera's EXIF tag (Detect, A4.2).
+    implementation(libs.androidx.exifinterface)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

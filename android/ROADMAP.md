@@ -166,9 +166,18 @@ original numbers._
       in `SavedStateHandle`, so it survives tab switches and the app being killed, including
       while the camera is open. Checked on the emulator: pick, take, back out of the camera,
       change photo, kill-and-restore for both, dark mode.
-- [ ] **A4.2 Image prep**: fix EXIF rotation, resize to max 1280 px, JPEG quality 85
+- [x] **A4.2 Image prep**: fix EXIF rotation, resize to max 1280 px, JPEG quality 85
       (matches `frontend/src/composables/useImageResize.js`). The website also makes a
       2048 px, quality 0.92 copy for the sighting upload (`DetectPage.vue`).
+      `BitmapPhotoPreparer` makes both as soon as a photo is chosen (or restored), decoding
+      once with `inSampleSize` so a 50 MP photo never sits in memory at full size. Browsers
+      apply EXIF rotation themselves; Android's decoder doesn't, so it reads the tag
+      (`androidx.exifinterface`) and turns or un-mirrors the pixels; outputs carry no EXIF.
+      Sizes round like JavaScript's `Math.round`; transparency goes on white. A photo that
+      can't be decoded is dropped with "Couldn't read that photo". Device tests
+      (`PhotoPreparerTest`) cover the sizes, three orientations, PNG transparency and
+      non-photos; with rotation switched off, exactly the three orientation tests fail.
+      The JPEGs stay in memory only, so A4.3/A4.5 read them from `DetectUiState.prepared`.
 - [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 5 }` (5, as the website); loading,
       error, cancel-on-new-photo states.
 - [ ] **A4.4 Results UI**: top matches with confidence + stats card, like

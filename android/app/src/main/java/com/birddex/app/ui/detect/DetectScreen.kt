@@ -192,4 +192,5 @@ private fun PhotoInputError.messageRes(): Int = when (this) {
     PhotoInputError.ImportFailed -> R.string.detect_error_import
     PhotoInputError.NoCameraApp -> R.string.detect_error_no_camera
     PhotoInputError.CameraFailed -> R.string.detect_error_camera
+    PhotoInputError.Unreadable -> R.string.detect_error_unreadable
 }

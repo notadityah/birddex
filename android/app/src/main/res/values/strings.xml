@@ -70,6 +70,7 @@
     <string name="detect_error_import">Couldn\'t open that photo. Try a different one.</string>
     <string name="detect_error_no_camera">No camera app found. Choose a photo instead.</string>
     <string name="detect_error_camera">The camera didn\'t save a photo. Please try again.</string>
+    <string name="detect_error_unreadable">Couldn\'t read that photo. Try a different one.</string>
 
     <!-- Placeholder screens (replaced as each phase lands) -->
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
