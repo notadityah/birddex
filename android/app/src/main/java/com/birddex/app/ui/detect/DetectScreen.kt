@@ -8,6 +8,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -136,7 +137,19 @@ fun DetectScreen(
                 onDetect = viewModel::detect,
                 onSelectMatch = viewModel::selectMatch,
                 onSave = viewModel::save,
+                onReport = viewModel::openReport,
             )
+            val detection = state.detection
+            val report = state.report
+            if (detection != null && report != null) {
+                ReportMatchSheet(
+                    photo = photo,
+                    details = detectionReportDetails(state.selectedBird, detection.predictions),
+                    report = report,
+                    onSend = viewModel::sendReport,
+                    onDismiss = viewModel::closeReport,
+                )
+            }
         }
     }
 }
@@ -149,6 +162,7 @@ private fun DetectSection(
     onDetect: () -> Unit,
     onSelectMatch: (String) -> Unit,
     onSave: (notes: String, shareToGallery: Boolean) -> Unit,
+    onReport: () -> Unit,
 ) {
     val error = state.detectError
     val detection = state.detection
@@ -167,6 +181,11 @@ private fun DetectSection(
                     error = state.saveError,
                     onSave = onSave,
                 )
+            }
+            // Always offered: the model names one of its 36 species even when the bird is none
+            // of them (website: "Wrong match? Report this bird").
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                TextButton(onClick = onReport) { Text(stringResource(R.string.report_link)) }
             }
         }
         else -> Button(onClick = onDetect, enabled = state.canDetect, modifier = Modifier.fillMaxWidth()) {

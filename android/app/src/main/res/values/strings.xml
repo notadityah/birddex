@@ -102,6 +102,22 @@
     <string name="saved_percent">%1$d%%</string>
     <string name="view_in_mydex">View in MyDex</string>
     <string name="detect_another">Detect another</string>
+    <!-- Report a wrong match (copy matches ReportMatchModal.vue and DetectPage.vue) -->
+    <string name="report_link">Wrong match? Report this bird</string>
+    <string name="report_title">Report this bird</string>
+    <string name="report_subtitle">Not the right match, or not in the dex? Tell us and we\'ll take a look.</string>
+    <string name="report_photo_description">Your bird photo</string>
+    <string name="report_details">Detection details</string>
+    <string name="report_no_details">No prediction data.</string>
+    <string name="report_note_label">What bird do you think this is? (optional)</string>
+    <string name="report_note_placeholder">e.g. I think this is a Rainbow Lorikeet — not in the list.</string>
+    <string name="report_note_count">%1$d / %2$d</string>
+    <string name="report_submit">Submit report</string>
+    <string name="report_sending">Sending…</string>
+    <string name="report_failed">Couldn\'t send the report. Please try again.</string>
+    <string name="report_sent_title">Thanks for the report!</string>
+    <string name="report_sent_body">We\'ll use it to improve detection.</string>
+    <string name="report_photo_failed">Your photo couldn\'t be sent, but the report was.</string>
 
     <!-- Placeholder screens (replaced as each phase lands) -->
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>

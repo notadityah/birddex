@@ -12,6 +12,9 @@ import com.birddex.app.data.detect.Prediction
 import com.birddex.app.data.detect.ImportResult
 import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
+import com.birddex.app.data.feedback.FeedbackCategory
+import com.birddex.app.data.feedback.FeedbackRepository
+import com.birddex.app.data.feedback.FeedbackSent
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.sightings.Sighting
@@ -120,17 +123,30 @@ class DetectViewModelTest {
         override suspend fun refresh() = ApiResult.Success(Unit)
     }
 
+    private class FakeFeedbackRepository : FeedbackRepository {
+        data class Sent(val category: FeedbackCategory, val message: String, val page: String, val photo: String?)
+        val sent = mutableListOf<Sent>()
+        var result: ApiResult<FeedbackSent> = ApiResult.Success(FeedbackSent(photoUploaded = true))
+        var gate: CompletableDeferred<Unit>? = null
+        override suspend fun send(category: FeedbackCategory, message: String, page: String, photoJpeg: ByteArray?): ApiResult<FeedbackSent> {
+            sent += Sent(category, message, page, photoJpeg?.decodeToString())
+            gate?.await()
+            return result
+        }
+    }
+
     private val store = FakeDetectPhotoStore()
     private val preparer = FakePhotoPreparer()
     private val detector = FakeDetectRepository()
     private val sightings = FakeSightingRepository()
     private val birds = FakeBirdRepository()
+    private val feedback = FakeFeedbackRepository()
     private val savedState = SavedStateHandle()
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun open() = DetectViewModel(store, preparer, detector, sightings, birds, savedState)
+    private fun open() = DetectViewModel(store, preparer, detector, sightings, birds, feedback, savedState)
 
     /** Which photo the prepared JPEGs were made from (see FakePhotoPreparer). */
     private fun DetectViewModel.preparedFrom(): String? = state.value.prepared?.detectJpeg?.decodeToString()
@@ -680,6 +696,93 @@ class DetectViewModelTest {
             assertEquals(1, found)
             assertEquals(50, percent)
         }
+    }
+
+    // --- reporting a wrong match (A4.6) ---
+
+    @Test fun reportSendsTheDetailsOnScreenTheNoteAndTheBigPhoto() {
+        val vm = detected()
+        vm.selectMatch("spotted_turtle_dove")
+        vm.openReport()
+
+        vm.sendReport("It's a Noisy Miner")
+
+        val sent = feedback.sent.single()
+        assertEquals(FeedbackCategory.Detection, sent.category)
+        assertEquals("android:/detect", sent.page)
+        assertEquals("picked-0.jpg-upload", sent.photo)
+        assertEquals(
+            detectionReportMessage(detectionReportDetails(dove, threeMatches.predictions), "It's a Noisy Miner"),
+            sent.message,
+        )
+        assertTrue(sent.message.contains("Best match shown: Spotted Turtle-dove (spotted_turtle_dove)"))
+        assertEquals(ReportUiState(sent = FeedbackSent(photoUploaded = true)), vm.state.value.report)
+    }
+
+    @Test fun reportNeedsADetection() {
+        val vm = withPhoto()
+        vm.openReport()
+        assertNull(vm.state.value.report)
+    }
+
+    @Test fun nothingDetectedCanStillBeReported() {
+        detector.result = ApiResult.Success(Detection())
+        val vm = withPhoto().apply { detect() }
+        vm.openReport()
+
+        vm.sendReport("")
+
+        assertEquals("Wrong / missing match reported from the detect screen.\n\n", feedback.sent.single().message)
+    }
+
+    @Test fun failedReportShowsTheErrorAndCanBeSentAgain() {
+        feedback.result = ApiResult.Failure(ApiError.Network)
+        val vm = detected()
+        vm.openReport()
+
+        vm.sendReport("")
+        assertEquals(ReportUiState(error = ApiError.Network), vm.state.value.report)
+
+        feedback.result = ApiResult.Success(FeedbackSent(photoUploaded = false))
+        vm.sendReport("")
+        assertEquals(ReportUiState(sent = FeedbackSent(photoUploaded = false)), vm.state.value.report)
+        assertEquals(2, feedback.sent.size)
+    }
+
+    @Test fun sendingTwiceSendsOnce() {
+        feedback.gate = CompletableDeferred()
+        val vm = detected()
+        vm.openReport()
+
+        vm.sendReport("")
+        assertEquals(ReportUiState(sending = true), vm.state.value.report)
+        vm.sendReport("")
+        feedback.gate!!.complete(Unit)
+        vm.sendReport("") // already sent
+
+        assertEquals(1, feedback.sent.size)
+    }
+
+    @Test fun closingWhileSendingLetsItFinishQuietly() {
+        feedback.gate = CompletableDeferred()
+        val vm = detected()
+        vm.openReport()
+        vm.sendReport("")
+
+        vm.closeReport()
+        feedback.gate!!.complete(Unit)
+
+        assertEquals(1, feedback.sent.size)
+        assertNull(vm.state.value.report) // doesn't pop open again
+    }
+
+    @Test fun newPhotoClosesTheReport() {
+        val vm = detected()
+        vm.openReport()
+
+        vm.onPhotoPicked("content://media/picker/0/2")
+
+        assertNull(vm.state.value.report)
     }
 
     private fun sightingOf(id: String, birdId: Int) =

@@ -3,6 +3,8 @@ package com.birddex.app.data.network
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.detect.DetectRequest
 import com.birddex.app.data.detect.Detection
+import com.birddex.app.data.feedback.FeedbackCreated
+import com.birddex.app.data.feedback.FeedbackRequest
 import com.birddex.app.data.sightings.CreateSightingRequest
 import com.birddex.app.data.sightings.CreatedSighting
 import com.birddex.app.data.sightings.Sighting
@@ -36,7 +38,15 @@ interface BirdDexApi {
     suspend fun createSighting(@Body body: CreateSightingRequest): CreatedSighting
 
     /**
-     * Uploads a sighting photo straight to S3 with the presigned URL from [createSighting].
+     * Files feedback for the admins (201). With `imageExt`, the answer carries a presigned
+     * `uploadUrl` for [uploadPhoto], as for sightings. 400 if the message is empty or too long.
+     */
+    @POST("api/feedback")
+    suspend fun sendFeedback(@Body body: FeedbackRequest): FeedbackCreated
+
+    /**
+     * Uploads a sighting or feedback photo straight to S3 with the presigned URL from
+     * [createSighting] or [sendFeedback].
      * Not a BirdDex endpoint: no cookies match S3's host, and the /api/ interceptors skip it.
      */
     @PUT

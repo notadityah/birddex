@@ -221,8 +221,20 @@ original numbers._
       showed in the Dex with its note and photo (the website reads the same
       `/api/sightings`), then was deleted from the Dex sheet. Release (R8) build: an
       offline save fails cleanly; not saved for real there, to avoid a second test row.
-- [ ] **A4.6 Report wrong match**: `POST /api/feedback` with `category: "detection"`
+- [x] **A4.6 Report wrong match**: `POST /api/feedback` with `category: "detection"`
       and `imageExt` → `PUT` the photo to `uploadUrl`.
+      "Wrong match? Report this bird" sits under every result (even "No birds detected")
+      and opens a bottom sheet copying ReportMatchModal.vue: the photo, the auto-captured
+      "Detection details" (same text as the website, numbers printed like JavaScript), an
+      optional note (1000 max) and Submit; "Thanks for the report!" closes itself after 2 s.
+      Sends the 2048 px photo; `pageUrl` is `android:/detect` so admins can tell app
+      reports apart. Users can't delete feedback, so a failed photo upload still counts as
+      sent (with a note saying so) rather than inviting a duplicate. `FeedbackRepository`
+      is generic for A5.4. Live, with the owner's OK: one labelled test report (POST 201,
+      S3 PUT 200) — delete it in the admin panel. The 2-second thanks screen wasn't caught
+      by the UI check (it polls every ~2 s); its state is unit tested. Offline sends show
+      the error, also on a release (R8) build. The four test photos are removed from the
+      emulator again.
 
 ## Phase 5 — Gallery, account, feedback
 

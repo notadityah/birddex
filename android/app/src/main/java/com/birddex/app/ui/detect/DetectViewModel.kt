@@ -11,6 +11,9 @@ import com.birddex.app.data.detect.Detection
 import com.birddex.app.data.detect.ImportResult
 import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
+import com.birddex.app.data.feedback.FeedbackCategory
+import com.birddex.app.data.feedback.FeedbackRepository
+import com.birddex.app.data.feedback.FeedbackSent
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.sightings.SightingRepository
@@ -53,6 +56,8 @@ data class DetectUiState(
     val saveError: ApiError? = null,
     /** The bird just saved: the "Sighting saved!" screen shows until "Detect another". */
     val saved: Bird? = null,
+    /** The open "Report this bird" sheet, or null when it's closed. */
+    val report: ReportUiState? = null,
 ) {
     /** "Detect bird" is shown once the photo is ready and hasn't been identified yet. */
     val canDetect: Boolean get() = prepared != null && !detecting && detection == null
@@ -60,6 +65,13 @@ data class DetectUiState(
     /** The selected match's bird, with its stats (website: `matchedBird`). */
     val selectedBird: Bird? get() = selectedSlug?.let { detection?.birds?.get(it) }
 }
+
+/** "Report this bird": sending, why it failed, or what was sent. */
+data class ReportUiState(
+    val sending: Boolean = false,
+    val error: ApiError? = null,
+    val sent: FeedbackSent? = null,
+)
 
 /** The user's Dex, for "already recorded" and the progress bar after saving. */
 data class DexProgress(val foundBirdIds: Set<Int> = emptySet(), val total: Int = 0) {
@@ -72,7 +84,8 @@ data class DexProgress(val foundBirdIds: Set<Int> = emptySet(), val total: Int =
  * system photo picker or the system camera; neither needs a permission. A4.2 then prepares
  * it (upright, shrunk, JPEG) as soon as it is chosen, like the website. A4.3 sends it to
  * the model; changing the photo cancels a call that is still running (the website aborts it).
- * A4.4 lets the user pick another match, and A4.5 saves the picked one as a sighting.
+ * A4.4 lets the user pick another match, A4.5 saves the picked one as a sighting, and A4.6
+ * reports a wrong or missing match to the admins.
  *
  * Both file paths live in [SavedStateHandle], so the chosen photo, and a camera photo that
  * is still being taken, survive the app being killed in the background (camera apps often
@@ -87,6 +100,7 @@ class DetectViewModel @Inject constructor(
     private val detector: DetectRepository,
     private val sightings: SightingRepository,
     birds: BirdRepository,
+    private val feedback: FeedbackRepository,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -210,6 +224,47 @@ class DetectViewModel @Inject constructor(
         }
     }
 
+    /** "Wrong match? Report this bird", under the results. */
+    fun openReport() {
+        if (_state.value.detection == null) return
+        _state.update { it.copy(report = ReportUiState()) }
+    }
+
+    /** Cancel, swiping the sheet away, or two seconds after it was sent. A send keeps going. */
+    fun closeReport() {
+        _state.update { it.copy(report = null) }
+    }
+
+    /**
+     * Sends the report with the details on screen (website: ReportMatchModal.vue), the note,
+     * and the 2048 px photo, marked as coming from the app.
+     */
+    fun sendReport(note: String) {
+        val current = _state.value
+        val report = current.report ?: return
+        val detection = current.detection ?: return
+        if (report.sending || report.sent != null) return
+        val message = detectionReportMessage(detectionReportDetails(current.selectedBird, detection.predictions), note)
+        _state.update { it.copy(report = ReportUiState(sending = true)) }
+        viewModelScope.launch {
+            val result = feedback.send(
+                FeedbackCategory.Detection,
+                message,
+                FeedbackRepository.appPage("/detect"),
+                current.prepared?.uploadJpeg,
+            )
+            _state.update { state ->
+                val open = state.report ?: return@update state // closed meanwhile
+                state.copy(
+                    report = when (result) {
+                        is ApiResult.Success -> open.copy(sending = false, sent = result.value)
+                        is ApiResult.Failure -> open.copy(sending = false, error = result.error)
+                    },
+                )
+            }
+        }
+    }
+
     /** "Detect another", from the "Sighting saved!" screen. */
     fun detectAnother() {
         _state.update { DetectUiState(importing = it.importing) }
@@ -239,6 +294,7 @@ class DetectViewModel @Inject constructor(
                 selectedSlug = null,
                 saveError = null,
                 saved = null,
+                report = null,
             )
         }
         prepare(file)
