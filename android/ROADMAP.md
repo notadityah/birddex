@@ -47,7 +47,7 @@ same commit. A task is done when its "Done when" line is true.
       Cookie jar has unit tests (`PersistentCookieJarTest`); the cookie file is excluded
       from cloud backup. The `Origin` interceptor is left to A2.1. Release (R8) build
       verified against the live API too.
-- [ ] **A1.6 Docs**: add an Android section to `AGENTS.md` and `README.md`
+- [x] **A1.6 Docs**: add an Android section to `AGENTS.md` and `README.md`
       (how to build/run, where the API URL lives).
 
 ## Phase 2 — Auth

@@ -1,6 +1,6 @@
 # BirdDex
 
-A Pokedex-style bird-tracking web app that lets you identify Australian birds using AI-powered detection, log your sightings, and share them with the community.
+A Pokedex-style bird-tracking web app that lets you identify Australian birds using AI-powered detection, log your sightings, and share them with the community. A native Android app is in progress in [`android/`](android/).
 
 ## Features
 
@@ -23,6 +23,7 @@ A Pokedex-style bird-tracking web app that lets you identify Australian birds us
 | Detection      | ONNX Runtime inference on Lambda (Docker, x86_64)          |
 | Database       | Neon (serverless PostgreSQL 17)                            |
 | Infrastructure | AWS CDK (TypeScript), HTTP API Gateway v2, CloudFront, S3  |
+| Android app    | Kotlin, Jetpack Compose, Material 3, Hilt, Retrofit/OkHttp |
 
 ## Project Structure
 
@@ -53,6 +54,15 @@ bird-dex/
 │   │   ├── migrate/           # schema.sql — DB schema + seed data (applied manually)
 │   │   └── lib/               # Shared utilities (DB connections, secrets caching)
 │   └── test/                  # CDK assertion tests
+│
+├── android/                   # Native Android app (Kotlin, Jetpack Compose)
+│   ├── ROADMAP.md             # Task-by-task plan and progress
+│   └── app/src/
+│       ├── main/java/com/birddex/app/
+│       │   ├── data/network/  # Retrofit API, persistent cookie jar
+│       │   ├── di/            # Hilt modules
+│       │   └── ui/            # Theme, navigation, one package per tab
+│       └── test/              # JVM unit tests
 │___
 ```
 
@@ -63,6 +73,7 @@ bird-dex/
 - Node.js 22+
 - AWS CLI configured (for backend deployment)
 - AWS CDK CLI (`npm install -g aws-cdk`)
+- Android Studio 2026.2+ (only for the Android app)
 
 ### Frontend
 
@@ -84,6 +95,25 @@ npm test             # Run CDK assertion tests
 npx cdk synth        # Synthesize CloudFormation template
 npx cdk deploy       # Deploy (requires CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGION)
 ```
+
+### Android app
+
+The Android app in `android/` uses the same production API as the website (`https://birddex.fun/api/*`); there is no separate mobile backend. Sign-in reuses better-auth's session cookie, which the app keeps in a persistent cookie jar. Progress is tracked task by task in [`android/ROADMAP.md`](android/ROADMAP.md).
+
+Android Studio bundles the JDK and installs the Android SDK on first launch (the app compiles against API 37). Open the `android/` folder in Android Studio, or build from a terminal with `JAVA_HOME` pointing at Android Studio's bundled JDK (`<Android Studio>/jbr`):
+
+```bash
+cd android
+./gradlew assembleDebug        # Build app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug         # Install on a running emulator or connected phone
+./gradlew testDebugUnitTest    # Run JVM unit tests
+```
+
+On Windows PowerShell, use `.\gradlew` instead of `./gradlew`.
+
+- **API URL:** `BuildConfig.BASE_URL`, set by `PRODUCTION_BASE_URL` in `android/app/build.gradle.kts`. Debug builds can target another API with `-Pbirddex.debugBaseUrl=https://...` (or the same key in `~/.gradle/gradle.properties`); release builds always use production.
+- **App IDs:** release is `fun.birddex.app`; debug installs next to it as `fun.birddex.app.debug` ("BirdDex Debug"). Kotlin code uses the package `com.birddex.app` because `fun` is a Kotlin keyword.
+- **Debug logging:** debug builds log HTTP traffic under the `BirdDexHttp` logcat tag, with `Cookie`/`Set-Cookie` headers redacted.
 
 ### Database
 
