@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { BackendStack } from '../lib/backend-stack';
+import { SPA_REWRITE_FUNCTION_CODE } from '../lib/spa-routing';
 
 function buildTemplate() {
   const app = new cdk.App();
@@ -156,6 +157,62 @@ describe('BackendStack', () => {
   });
 
   // =========================================================
+  // CloudFront
+  // =========================================================
+  function distributionConfig() {
+    const distributions = Object.values(template.findResources('AWS::CloudFront::Distribution'));
+    expect(distributions).toHaveLength(1);
+    return distributions[0].Properties.DistributionConfig;
+  }
+
+  test('CloudFront has no distribution-level error responses (they would mask /api/* 403/404 as 200 index.html)', () => {
+    expect(distributionConfig().CustomErrorResponses).toBeUndefined();
+  });
+
+  test('SPA rewrite function runs on viewer-request for the default (S3) behavior only', () => {
+    const functionIds = Object.keys(template.findResources('AWS::CloudFront::Function'));
+    expect(functionIds).toHaveLength(1);
+
+    const config = distributionConfig();
+    expect(config.DefaultCacheBehavior.FunctionAssociations).toEqual([
+      {
+        EventType: 'viewer-request',
+        FunctionARN: { 'Fn::GetAtt': [functionIds[0], 'FunctionARN'] },
+      },
+    ]);
+
+    expect(config.CacheBehaviors.map((b: { PathPattern: string }) => b.PathPattern)).toEqual([
+      '/api/*',
+    ]);
+    for (const behavior of config.CacheBehaviors) {
+      expect(behavior.FunctionAssociations).toBeUndefined();
+      expect(behavior.LambdaFunctionAssociations).toBeUndefined();
+    }
+  });
+
+  test('SPA rewrite function deploys the tested source on the cloudfront-js-2.0 runtime', () => {
+    template.hasResourceProperties('AWS::CloudFront::Function', {
+      AutoPublish: true,
+      FunctionCode: SPA_REWRITE_FUNCTION_CODE,
+      FunctionConfig: Match.objectLike({ Runtime: 'cloudfront-js-2.0' }),
+    });
+  });
+
+  test('Frontend bucket lets CloudFront list keys, so missing assets are 404 (not 403)', () => {
+    const statements = Object.values(template.findResources('AWS::S3::BucketPolicy')).flatMap(
+      (policy) => policy.Properties.PolicyDocument.Statement,
+    );
+    const cloudFrontList = statements.filter(
+      (s) =>
+        s.Principal?.Service === 'cloudfront.amazonaws.com' &&
+        [s.Action].flat().includes('s3:ListBucket'),
+    );
+    expect(cloudFrontList).toHaveLength(1);
+    // With LIST granted, "/" must never reach S3 as a bucket listing.
+    expect(distributionConfig().DefaultRootObject).toBe('index.html');
+  });
+
+  // =========================================================
   // Monitoring
   // =========================================================
   test('SNS alarm topic is created', () => {
@@ -181,5 +238,38 @@ describe('BackendStack', () => {
     template.hasOutput('BucketName', {
       Export: { Name: 'BirddexBucketName' },
     });
+  });
+});
+
+// Runs the exact CloudFront Function source that the stack deploys.
+describe('SPA rewrite CloudFront Function', () => {
+  type ViewerRequestHandler = (event: { request: { uri: string } }) => { uri: string };
+  const handler = new Function(
+    `${SPA_REWRITE_FUNCTION_CODE}\nreturn handler;`,
+  )() as ViewerRequestHandler;
+  const rewrite = (uri: string) => handler({ request: { uri } }).uri;
+
+  test.each([
+    '/',
+    '/mydex',
+    '/gallery',
+    '/gallery/',
+    '/login',
+    '/admin',
+    '/reset-password',
+    '/some/unknown/route',
+  ])('rewrites client-side route %s to /index.html', (uri) => {
+    expect(rewrite(uri)).toBe('/index.html');
+  });
+
+  test.each([
+    '/index.html',
+    '/favicon.ico',
+    '/assets/index-BxY12abc.js',
+    '/assets/index-BxY12abc.css',
+    '/birds/american-robin.webp',
+    '/.well-known/assetlinks.json',
+  ])('leaves static file %s unchanged', (uri) => {
+    expect(rewrite(uri)).toBe(uri);
   });
 });

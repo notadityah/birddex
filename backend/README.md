@@ -6,8 +6,9 @@ Serverless AWS infrastructure for BirdDex, defined with AWS CDK (TypeScript). De
 
 ```
 CloudFront
-  |-- /           --> S3 (frontend static files)
-  |-- /api/*      --> HTTP API Gateway v2
+  |-- /           --> S3 (frontend static files; a CloudFront Function rewrites
+  |                   extensionless SPA routes like /mydex to /index.html)
+  |-- /api/*      --> HTTP API Gateway v2 (status codes pass through untouched)
                         |-- /api/auth/{proxy+}  --> Auth Lambda (better-auth + Resend)
                         |-- /api/detect         --> Detect Lambda (ONNX inference)
                         |-- /api/{proxy+}       --> API Lambda (CRUD operations)
@@ -21,6 +22,7 @@ CloudFront
 ```
 lib/
   backend-stack.ts      # CDK stack definition (all infrastructure)
+  spa-routing.ts        # CloudFront Function source for SPA routing (S3 behavior only)
 lambda/
   auth/index.ts         # Auth Lambda — better-auth with Google OAuth + email via Resend
   api/index.ts          # API Lambda — Hono REST (birds, sightings, gallery, admin, feedback)
@@ -32,7 +34,7 @@ lambda/
   migrate/schema.sql    # Database schema + seed data
   tsconfig.json         # Lambda-specific TS config (ESNext/bundler for esbuild)
 test/
-  backend.test.ts       # CDK assertion tests (22 tests)
+  backend.test.ts       # CDK assertion tests + SPA rewrite function tests
 ```
 
 ## Prerequisites

@@ -17,6 +17,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as cw_actions from "aws-cdk-lib/aws-cloudwatch-actions";
 import { Construct } from "constructs";
 import * as path from "path";
+import { SPA_REWRITE_FUNCTION_CODE } from "./spa-routing";
 
 interface EnvConfig {
   domain?: string;
@@ -268,13 +269,43 @@ export class BackendStack extends cdk.Stack {
       signing: cloudfront.Signing.SIGV4_NO_OVERRIDE,
     });
 
+    // SPA routing: rewrite client-side routes (/mydex, /gallery, ...) to /index.html on
+    // the S3 default behavior only. Don't use distribution-level errorResponses for
+    // this: CloudFront applies them to every behavior, so they turned /api/* 403/404s
+    // into `200 index.html`. See lib/spa-routing.ts.
+    const spaRewriteFunction = new cloudfront.Function(
+      this,
+      "SpaRewriteFunction",
+      {
+        code: cloudfront.FunctionCode.fromInline(SPA_REWRITE_FUNCTION_CODE),
+        runtime: cloudfront.FunctionRuntime.JS_2_0,
+        comment: "Rewrite SPA routes to /index.html (S3 default behavior only)",
+      },
+    );
+
     const distributionProps: cloudfront.DistributionProps = {
+      // Belt and braces with the LIST permission below: "/" always maps to an object,
+      // never a bucket listing (the SPA function also rewrites "/" to /index.html).
+      defaultRootObject: "index.html",
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(frontendBucket, {
           originAccessControl: oac,
+          // LIST lets S3 answer 404 (not 403) for a missing asset. Viewers can't
+          // trigger a bucket listing: the function sends every extensionless path
+          // (including "/") to /index.html, and no query strings reach the origin.
+          originAccessLevels: [
+            cloudfront.AccessLevel.READ,
+            cloudfront.AccessLevel.LIST,
+          ],
         }),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        functionAssociations: [
+          {
+            function: spaRewriteFunction,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
       },
       additionalBehaviors: {
         "/api/*": {
@@ -289,20 +320,7 @@ export class BackendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         },
       },
-      // SPA routing: return index.html for 403/404 so Vue Router handles client-side routes.
-      // S3 returns 403 for missing keys (not 404) when using OAC, so both must be caught.
-      errorResponses: [
-        {
-          httpStatus: 403,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
-        },
-        {
-          httpStatus: 404,
-          responseHttpStatus: 200,
-          responsePagePath: "/index.html",
-        },
-      ],
+      // No errorResponses: they are distribution-wide and would mask API errors.
     };
 
     // Custom domain + cert are optional — dev deployments use the default CloudFront domain.
@@ -328,6 +346,13 @@ export class BackendStack extends cdk.Stack {
       this,
       "Distribution",
       distributionProps,
+    );
+
+    // CDK warns on every S3 origin with LIST access. The risk (GET / listing the bucket)
+    // is covered: defaultRootObject is set and the SPA function rewrites "/".
+    cdk.Annotations.of(distribution).acknowledgeWarning(
+      "@aws-cdk/aws-cloudfront-origins:listBucketSecurityRisk",
+      "defaultRootObject is index.html and the SPA rewrite function maps / to /index.html",
     );
 
     // =========================================================
