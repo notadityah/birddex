@@ -7,19 +7,25 @@
     <string name="tab_gallery">Gallery</string>
     <string name="tab_account">Account</string>
 
-    <!-- Dex -->
-    <plurals name="dex_species_count">
-        <item quantity="one">%1$d Australian species</item>
-        <item quantity="other">%1$d Australian species</item>
-    </plurals>
-    <string name="dex_seen_count">You\'ve seen %1$d of %2$d</string>
-    <string name="dex_showing_saved">Couldn\'t refresh, showing saved birds. Pull down to try again.</string>
+    <!-- Dex (copy matches frontend/src/views/MyDexPage.vue and BirdCard.vue) -->
+    <string name="dex_title">MyDex</string>
+    <string name="dex_welcome">Welcome back, %1$s.</string>
+    <string name="dex_found_count">You\'ve found %1$d of %2$d birds.</string>
+    <string name="dex_percent_complete">%1$d%% complete</string>
+    <string name="dex_filter_all">All</string>
+    <string name="dex_filter_found">Found</string>
+    <string name="dex_filter_not_found">Not Found</string>
+    <string name="dex_found_badge">Found</string>
+    <string name="dex_empty_title">No birds to show</string>
+    <string name="dex_empty_hint">Try changing the filter above.</string>
+    <string name="dex_showing_saved">Couldn\'t refresh, showing saved birds.</string>
     <string name="dex_load_failed">Couldn\'t load the birds. Check your connection and try again.</string>
     <string name="rarity_common">Common</string>
     <string name="rarity_uncommon">Uncommon</string>
     <string name="rarity_rare">Rare</string>
 
-    <!-- Placeholder screens (replaced as each phase lands) -->    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
+    <!-- Placeholder screens (replaced as each phase lands) -->
+    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
 
     <!-- Common -->

@@ -1,8 +1,10 @@
 package com.birddex.app.ui.dex
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.birddex.app.data.birds.Bird
+import com.birddex.app.data.auth.AuthRepository
+import com.birddex.app.data.auth.SessionState
 import com.birddex.app.data.birds.BirdRepository
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
@@ -18,37 +20,43 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class DexUiState(
-    val birds: List<Bird> = emptyList(),
-    /** Ids of the species the user has at least one sighting of. */
-    val seenBirdIds: Set<Int> = emptySet(),
+    val entries: List<DexEntry> = emptyList(),
+    val filter: DexFilter = DexFilter.All,
+    /** For "Welcome back, …"; null until the session is confirmed (e.g. offline launch). */
+    val userName: String? = null,
     /** False until the saved copy has been read once (a few milliseconds at most). */
     val cacheLoaded: Boolean = false,
     val refreshing: Boolean = false,
     /** Last refresh failure; with saved birds on screen it just means "showing saved copy". */
     val refreshError: ApiError? = null,
 ) {
-    /** Seen species that are still in the bird list. */
-    val seenCount: Int get() = birds.count { it.id in seenBirdIds }
+    val totalCount: Int get() = entries.size
+    val foundCount: Int get() = entries.count { it.found }
+    val percent: Int get() = completionPercent(foundCount, totalCount)
+    val visibleEntries: List<DexEntry> get() = entries.filteredBy(filter)
 }
 
+/** MyDex: every species, found or not, with the user's progress (A3.4). */
 @HiltViewModel
 class DexViewModel @Inject constructor(
     private val birds: BirdRepository,
     private val sightings: SightingRepository,
+    auth: AuthRepository,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
     private val refreshing = MutableStateFlow(false)
     private val refreshError = MutableStateFlow<ApiError?>(null)
+    private val filter = savedState.getStateFlow(KEY_FILTER, DexFilter.All)
 
-    val state: StateFlow<DexUiState> = combine(
-        birds.observeBirds(),
-        sightings.observeSightings(),
-        refreshing,
-        refreshError,
-    ) { birdList, sightingList, isRefreshing, error ->
+    private val entries = combine(birds.observeBirds(), sightings.observeSightings(), ::buildDexEntries)
+    private val status = combine(refreshing, refreshError, ::Pair)
+
+    val state: StateFlow<DexUiState> = combine(entries, filter, auth.sessionState, status) { list, f, session, (isRefreshing, error) ->
         DexUiState(
-            birds = birdList,
-            seenBirdIds = sightingList.mapTo(mutableSetOf()) { it.birdId },
+            entries = list,
+            filter = f,
+            userName = (session as? SessionState.SignedIn)?.user?.name?.takeIf { it.isNotBlank() },
             cacheLoaded = true,
             refreshing = isRefreshing,
             refreshError = error,
@@ -57,6 +65,10 @@ class DexViewModel @Inject constructor(
 
     init {
         refresh()
+    }
+
+    fun setFilter(value: DexFilter) {
+        savedState[KEY_FILTER] = value
     }
 
     /** Refreshes birds and sightings together; reports the first failure. */
@@ -71,5 +83,9 @@ class DexViewModel @Inject constructor(
                 .firstOrNull()?.error
             refreshing.value = false
         }
+    }
+
+    private companion object {
+        const val KEY_FILTER = "dex_filter"
     }
 }

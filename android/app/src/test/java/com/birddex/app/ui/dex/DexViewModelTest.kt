@@ -1,11 +1,14 @@
 package com.birddex.app.ui.dex
 
+import androidx.lifecycle.SavedStateHandle
+import com.birddex.app.data.auth.SessionState
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.birds.BirdRepository
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.sightings.Sighting
 import com.birddex.app.data.sightings.SightingRepository
+import com.birddex.app.ui.auth.FakeAuthRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +46,8 @@ class DexViewModelTest {
 
     private val birds = FakeBirdRepository()
     private val sightings = FakeSightingRepository()
+    private val auth = FakeAuthRepository()
+    private val savedState = SavedStateHandle()
     private val parrot = Bird(id = 1, name = "Australian King Parrot", scientificName = "Alisterus scapularis", slug = "australian_king_parrot")
     private val magpie = Bird(id = 2, name = "Australian Magpie", scientificName = "Gymnorhina tibicen", slug = "australian_magpie")
 
@@ -52,30 +57,44 @@ class DexViewModelTest {
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun TestScope.open(): DexViewModel = DexViewModel(birds, sightings).also { vm ->
+    private fun TestScope.open(): DexViewModel = DexViewModel(birds, sightings, auth, savedState).also { vm ->
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.state.collect {} }
     }
 
-    @Test fun refreshesBothOnOpenAndShowsSavedBirds() = runTest {
-        birds.saved.value = listOf(parrot)
+    @Test fun refreshesBothOnOpenAndShowsProgress() = runTest {
+        birds.saved.value = listOf(parrot, magpie)
+        sightings.saved.value = listOf(sighting("a", 1), sighting("b", 1))
         val vm = open()
 
         assertEquals(1, birds.refreshCalls)
         assertEquals(1, sightings.refreshCalls)
         with(vm.state.value) {
             assertTrue(cacheLoaded)
-            assertEquals(listOf(parrot), this.birds)
+            assertEquals(2, totalCount)
+            assertEquals(1, foundCount) // two parrot sightings = one species
+            assertEquals(50, percent)
             assertNull(refreshError)
         }
     }
 
-    @Test fun seenCountsSpeciesNotSightings() = runTest {
+    @Test fun greetsTheSignedInUserOnly() = runTest {
+        val vm = open()
+        assertNull(vm.state.value.userName) // session not confirmed yet
+
+        auth.state.value = SessionState.SignedIn(auth.user)
+        assertEquals("Jane Doe", vm.state.value.userName)
+    }
+
+    @Test fun filterIsAppliedAndSurvivesRecreation() = runTest {
         birds.saved.value = listOf(parrot, magpie)
-        sightings.saved.value = listOf(sighting("a", 1), sighting("b", 1), sighting("c", 99))
+        sightings.saved.value = listOf(sighting("a", 1))
         val vm = open()
 
-        assertEquals(setOf(1, 99), vm.state.value.seenBirdIds)
-        assertEquals(1, vm.state.value.seenCount) // two parrot sightings = one species; 99 isn't a known bird
+        vm.setFilter(DexFilter.NotFound)
+        assertEquals(listOf(magpie), vm.state.value.visibleEntries.map { it.bird })
+
+        // Same SavedStateHandle, e.g. after rotation or process death.
+        assertEquals(DexFilter.NotFound, open().state.value.filter)
     }
 
     @Test fun offlineKeepsSavedBirdsAndReportsTheError() = runTest {
@@ -84,25 +103,19 @@ class DexViewModelTest {
         sightings.refreshResult = ApiResult.Failure(ApiError.Network)
         val vm = open()
 
-        assertEquals(listOf(parrot), vm.state.value.birds)
+        assertEquals(listOf(parrot), vm.state.value.entries.map { it.bird })
         assertEquals(ApiError.Network, vm.state.value.refreshError)
-    }
-
-    @Test fun sightingsFailureAloneIsReported() = runTest {
-        sightings.refreshResult = ApiResult.Failure(ApiError.Http(500, "boom"))
-        val vm = open()
-        assertEquals(ApiError.Http(500, "boom"), vm.state.value.refreshError)
     }
 
     @Test fun retryClearsTheErrorWhenItWorks() = runTest {
-        birds.refreshResult = ApiResult.Failure(ApiError.Network)
+        sightings.refreshResult = ApiResult.Failure(ApiError.Http(500, "boom"))
         val vm = open()
-        assertEquals(ApiError.Network, vm.state.value.refreshError)
+        assertEquals(ApiError.Http(500, "boom"), vm.state.value.refreshError)
 
-        birds.refreshResult = ApiResult.Success(Unit)
+        sightings.refreshResult = ApiResult.Success(Unit)
         vm.refresh()
 
-        assertEquals(2, birds.refreshCalls)
+        assertEquals(2, sightings.refreshCalls)
         assertNull(vm.state.value.refreshError)
     }
 }

@@ -5,14 +5,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,20 +28,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
-import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.birds.Rarity
+import com.birddex.app.ui.components.BirdPlaceholder
+import com.birddex.app.ui.components.SightingPhoto
 
 /**
- * The species list, read from the on-device copy and refreshed from the server (A3.2).
- * A3.4 turns this into the dex grid with seen/unseen birds and completion %.
+ * MyDex (website: MyDexPage.vue + BirdCard.vue): every species as a card, found ones with the
+ * user's newest photo, plus progress and All / Found / Not Found filters. Tapping a card opens
+ * the bird detail sheet in A3.5.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,74 +57,175 @@ fun DexScreen(
     Box(modifier.fillMaxSize()) {
         when {
             !state.cacheLoaded -> Unit
-            state.birds.isEmpty() && state.refreshError != null ->
+            state.entries.isEmpty() && state.refreshError != null ->
                 LoadFailed(onRetry = viewModel::refresh, modifier = Modifier.align(Alignment.Center))
-            state.birds.isEmpty() -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+            state.entries.isEmpty() -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             else -> PullToRefreshBox(
                 isRefreshing = state.refreshing,
                 onRefresh = viewModel::refresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                BirdList(state.birds, state.seenCount, showingSavedCopy = state.refreshError != null)
+                DexGrid(state, onFilter = viewModel::setFilter, onRetry = viewModel::refresh)
             }
         }
     }
 }
 
 @Composable
-private fun BirdList(birds: List<Bird>, seenCount: Int, showingSavedCopy: Boolean) {
-    LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.fillMaxSize()) {
-        item {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.tab_dex), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
-                Text(
-                    pluralStringResource(R.plurals.dex_species_count, birds.size, birds.size),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    stringResource(R.string.dex_seen_count, seenCount, birds.size),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                if (showingSavedCopy) {
+private fun DexGrid(state: DexUiState, onFilter: (DexFilter) -> Unit, onRetry: () -> Unit) {
+    LazyVerticalGrid(
+        // Two columns on phones, more on wider screens (website: 2 → 5 columns).
+        columns = GridCells.Adaptive(minSize = 160.dp),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        fullWidth { Header(state) }
+        if (state.refreshError != null) fullWidth { RefreshFailedBanner(onRetry) }
+        fullWidth { Filters(state.filter, onFilter) }
+        val visible = state.visibleEntries
+        if (visible.isEmpty()) {
+            fullWidth { NothingToShow() }
+        } else {
+            items(visible, key = { it.bird.id }) { entry -> BirdCard(entry) }
+        }
+    }
+}
+
+private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) =
+    item(span = { GridItemSpan(maxLineSpan) }) { content() }
+
+@Composable
+private fun Header(state: DexUiState) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.dex_title), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.secondary)
+        state.userName?.let {
+            Text(stringResource(R.string.dex_welcome, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(
+            stringResource(R.string.dex_found_count, state.foundCount, state.totalCount),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LinearProgressIndicator(
+                progress = { if (state.totalCount == 0) 0f else state.foundCount.toFloat() / state.totalCount },
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(R.string.dex_percent_complete, state.percent),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RefreshFailedBanner(onRetry: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.medium) {
+        Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(R.string.dex_showing_saved),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        }
+    }
+}
+
+@Composable
+private fun Filters(selected: DexFilter, onFilter: (DexFilter) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        DexFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = filter == selected,
+                onClick = { onFilter(filter) },
+                label = {
                     Text(
-                        stringResource(R.string.dex_showing_saved),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        stringResource(
+                            when (filter) {
+                                DexFilter.All -> R.string.dex_filter_all
+                                DexFilter.Found -> R.string.dex_filter_found
+                                DexFilter.NotFound -> R.string.dex_filter_not_found
+                            },
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BirdCard(entry: DexEntry) {
+    // mergeDescendants: screen readers read the card as one item ("King Parrot, Found, …").
+    Card(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            val photo = entry.photo
+            if (entry.found && photo?.imageKey != null) {
+                SightingPhoto(
+                    imageKey = photo.imageKey,
+                    imageUrl = photo.imageUrl,
+                    contentDescription = null, // the name below describes the card
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                BirdPlaceholder()
+            }
+            if (entry.found) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.dex_found_badge),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
             }
         }
-        items(birds, key = { it.id }) { bird ->
-            BirdRow(bird)
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(entry.bird.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                entry.bird.scientificName,
+                style = MaterialTheme.typography.bodySmall,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 @Composable
-private fun BirdRow(bird: Bird) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(bird.name, style = MaterialTheme.typography.titleMedium)
-            Text(
-                bird.scientificName,
-                style = MaterialTheme.typography.bodySmall,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        RarityBadge(bird.rarityLevel)
+private fun NothingToShow() {
+    Column(Modifier.fillMaxWidth().padding(vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(stringResource(R.string.dex_empty_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.dex_empty_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-/** Same colours as the website's badges: grey common, green uncommon, amber rare. */
+@Composable
+private fun LoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            stringResource(R.string.dex_load_failed),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+    }
+}
+
+/** Same colours as the website's badges: grey common, green uncommon, amber rare. Used by A3.5. */
 @Composable
 fun RarityBadge(rarity: Rarity, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
@@ -130,18 +240,5 @@ fun RarityBadge(rarity: Rarity, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
-    }
-}
-
-@Composable
-private fun LoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            stringResource(R.string.dex_load_failed),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
     }
 }

@@ -132,10 +132,15 @@ original numbers._
       owner's account (2 species), offline count kept, R8 release OK. The 401 path still
       hasn't happened live (needs a server-side expired session). Image loading/caching by
       `imageKey` lands with the first photos (A3.5).
-- [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %. Replaces A3.2's simple list.
+- [x] **A3.4 Dex grid screen**: seen/unseen birds, completion %. Replaces A3.2's simple list.
+      Matches the website's MyDex: "You've found N of M birds", progress bar + % (rounded
+      down), All / Found / Not Found chips (kept across rotation), 2-column cards with the
+      newest sighting photo and a Found badge, origami placeholder otherwise. Photos load
+      with Coil 3 via `ui/components/SightingPhoto`, cached by `imageKey`. Live: photos
+      online, from cache in airplane mode, in dark mode, and in an R8 release build.
 - [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
-      Load photos with an image library (e.g. Coil) using `Sighting.imageKey` as the
-      memory/disk cache key, so photos still show offline after the 1-hour URL expires.
+      Open it from a dex card. Use `SightingPhoto` (already caches by `imageKey`) and
+      `RarityBadge` (in `DexScreen.kt`).
 - [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
       (`DELETE /api/sightings/:id`) with confirmation.
 
