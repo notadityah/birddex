@@ -250,7 +250,17 @@ original numbers._
       Live: 3 shared sightings; with the page size set to 2 for one test, scrolling loaded
       `offset=2` and stopped at the end; offline start, Retry, offline refresh, dark mode,
       and a release (R8) build. `PlaceholderScreen` was removed (Gallery was its last user).
-- [ ] **A5.2 Gallery filter + detail**: species filter (`birdId`), full-screen sighting view.
+- [x] **A5.2 Gallery filter + detail**: species filter (`birdId`), full-screen sighting view.
+      "Filter by bird" is a dropdown with "All birds" and every saved species (fetched if
+      the Dex hasn't loaded them yet); a new filter starts a new feed (`flatMapLatest` before
+      `cachedIn`) and scrolls to the top, and an empty species says "No shared sightings of
+      <bird> yet." Tapping a card opens a full-screen dialog copying GallerySightingModal.vue:
+      name, scientific name, the whole photo (same Coil key as the card), "Spotted by",
+      "Date" (seen, else shared) and notes; Back or ✕ closes it. Filter and open sighting
+      live in `SavedStateHandle` (the sighting as JSON). Gotcha: `SavedStateHandle.remove()`
+      detaches a key's StateFlow instead of clearing it; set the key to null. Live: magpie
+      filter (`birdId=2`), an empty species, back to all; detail opened, survived the app
+      being killed, closed; dark mode; release (R8) build incl. kill-and-restore.
 - [ ] **A5.3 Account screen**: gallery anonymity toggle (`/api/account/settings`),
       delete all sightings (`DELETE /api/sightings`), sign out.
 - [ ] **A5.4 Feedback form**: bug / suggestion / other via `POST /api/feedback`.

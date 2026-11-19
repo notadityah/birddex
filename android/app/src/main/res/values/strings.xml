@@ -128,6 +128,13 @@
     <string name="gallery_load_failed">Couldn\'t load the gallery. Check your connection and try again.</string>
     <string name="gallery_refresh_failed">Couldn\'t refresh the gallery.</string>
     <string name="gallery_load_more_failed">Couldn\'t load more sightings.</string>
+    <string name="gallery_filter_label">Filter by bird</string>
+    <string name="gallery_all_birds">All birds</string>
+    <string name="gallery_empty_filtered">No shared sightings of %1$s yet.</string>
+    <!-- Gallery sighting detail (copy matches GallerySightingModal.vue) -->
+    <string name="gallery_spotted_by">Spotted by</string>
+    <string name="gallery_date">Date</string>
+    <string name="close">Close</string>
     <!-- Relative dates (website: relativeDate in utils/dateFormat.js) -->
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>

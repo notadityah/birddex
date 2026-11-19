@@ -25,7 +25,10 @@ data class GallerySighting(
     @SerialName("image_url") val imageUrl: String? = null,
 ) {
     /** When it was shared (the gallery's order, and the website's "2 days ago"). */
-    val sharedAt: Instant? get() = runCatching { Instant.parse(createdAt) }.getOrNull()
+    val sharedAt: Instant? get() = parseInstant(createdAt)
+
+    /** When the bird was seen, falling back to when it was shared (the detail view's date). */
+    val seenAt: Instant? get() = parseInstant(detectedAt) ?: sharedAt
 
     /** Stable across fetches, unlike [imageUrl], so Coil's cache keeps working. */
     val photoCacheKey: String get() = "gallery/$id"
@@ -40,3 +43,5 @@ data class GalleryPage(
     val limit: Int = 0,
     val offset: Int = 0,
 )
+
+private fun parseInstant(value: String?): Instant? = value?.let { runCatching { Instant.parse(it) }.getOrNull() }

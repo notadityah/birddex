@@ -14,14 +14,25 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,12 +40,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.birddex.app.R
+import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.gallery.GallerySighting
 import com.birddex.app.ui.components.BirdPlaceholder
 import com.birddex.app.ui.components.RelativeDate
@@ -45,7 +58,8 @@ import java.time.Instant
 /**
  * Community Gallery (website: GalleryPage.vue): every shared sighting, newest first, as photo
  * cards with the bird, who shared it and when. More load as you scroll, where the website has
- * a "Load More" button. Needs a connection; nothing is saved for offline use.
+ * a "Load More" button. A species filter narrows the feed, and tapping a card opens it
+ * full-screen. Needs a connection; nothing is saved for offline use.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +70,22 @@ fun GalleryScreen(
     val items = viewModel.feed.collectAsLazyPagingItems()
     val refresh = items.loadState.refresh
     val now = Instant.now()
+    val birdFilter by viewModel.birdFilter.collectAsStateWithLifecycle()
+    val birds by viewModel.birdOptions.collectAsStateWithLifecycle()
+    val openSighting by viewModel.openSighting.collectAsStateWithLifecycle()
+    val gridState = rememberLazyGridState()
+
+    // A new filter is a new list: start it from the top. Skipped on first composition, so
+    // coming back to the tab keeps the scroll position.
+    var shownFilter by rememberSaveable { mutableStateOf(birdFilter) }
+    LaunchedEffect(birdFilter) {
+        if (birdFilter != shownFilter) {
+            shownFilter = birdFilter
+            gridState.scrollToItem(0)
+        }
+    }
+
+    openSighting?.let { GallerySightingDetail(it, onClose = viewModel::close) }
 
     PullToRefreshBox(
         isRefreshing = refresh is LoadState.Loading && items.itemCount > 0,
@@ -68,9 +98,11 @@ fun GalleryScreen(
             contentPadding = PaddingValues(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
+            state = gridState,
             modifier = Modifier.fillMaxSize(),
         ) {
             fullWidth { Header() }
+            fullWidth { BirdFilter(birds, selected = birdFilter, onSelect = viewModel::setBirdFilter) }
             when {
                 refresh is LoadState.Error && items.itemCount == 0 ->
                     fullWidth { Problem(R.string.gallery_load_failed, onRetry = items::retry) }
@@ -79,10 +111,10 @@ fun GalleryScreen(
                 refresh is LoadState.Loading && items.itemCount == 0 ->
                     fullWidth { Loading(Modifier.padding(vertical = 48.dp)) }
                 refresh is LoadState.NotLoading && items.itemCount == 0 ->
-                    fullWidth { Empty() }
+                    fullWidth { Empty(filteredTo = birds.firstOrNull { it.id == birdFilter }) }
             }
             items(count = items.itemCount, key = items.itemKey { it.id }, contentType = items.itemContentType { "sighting" }) { index ->
-                items[index]?.let { GalleryCard(it, now) }
+                items[index]?.let { sighting -> GalleryCard(sighting, now, onClick = { viewModel.open(sighting) }) }
             }
             appendState(items)
         }
@@ -108,10 +140,52 @@ private fun Header() {
     }
 }
 
-/** One shared sighting (website: GallerySightingCard.vue). */
+/**
+ * "All birds" or one species (website: the "Filter by bird" select). The menu lists the birds
+ * the app has saved, so it works as soon as the Dex has loaded once.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GalleryCard(sighting: GallerySighting, now: Instant) {
-    OutlinedCard(Modifier.fillMaxWidth()) {
+private fun BirdFilter(birds: List<Bird>, selected: Int?, onSelect: (Int?) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val allBirds = stringResource(R.string.gallery_all_birds)
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = birds.firstOrNull { it.id == selected }?.name ?: allBirds,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(stringResource(R.string.gallery_filter_label)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(allBirds) },
+                onClick = {
+                    onSelect(null)
+                    expanded = false
+                },
+            )
+            birds.forEach { bird ->
+                DropdownMenuItem(
+                    text = { Text(bird.name) },
+                    onClick = {
+                        onSelect(bird.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** One shared sighting (website: GallerySightingCard.vue); tapping it opens the full view. */
+@Composable
+private fun GalleryCard(sighting: GallerySighting, now: Instant, onClick: () -> Unit) {
+    OutlinedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -171,9 +245,13 @@ private fun Loading(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Empty() {
+private fun Empty(filteredTo: Bird?) {
     Text(
-        stringResource(R.string.gallery_empty),
+        if (filteredTo == null) {
+            stringResource(R.string.gallery_empty)
+        } else {
+            stringResource(R.string.gallery_empty_filtered, filteredTo.name)
+        },
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
