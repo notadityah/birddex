@@ -3,6 +3,7 @@ package com.birddex.app.ui.detect
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.detect.DetectPhotoStore
 import com.birddex.app.data.detect.DetectRepository
 import com.birddex.app.data.detect.Detection
@@ -39,9 +40,14 @@ data class DetectUiState(
     val detection: Detection? = null,
     /** Why the last detect call failed; cleared by retrying. */
     val detectError: ApiError? = null,
+    /** The match the user is looking at: the best one at first, or another they tapped. */
+    val selectedSlug: String? = null,
 ) {
     /** "Detect bird" is shown once the photo is ready and hasn't been identified yet. */
     val canDetect: Boolean get() = prepared != null && !detecting && detection == null
+
+    /** The selected match's bird, with its stats (website: `matchedBird`). */
+    val selectedBird: Bird? get() = selectedSlug?.let { detection?.birds?.get(it) }
 }
 
 /**
@@ -128,16 +134,30 @@ class DetectViewModel @Inject constructor(
         val current = _state.value
         val jpeg = current.prepared?.detectJpeg ?: return
         if (current.detecting) return
-        _state.update { it.copy(detecting = true, detection = null, detectError = null) }
+        _state.update { it.copy(detecting = true, detection = null, detectError = null, selectedSlug = null) }
         detectJob = viewModelScope.launch {
             val result = detector.detect(jpeg)
             _state.update {
                 when (result) {
-                    is ApiResult.Success -> it.copy(detecting = false, detection = result.value)
+                    is ApiResult.Success -> it.copy(
+                        detecting = false,
+                        detection = result.value,
+                        selectedSlug = result.value.bestMatch?.slug,
+                    )
                     is ApiResult.Failure -> it.copy(detecting = false, detectError = result.error)
                 }
             }
         }
+    }
+
+    /**
+     * "Not this bird? Tap another match." Only matches the server sent a bird for can be picked:
+     * it looks them all up in the same table the Dex comes from, so a label without a row is a
+     * species the app knows nothing about (website: falls back to the Dex, which lacks it too).
+     */
+    fun selectMatch(label: String) {
+        if (_state.value.detection?.birds?.containsKey(label) != true) return
+        _state.update { it.copy(selectedSlug = label) }
     }
 
     /** "Change photo": back to the Take / Choose buttons, abandoning any detection. */
@@ -154,7 +174,14 @@ class DetectViewModel @Inject constructor(
         _state.value.photo?.takeIf { it != file }?.let(store::delete)
         savedState[KEY_PHOTO] = file.path
         _state.update {
-            it.copy(photo = file, inputError = null, detecting = false, detection = null, detectError = null)
+            it.copy(
+                photo = file,
+                inputError = null,
+                detecting = false,
+                detection = null,
+                detectError = null,
+                selectedSlug = null,
+            )
         }
         prepare(file)
     }

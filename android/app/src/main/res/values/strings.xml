@@ -80,6 +80,12 @@
     <string name="results_title">Results</string>
     <string name="results_none">No birds detected — try a clearer photo.</string>
     <string name="best_match">Best match</string>
+    <string name="results_pick_another">Not this bird? Tap another match.</string>
+    <string name="your_photo">Your photo</string>
+    <string name="reference_caption">Reference — %1$s</string>
+    <string name="reference_photo_description">Reference photo of %1$s</string>
+    <!-- Credit for a Wikimedia Commons reference photo; %1$s (the author) becomes a link. -->
+    <string name="photo_credit">Photo: %1$s (%2$s)</string>
 
     <!-- Placeholder screens (replaced as each phase lands) -->
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>

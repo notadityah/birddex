@@ -23,8 +23,8 @@ import com.birddex.app.ui.components.RarityBadge
 /**
  * Pokédex stats for one bird, laid out like the website's BirdStatsCard.vue: header band
  * (name, rarity, conservation status), Wingspan/Length/Weight/Diet grid, Appearance/Habitat/
- * Call rows, and a fun fact. Missing stats are skipped. The website's optional reference
- * photo (with photographer credit) is added with the Detect results in A4.4.
+ * Call rows, and a fun fact. Missing stats are skipped. The card has no reference photo: on
+ * the Detect tab it sits beside the user's photo instead (ReferencePhoto), as on the website.
  */
 @Composable
 fun BirdStatsCard(bird: Bird, modifier: Modifier = Modifier, showName: Boolean = true) {

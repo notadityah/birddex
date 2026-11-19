@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,8 +49,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.birddex.app.R
-import com.birddex.app.data.detect.Detection
+import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.network.ApiError
+import com.birddex.app.ui.components.BirdStatsCard
+import com.birddex.app.ui.components.PhotoCreditText
+import com.birddex.app.ui.components.ReferencePhoto
 import java.io.File
 
 /**
@@ -107,21 +110,25 @@ fun DetectScreen(
                 },
             )
         } else {
-            SelectedPhoto(photo, onChangePhoto = viewModel::clearPhoto)
-            DetectSection(state, onDetect = viewModel::detect)
+            SelectedPhoto(photo, matchedBird = state.selectedBird, onChangePhoto = viewModel::clearPhoto)
+            DetectSection(state, onDetect = viewModel::detect, onSelectMatch = viewModel::selectMatch)
         }
     }
 }
 
 /** Under the photo (website: the Detect button, spinner, error banner and results). */
 @Composable
-private fun DetectSection(state: DetectUiState, onDetect: () -> Unit) {
+private fun DetectSection(state: DetectUiState, onDetect: () -> Unit, onSelectMatch: (String) -> Unit) {
     val error = state.detectError
     val detection = state.detection
     when {
         state.detecting -> Detecting()
         error != null -> DetectFailed(error, onRetry = onDetect)
-        detection != null -> DetectionSummary(detection)
+        detection != null -> {
+            DetectionResults(detection, selectedSlug = state.selectedSlug, onSelect = onSelectMatch)
+            // The reference photo is already beside the user's (website: show-photo="false").
+            state.selectedBird?.let { BirdStatsCard(it) }
+        }
         else -> Button(onClick = onDetect, enabled = state.canDetect, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.detect_button))
         }
@@ -169,43 +176,6 @@ private fun DetectFailed(error: ApiError, onRetry: () -> Unit) {
             val message = if (error == ApiError.Network) R.string.detect_offline else R.string.detect_failed
             Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-        }
-    }
-}
-
-/** The matches, best first. A plain list for now; A4.4 adds photos, stats and picking a match. */
-@Composable
-private fun DetectionSummary(detection: Detection) {
-    OutlinedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.results_title), style = MaterialTheme.typography.titleMedium)
-            if (detection.predictions.isEmpty()) {
-                Text(
-                    stringResource(R.string.results_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            detection.predictions.forEachIndexed { index, prediction ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(detection.nameOf(prediction.label), style = MaterialTheme.typography.bodyLarge)
-                    if (index == 0) {
-                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
-                            Text(
-                                stringResource(R.string.best_match),
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        formatConfidence(prediction.confidence),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
         }
     }
 }
@@ -273,20 +243,73 @@ private fun ButtonIcon(iconRes: Int) {
     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
 }
 
+/**
+ * The user's photo, whole; once a bird is matched, side by side with that bird's reference
+ * photo instead, so a wrong match is obvious at a glance (website: DetectPage.vue).
+ */
 @Composable
-private fun SelectedPhoto(photo: File, onChangePhoto: () -> Unit) {
+private fun SelectedPhoto(photo: File, matchedBird: Bird?, onChangePhoto: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        AsyncImage(
-            model = photo,
-            contentDescription = stringResource(R.string.detect_selected_photo),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
+        if (matchedBird == null) {
+            AsyncImage(
+                model = photo,
+                contentDescription = stringResource(R.string.detect_selected_photo),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 384.dp)
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ComparedPhoto(caption = stringResource(R.string.your_photo), modifier = Modifier.weight(1f)) {
+                    AsyncImage(
+                        model = photo,
+                        contentDescription = stringResource(R.string.detect_selected_photo),
+                        contentScale = ContentScale.Crop,
+                        modifier = it,
+                    )
+                }
+                ComparedPhoto(
+                    caption = stringResource(R.string.reference_caption, matchedBird.name),
+                    credit = { PhotoCreditText(matchedBird.slug, textAlign = TextAlign.Center) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    ReferencePhoto(
+                        slug = matchedBird.slug,
+                        contentDescription = stringResource(R.string.reference_photo_description, matchedBird.name),
+                        modifier = it,
+                    )
+                }
+            }
+        }
+        TextButton(onClick = onChangePhoto) { Text(stringResource(R.string.change_photo)) }
+    }
+}
+
+@Composable
+private fun ComparedPhoto(
+    caption: String,
+    modifier: Modifier = Modifier,
+    credit: @Composable () -> Unit = {},
+    image: @Composable (Modifier) -> Unit,
+) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        image(
+            Modifier
                 .fillMaxWidth()
-                .heightIn(max = 384.dp)
+                .height(192.dp)
                 .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         )
-        TextButton(onClick = onChangePhoto) { Text(stringResource(R.string.change_photo)) }
+        Text(
+            caption,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        credit()
     }
 }
 

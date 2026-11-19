@@ -1,6 +1,7 @@
 package com.birddex.app.ui.detect
 
 import androidx.lifecycle.SavedStateHandle
+import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.detect.CacheDetectPhotoStore
 import com.birddex.app.data.detect.CameraTarget
 import com.birddex.app.data.detect.DetectPhotoStore
@@ -471,7 +472,89 @@ class DetectViewModelTest {
         assertTrue(vm.state.value.canDetect)
     }
 
+    // --- picking a match (A4.4) ---
+
+    @Test fun bestMatchIsShownFirst() {
+        detector.result = ApiResult.Success(threeMatches)
+        val vm = withPhoto()
+
+        vm.detect()
+
+        assertEquals("house_sparrow", vm.state.value.selectedSlug)
+        assertEquals(houseSparrow, vm.state.value.selectedBird)
+    }
+
+    @Test fun tappingAnotherMatchShowsThatBird() {
+        detector.result = ApiResult.Success(threeMatches)
+        val vm = withPhoto()
+        vm.detect()
+
+        vm.selectMatch("spotted_turtle_dove")
+
+        assertEquals(dove, vm.state.value.selectedBird)
+        assertEquals(1, detector.sent.size) // no new request: the stats came with the answer
+    }
+
+    @Test fun matchWithoutABirdRowCantBePicked() {
+        detector.result = ApiResult.Success(threeMatches)
+        val vm = withPhoto()
+        vm.detect()
+
+        vm.selectMatch("removed_bird")
+        vm.selectMatch("not_even_a_match")
+
+        assertEquals(houseSparrow, vm.state.value.selectedBird)
+    }
+
+    @Test fun nothingIsPickedBeforeDetecting() {
+        val vm = withPhoto()
+
+        vm.selectMatch("house_sparrow")
+
+        assertNull(vm.state.value.selectedSlug)
+    }
+
+    @Test fun topMatchWithoutABirdRowLeavesNothingPicked() {
+        // The server's "bird" is null when its top label has no row (website: no stats card).
+        detector.result = ApiResult.Success(threeMatches.copy(predictions = threeMatches.predictions.reversed(), bestMatch = null))
+        val vm = withPhoto()
+
+        vm.detect()
+
+        assertNull(vm.state.value.selectedBird)
+        vm.selectMatch("house_sparrow")
+        assertEquals(houseSparrow, vm.state.value.selectedBird)
+    }
+
+    @Test fun newPhotoOrNewDetectionClearsThePick() {
+        detector.result = ApiResult.Success(threeMatches)
+        val vm = withPhoto()
+        vm.detect()
+        vm.selectMatch("spotted_turtle_dove")
+
+        detector.gate = CompletableDeferred()
+        vm.onPhotoPicked("content://media/picker/0/2")
+        assertNull(vm.state.value.selectedSlug)
+        vm.detect()
+        assertNull(vm.state.value.selectedSlug) // not while the new answer is on its way
+
+        detector.gate!!.complete(Unit)
+        assertEquals("house_sparrow", vm.state.value.selectedSlug)
+    }
+
     private companion object {
         val sparrow = Detection(predictions = listOf(Prediction("house_sparrow", 91.37)))
+
+        val houseSparrow = Bird(id = 14, name = "House Sparrow", scientificName = "Passer domesticus", slug = "house_sparrow")
+        val dove = Bird(id = 31, name = "Spotted Turtle-dove", scientificName = "Spilopelia chinensis", slug = "spotted_turtle_dove")
+        val threeMatches = Detection(
+            predictions = listOf(
+                Prediction("house_sparrow", 91.37),
+                Prediction("spotted_turtle_dove", 4.2),
+                Prediction("removed_bird", 0.5),
+            ),
+            bestMatch = houseSparrow,
+            birds = mapOf("house_sparrow" to houseSparrow, "spotted_turtle_dove" to dove),
+        )
     }
 }

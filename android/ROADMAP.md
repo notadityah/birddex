@@ -189,10 +189,20 @@ original numbers._
       the whole photo. Live: a cold start took 15 s (House Sparrow 78.23%); offline then
       Retry, a bird-less photo ("No birds detected"), and Change photo mid-call
       (`Canceled` after 172 ms) all checked, plus the same detection on a release (R8) build.
-- [ ] **A4.4 Results UI**: top matches with confidence + stats card, like
+- [x] **A4.4 Results UI**: top matches with confidence + stats card, like
       `BirdStatsCard.vue` / `DetectionResults.vue`. Reuse `ui/components/BirdStatsCard` and
       add its reference photo (`<site>/birds/<slug>.jpg`) with the photographer credit and
       licence link from `frontend/src/data/birdImages.js` (CC BY / CC BY-SA require it).
+      As on the website's Detect page, the reference photo sits beside the user's photo
+      (not in the stats card), captioned "Reference — <name>" with "Photo: <author>
+      (<licence>)", the author linking to Wikimedia Commons. Credits are copied into
+      `data/birds/BirdImages.kt` (36, one CC0; a test checks every bird has one); photos
+      load from the site through Coil. Matches show a thumbnail, name, "Best match",
+      confidence and bar, and act as radio buttons; tapping one swaps the reference photo
+      and stats without a request. Matches the server sent no bird row for can't be picked.
+      Checked live with four of the website's reference photos copied to the emulator:
+      Little Wattlebird 70.39% / Red Wattlebird 56.9%, picking the second swapped photo,
+      credit and stats; the credit link opened commons.wikimedia.org; dark mode.
 - [ ] **A4.5 Save sighting**: `POST /api/sightings`
       `{ birdId, imageExt: "jpg", detectedAt, notes, public }` → `PUT` the JPEG to the
       returned `uploadUrl`; refresh the Dex.
