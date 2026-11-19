@@ -4,9 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.birddex.app.data.detect.DetectPhotoStore
+import com.birddex.app.data.detect.DetectRepository
+import com.birddex.app.data.detect.Detection
 import com.birddex.app.data.detect.ImportResult
 import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
+import com.birddex.app.data.network.ApiError
+import com.birddex.app.data.network.ApiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -29,22 +33,34 @@ data class DetectUiState(
     /** Turning [photo] into the JPEGs that get sent; ready when [prepared] is set. */
     val preparing: Boolean = false,
     val prepared: PreparedPhoto? = null,
-)
+    /** Waiting for `POST /api/detect`. */
+    val detecting: Boolean = false,
+    /** The server's answer for [photo]; null until detected. */
+    val detection: Detection? = null,
+    /** Why the last detect call failed; cleared by retrying. */
+    val detectError: ApiError? = null,
+) {
+    /** "Detect bird" is shown once the photo is ready and hasn't been identified yet. */
+    val canDetect: Boolean get() = prepared != null && !detecting && detection == null
+}
 
 /**
  * The Detect tab (website: DetectPage.vue). A4.1 covers getting the photo in, from the
  * system photo picker or the system camera; neither needs a permission. A4.2 then prepares
- * it (upright, shrunk, JPEG) as soon as it is chosen, like the website.
+ * it (upright, shrunk, JPEG) as soon as it is chosen, like the website. A4.3 sends it to
+ * the model; changing the photo cancels a call that is still running (the website aborts it).
  *
  * Both file paths live in [SavedStateHandle], so the chosen photo, and a camera photo that
  * is still being taken, survive the app being killed in the background (camera apps often
  * cause that on phones with little memory). The prepared JPEGs are only kept in memory and
- * are made again from the saved photo after a restart.
+ * are made again from the saved photo after a restart; so is the detection result, which
+ * means asking again.
  */
 @HiltViewModel
 class DetectViewModel @Inject constructor(
     private val store: DetectPhotoStore,
     private val preparer: PhotoPreparer,
+    private val detector: DetectRepository,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -52,6 +68,7 @@ class DetectViewModel @Inject constructor(
     val state: StateFlow<DetectUiState> = _state.asStateFlow()
 
     private var prepareJob: Job? = null
+    private var detectJob: Job? = null
 
     init {
         // Drop leftovers from earlier visits, but keep a camera photo that is still on its way.
@@ -106,18 +123,39 @@ class DetectViewModel @Inject constructor(
         }
     }
 
-    /** "Change photo": back to the Take / Choose buttons. */
+    /** "Detect bird", and "Retry" after a failure. */
+    fun detect() {
+        val current = _state.value
+        val jpeg = current.prepared?.detectJpeg ?: return
+        if (current.detecting) return
+        _state.update { it.copy(detecting = true, detection = null, detectError = null) }
+        detectJob = viewModelScope.launch {
+            val result = detector.detect(jpeg)
+            _state.update {
+                when (result) {
+                    is ApiResult.Success -> it.copy(detecting = false, detection = result.value)
+                    is ApiResult.Failure -> it.copy(detecting = false, detectError = result.error)
+                }
+            }
+        }
+    }
+
+    /** "Change photo": back to the Take / Choose buttons, abandoning any detection. */
     fun clearPhoto() {
         prepareJob?.cancel()
+        detectJob?.cancel()
         _state.value.photo?.let(store::delete)
         savedState.remove<String>(KEY_PHOTO)
-        _state.update { it.copy(photo = null, inputError = null, preparing = false, prepared = null) }
+        _state.update { DetectUiState(importing = it.importing) }
     }
 
     private fun usePhoto(file: File) {
+        detectJob?.cancel() // its answer would be for the old photo
         _state.value.photo?.takeIf { it != file }?.let(store::delete)
         savedState[KEY_PHOTO] = file.path
-        _state.update { it.copy(photo = file, inputError = null) }
+        _state.update {
+            it.copy(photo = file, inputError = null, detecting = false, detection = null, detectError = null)
+        }
         prepare(file)
     }
 

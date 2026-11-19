@@ -178,8 +178,17 @@ original numbers._
       (`PhotoPreparerTest`) cover the sizes, three orientations, PNG transparency and
       non-photos; with rotation switched off, exactly the three orientation tests fail.
       The JPEGs stay in memory only, so A4.3/A4.5 read them from `DetectUiState.prepared`.
-- [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 5 }` (5, as the website); loading,
+- [x] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 5 }` (5, as the website); loading,
       error, cancel-on-new-photo states.
+      `NetworkDetectRepository` sends `PreparedPhoto.detectJpeg`; the answer
+      (`predictions`, `bird`, `birds` keyed by slug) reuses the `Bird` model. "Detect bird"
+      is enabled once the photo is prepared; "Detecting…" shows the website's cold-start
+      hint; errors show with Retry (offline gets its own message); changing the photo
+      cancels the call. Results are a plain list for now (name, "Best match", confidence),
+      replaced in A4.4. The debug HTTP log keeps /api/detect to headers, since its body is
+      the whole photo. Live: a cold start took 15 s (House Sparrow 78.23%); offline then
+      Retry, a bird-less photo ("No birds detected"), and Change photo mid-call
+      (`Canceled` after 172 ms) all checked, plus the same detection on a release (R8) build.
 - [ ] **A4.4 Results UI**: top matches with confidence + stats card, like
       `BirdStatsCard.vue` / `DetectionResults.vue`. Reuse `ui/components/BirdStatsCard` and
       add its reference photo (`<site>/birds/<slug>.jpg`) with the photographer credit and

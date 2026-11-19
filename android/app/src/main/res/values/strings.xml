@@ -71,6 +71,15 @@
     <string name="detect_error_no_camera">No camera app found. Choose a photo instead.</string>
     <string name="detect_error_camera">The camera didn\'t save a photo. Please try again.</string>
     <string name="detect_error_unreadable">Couldn\'t read that photo. Try a different one.</string>
+    <string name="detect_button">Detect bird</string>
+    <string name="detecting">Detecting…</string>
+    <string name="detecting_hint">This may take a moment on first use.</string>
+    <string name="detect_failed">Detection failed. Please try again.</string>
+    <string name="detect_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <!-- Detection results (copy matches DetectionResults.vue) -->
+    <string name="results_title">Results</string>
+    <string name="results_none">No birds detected — try a clearer photo.</string>
+    <string name="best_match">Best match</string>
 
     <!-- Placeholder screens (replaced as each phase lands) -->
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>

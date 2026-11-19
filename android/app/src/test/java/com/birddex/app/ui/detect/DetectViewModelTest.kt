@@ -4,9 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import com.birddex.app.data.detect.CacheDetectPhotoStore
 import com.birddex.app.data.detect.CameraTarget
 import com.birddex.app.data.detect.DetectPhotoStore
+import com.birddex.app.data.detect.DetectRepository
+import com.birddex.app.data.detect.Detection
+import com.birddex.app.data.detect.Prediction
 import com.birddex.app.data.detect.ImportResult
 import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
+import com.birddex.app.data.network.ApiError
+import com.birddex.app.data.network.ApiResult
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -69,14 +74,33 @@ class DetectViewModelTest {
         }
     }
 
+    private class FakeDetectRepository : DetectRepository {
+        /** What each call sent, as text (the fake preparer's "JPEG" is the photo's file name). */
+        val sent = mutableListOf<String>()
+        var result: ApiResult<Detection> = ApiResult.Success(sparrow)
+        var gate: CompletableDeferred<Unit>? = null
+        var cancelled = 0
+        override suspend fun detect(jpeg: ByteArray): ApiResult<Detection> {
+            sent += jpeg.decodeToString()
+            try {
+                gate?.await()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                cancelled++
+                throw e
+            }
+            return result
+        }
+    }
+
     private val store = FakeDetectPhotoStore()
     private val preparer = FakePhotoPreparer()
+    private val detector = FakeDetectRepository()
     private val savedState = SavedStateHandle()
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun open() = DetectViewModel(store, preparer, savedState)
+    private fun open() = DetectViewModel(store, preparer, detector, savedState)
 
     /** Which photo the prepared JPEGs were made from (see FakePhotoPreparer). */
     private fun DetectViewModel.preparedFrom(): String? = state.value.prepared?.detectJpeg?.decodeToString()
@@ -338,5 +362,116 @@ class DetectViewModelTest {
         gate.complete(Unit)
 
         assertEquals(DetectUiState(), vm.state.value)
+    }
+
+    // --- detecting (A4.3) ---
+
+    private fun withPhoto(): DetectViewModel = open().apply { onPhotoPicked("content://media/picker/0/1") }
+
+    @Test fun detectSendsTheDetectionJpegAndShowsTheAnswer() {
+        val vm = withPhoto()
+        assertTrue(vm.state.value.canDetect)
+
+        vm.detect()
+
+        assertEquals(listOf("picked-0.jpg"), detector.sent) // detectJpeg, not the upload one
+        with(vm.state.value) {
+            assertFalse(detecting)
+            assertEquals(sparrow, detection)
+            assertNull(detectError)
+            assertFalse(canDetect) // the button gives way to the results
+        }
+    }
+
+    @Test fun cannotDetectUntilThePhotoIsPrepared() {
+        preparer.gate = CompletableDeferred()
+        val vm = withPhoto()
+        assertFalse(vm.state.value.canDetect)
+
+        vm.detect()
+
+        assertTrue(detector.sent.isEmpty())
+    }
+
+    @Test fun showsDetectingAndIgnoresASecondTap() {
+        detector.gate = CompletableDeferred()
+        val vm = withPhoto()
+
+        vm.detect()
+        assertTrue(vm.state.value.detecting)
+        assertFalse(vm.state.value.canDetect)
+        vm.detect()
+
+        detector.gate!!.complete(Unit)
+        assertEquals(1, detector.sent.size)
+        assertFalse(vm.state.value.detecting)
+    }
+
+    @Test fun failureIsShownAndRetryWorks() {
+        detector.result = ApiResult.Failure(ApiError.Network)
+        val vm = withPhoto()
+
+        vm.detect()
+        assertEquals(ApiError.Network, vm.state.value.detectError)
+        assertNull(vm.state.value.detection)
+
+        detector.result = ApiResult.Success(sparrow)
+        vm.detect() // "Retry"
+        assertNull(vm.state.value.detectError)
+        assertEquals(sparrow, vm.state.value.detection)
+        assertEquals(2, detector.sent.size)
+    }
+
+    @Test fun noBirdDetectedIsAResultNotAnError() {
+        detector.result = ApiResult.Success(Detection())
+        val vm = withPhoto()
+
+        vm.detect()
+
+        assertEquals(Detection(), vm.state.value.detection)
+        assertNull(vm.state.value.detectError)
+    }
+
+    @Test fun changePhotoCancelsTheCall() {
+        detector.gate = CompletableDeferred()
+        val vm = withPhoto()
+        vm.detect()
+
+        vm.clearPhoto()
+
+        assertEquals(1, detector.cancelled)
+        assertEquals(DetectUiState(), vm.state.value)
+    }
+
+    @Test fun newPhotoCancelsTheCallAndStartsFresh() {
+        detector.gate = CompletableDeferred()
+        val vm = withPhoto()
+        vm.detect()
+
+        val uri = vm.prepareCamera()!!
+        cameraWrites(uri)
+        vm.onCameraResult(saved = true)
+
+        assertEquals(1, detector.cancelled)
+        with(vm.state.value) {
+            assertFalse(detecting)
+            assertNull(detection)
+            assertTrue(canDetect) // ready to detect the new photo
+        }
+    }
+
+    @Test fun newPhotoClearsTheOldAnswer() {
+        val vm = withPhoto()
+        vm.detect()
+        assertEquals(sparrow, vm.state.value.detection)
+
+        vm.onPhotoPicked("content://media/picker/0/2")
+
+        assertNull(vm.state.value.detection)
+        assertTrue(vm.state.value.canDetect)
+    }
+
+    private companion object {
+        val sparrow = Detection(predictions = listOf(Prediction("house_sparrow", 91.37)))
     }
 }

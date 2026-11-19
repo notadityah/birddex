@@ -62,7 +62,8 @@ object ApiClients {
     /**
      * Debug-only HTTP log (logcat tag BirdDexHttp). Never prints credentials: cookie headers
      * are redacted everywhere, and /api/auth/ calls log headers only, because their bodies
-     * carry passwords (requests) and session tokens (responses).
+     * carry passwords (requests) and session tokens (responses). /api/detect also logs
+     * headers only: its request is the whole photo as base64 (hundreds of KB).
      */
     private fun debugHttpLogger(): Interceptor {
         fun logger(level: HttpLoggingInterceptor.Level) =
@@ -74,8 +75,9 @@ object ApiClients {
         val withBodies = logger(HttpLoggingInterceptor.Level.BODY)
         val headersOnly = logger(HttpLoggingInterceptor.Level.HEADERS)
         return Interceptor { chain ->
-            val isAuthCall = chain.request().url.encodedPath.startsWith("/api/auth/")
-            (if (isAuthCall) headersOnly else withBodies).intercept(chain)
+            val path = chain.request().url.encodedPath
+            val headersOnlyCall = path.startsWith("/api/auth/") || path == "/api/detect"
+            (if (headersOnlyCall) headersOnly else withBodies).intercept(chain)
         }
     }
 }

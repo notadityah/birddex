@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +20,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +49,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.birddex.app.R
+import com.birddex.app.data.detect.Detection
+import com.birddex.app.data.network.ApiError
 import java.io.File
 
 /**
@@ -102,6 +108,104 @@ fun DetectScreen(
             )
         } else {
             SelectedPhoto(photo, onChangePhoto = viewModel::clearPhoto)
+            DetectSection(state, onDetect = viewModel::detect)
+        }
+    }
+}
+
+/** Under the photo (website: the Detect button, spinner, error banner and results). */
+@Composable
+private fun DetectSection(state: DetectUiState, onDetect: () -> Unit) {
+    val error = state.detectError
+    val detection = state.detection
+    when {
+        state.detecting -> Detecting()
+        error != null -> DetectFailed(error, onRetry = onDetect)
+        detection != null -> DetectionSummary(detection)
+        else -> Button(onClick = onDetect, enabled = state.canDetect, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.detect_button))
+        }
+    }
+}
+
+@Composable
+private fun Detecting() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.detecting), style = MaterialTheme.typography.bodyMedium)
+        }
+        // The server loads the model on its first request after a quiet spell (10–15 s).
+        Text(
+            stringResource(R.string.detecting_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun DetectFailed(error: ApiError, onRetry: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val message = if (error == ApiError.Network) R.string.detect_offline else R.string.detect_failed
+            Text(stringResource(message), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+        }
+    }
+}
+
+/** The matches, best first. A plain list for now; A4.4 adds photos, stats and picking a match. */
+@Composable
+private fun DetectionSummary(detection: Detection) {
+    OutlinedCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.results_title), style = MaterialTheme.typography.titleMedium)
+            if (detection.predictions.isEmpty()) {
+                Text(
+                    stringResource(R.string.results_none),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            detection.predictions.forEachIndexed { index, prediction ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(detection.nameOf(prediction.label), style = MaterialTheme.typography.bodyLarge)
+                    if (index == 0) {
+                        Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
+                            Text(
+                                stringResource(R.string.best_match),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        formatConfidence(prediction.confidence),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
