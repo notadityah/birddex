@@ -238,7 +238,18 @@ original numbers._
 
 ## Phase 5 — Gallery, account, feedback
 
-- [ ] **A5.1 Gallery feed**: Paging 3 over `GET /api/gallery?limit&offset`.
+- [x] **A5.1 Gallery feed**: Paging 3 over `GET /api/gallery?limit&offset`.
+      Paging 3.5.3 (`paging-compose`), 20 per page like the website, loading more as you
+      scroll instead of "Load More". `GalleryPagingSource` keys by offset, stops at
+      `total`, and drops ids already shown (a share mid-scroll shifts the newest-first feed,
+      and a repeat would crash the id-keyed grid). Refresh always starts from the top. Cards
+      copy GallerySightingCard.vue: photo, bird, "by <name>" ("Anonymous" comes from the
+      server), and the website's relative date ("3mo ago"). The API hides image keys (they'd
+      reveal anonymous users), so Coil caches gallery photos by sighting id. Not saved
+      offline; errors show with Retry, and pull to refresh keeps the cards on failure.
+      Live: 3 shared sightings; with the page size set to 2 for one test, scrolling loaded
+      `offset=2` and stopped at the end; offline start, Retry, offline refresh, dark mode,
+      and a release (R8) build. `PlaceholderScreen` was removed (Gallery was its last user).
 - [ ] **A5.2 Gallery filter + detail**: species filter (`birdId`), full-screen sighting view.
 - [ ] **A5.3 Account screen**: gallery anonymity toggle (`/api/account/settings`),
       delete all sightings (`DELETE /api/sightings`), sign out.

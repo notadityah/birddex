@@ -119,8 +119,22 @@
     <string name="report_sent_body">We\'ll use it to improve detection.</string>
     <string name="report_photo_failed">Your photo couldn\'t be sent, but the report was.</string>
 
-    <!-- Placeholder screens (replaced as each phase lands) -->
-    <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
+    <!-- Community Gallery (copy matches GalleryPage.vue and GallerySightingCard.vue) -->
+    <string name="gallery_title">Community Gallery</string>
+    <string name="gallery_subtitle">Bird sightings shared by the community.</string>
+    <string name="gallery_by">by %1$s</string>
+    <string name="gallery_anonymous">Anonymous</string>
+    <string name="gallery_empty">No sightings shared yet. Be the first!</string>
+    <string name="gallery_load_failed">Couldn\'t load the gallery. Check your connection and try again.</string>
+    <string name="gallery_refresh_failed">Couldn\'t refresh the gallery.</string>
+    <string name="gallery_load_more_failed">Couldn\'t load more sightings.</string>
+    <!-- Relative dates (website: relativeDate in utils/dateFormat.js) -->
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
+    <string name="date_days_ago">%1$d days ago</string>
+    <string name="date_weeks_ago">%1$dw ago</string>
+    <string name="date_months_ago">%1$dmo ago</string>
+    <string name="date_years_ago">%1$dy ago</string>
 
     <!-- Common -->
     <string name="back">Back</string>

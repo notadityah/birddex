@@ -5,6 +5,7 @@ import com.birddex.app.data.detect.DetectRequest
 import com.birddex.app.data.detect.Detection
 import com.birddex.app.data.feedback.FeedbackCreated
 import com.birddex.app.data.feedback.FeedbackRequest
+import com.birddex.app.data.gallery.GalleryPage
 import com.birddex.app.data.sightings.CreateSightingRequest
 import com.birddex.app.data.sightings.CreatedSighting
 import com.birddex.app.data.sightings.Sighting
@@ -17,6 +18,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 import retrofit2.http.Url
 
 /** BirdDex REST API (`backend/lambda/api/index.ts`). Paths are relative to BuildConfig.BASE_URL. */
@@ -51,6 +53,17 @@ interface BirdDexApi {
      */
     @PUT
     suspend fun uploadPhoto(@Url uploadUrl: String, @Body photo: RequestBody)
+
+    /**
+     * The Community Gallery: shared sightings, newest first, with 1-hour photo links. The
+     * server caps [limit] at 100; [birdId] filters to one species. 401 when signed out.
+     */
+    @GET("api/gallery")
+    suspend fun getGallery(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int,
+        @Query("birdId") birdId: Int?,
+    ): GalleryPage
 
     /** Shares (true) or unshares a sighting in the public gallery. 404 if it isn't the user's. */
     @PATCH("api/sightings/{id}")

@@ -23,4 +23,26 @@ class DatesTest {
         assertEquals("19 November 2026", formatLongDate(lateUtc, sydney, australia))
         assertEquals("18 November 2026", formatLongDate(lateUtc, ZoneId.of("UTC"), australia))
     }
+
+    // --- relative dates (gallery cards, A5.1) ---
+
+    private val now = Instant.parse("2026-11-20T09:00:00Z")
+    private fun ago(days: Long, hours: Long = 0) = relativeDate(now.minusSeconds((days * 24 + hours) * 3600), now)
+
+    @Test fun relativeDateStepsMatchTheWebsite() {
+        assertEquals(RelativeDate.Today, ago(0, hours = 23)) // whole 24-hour periods, not calendar days
+        assertEquals(RelativeDate.Yesterday, ago(1))
+        assertEquals(RelativeDate.DaysAgo(2), ago(2))
+        assertEquals(RelativeDate.DaysAgo(6), ago(6, hours = 23))
+        assertEquals(RelativeDate.WeeksAgo(1), ago(7))
+        assertEquals(RelativeDate.WeeksAgo(4), ago(29))
+        assertEquals(RelativeDate.MonthsAgo(1), ago(30))
+        assertEquals(RelativeDate.MonthsAgo(12), ago(364))
+        assertEquals(RelativeDate.YearsAgo(1), ago(365))
+        assertEquals(RelativeDate.YearsAgo(2), ago(800))
+    }
+
+    @Test fun aSlightlyFutureTimeIsToday() {
+        assertEquals(RelativeDate.Today, relativeDate(now.plusSeconds(90), now))
+    }
 }

@@ -118,6 +118,8 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     // Photo rotation from the camera's EXIF tag (Detect, A4.2).
     implementation(libs.androidx.exifinterface)
+    // Gallery feed that loads more as you scroll (A5.1).
+    implementation(libs.androidx.paging.compose)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
