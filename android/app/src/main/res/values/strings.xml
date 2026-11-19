@@ -59,8 +59,19 @@
     <string name="rarity_uncommon">Uncommon</string>
     <string name="rarity_rare">Rare</string>
 
+    <!-- Detect (copy follows DetectPage.vue and ImageUploader.vue) -->
+    <string name="detect_subtitle">Take or pick a photo to identify a bird.</string>
+    <string name="take_photo">Take photo</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="change_photo">Change photo</string>
+    <string name="detect_selected_photo">Selected bird photo</string>
+    <string name="detect_error_not_image">That file isn\'t a photo. Please choose an image.</string>
+    <string name="detect_error_too_large">Photo is too large. Maximum size is 50 MB.</string>
+    <string name="detect_error_import">Couldn\'t open that photo. Try a different one.</string>
+    <string name="detect_error_no_camera">No camera app found. Choose a photo instead.</string>
+    <string name="detect_error_camera">The camera didn\'t save a photo. Please try again.</string>
+
     <!-- Placeholder screens (replaced as each phase lands) -->
-    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
 
     <!-- Common -->

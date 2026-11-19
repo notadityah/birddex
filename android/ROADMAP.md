@@ -158,11 +158,18 @@ original numbers._
 
 ## Phase 4 — Detect (core feature)
 
-- [ ] **A4.1 Image input**: Android Photo Picker plus the system camera
+- [x] **A4.1 Image input**: Android Photo Picker plus the system camera
       (`ActivityResultContracts.TakePicture`); runtime permissions where needed.
+      No permission is needed: the picker grants just the chosen photo, and the camera app
+      writes into a FileProvider file (declaring CAMERA would make it required). The photo
+      is copied into `cache/detect/` (`CacheDetectPhotoStore`, max 50 MB) and its path kept
+      in `SavedStateHandle`, so it survives tab switches and the app being killed, including
+      while the camera is open. Checked on the emulator: pick, take, back out of the camera,
+      change photo, kill-and-restore for both, dark mode.
 - [ ] **A4.2 Image prep**: fix EXIF rotation, resize to max 1280 px, JPEG quality 85
-      (matches `frontend/src/composables/useImageResize.js`).
-- [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 3 }`; loading,
+      (matches `frontend/src/composables/useImageResize.js`). The website also makes a
+      2048 px, quality 0.92 copy for the sighting upload (`DetectPage.vue`).
+- [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 5 }` (5, as the website); loading,
       error, cancel-on-new-photo states.
 - [ ] **A4.4 Results UI**: top matches with confidence + stats card, like
       `BirdStatsCard.vue` / `DetectionResults.vue`. Reuse `ui/components/BirdStatsCard` and
