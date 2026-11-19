@@ -3,6 +3,7 @@ package com.birddex.app.data.network
 import com.birddex.app.data.auth.SendVerificationEmailRequest
 import com.birddex.app.data.auth.SignInEmailRequest
 import com.birddex.app.data.auth.SignUpEmailRequest
+import com.birddex.app.data.auth.SocialIdTokenSignInRequest
 import com.birddex.app.data.auth.UserResponse
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -21,6 +22,10 @@ interface AuthApi {
 
     @POST("api/auth/sign-in/email")
     suspend fun signInEmail(@Body body: SignInEmailRequest): Response<UserResponse>
+
+    /** Google sign-in: better-auth verifies the ID token with Google and creates the account if new. */
+    @POST("api/auth/sign-in/social")
+    suspend fun signInSocial(@Body body: SocialIdTokenSignInRequest): Response<UserResponse>
 
     @POST("api/auth/sign-up/email")
     suspend fun signUpEmail(@Body body: SignUpEmailRequest): Response<JsonElement>

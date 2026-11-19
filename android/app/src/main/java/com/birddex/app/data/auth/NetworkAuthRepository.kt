@@ -49,6 +49,13 @@ class NetworkAuthRepository(
         return result
     }
 
+    override suspend fun signInWithGoogle(idToken: String): AuthResult<AuthUser> {
+        val request = SocialIdTokenSignInRequest(provider = "google", idToken = SocialIdTokenSignInRequest.IdToken(idToken))
+        val result = call { api.signInSocial(request) }.then { it.user }
+        if (result is AuthResult.Success) _sessionState.value = SessionState.SignedIn(result.value)
+        return result
+    }
+
     override suspend fun signUp(name: String, email: String, password: String): AuthResult<Unit> =
         call { api.signUpEmail(SignUpEmailRequest(name.trim(), email.trim(), password, verifyCallbackUrl)) }
             .then { }

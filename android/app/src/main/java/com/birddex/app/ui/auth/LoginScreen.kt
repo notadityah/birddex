@@ -11,7 +11,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
 
-/** Email/password sign-in. "Forgot password?" comes in A2.4, Google sign-in in A2.6. */
+/** Email/password or Google sign-in. "Forgot password?" comes in A2.4. */
 @Composable
 fun LoginScreen(
     onBack: () -> Unit,
@@ -66,6 +66,7 @@ fun LoginScreen(
             loading = state.loading,
             onClick = submit,
         )
+        GoogleSignInSection(onSignedIn = onSignedIn)
         AuthLinkRow(
             prompt = stringResource(R.string.login_no_account),
             action = stringResource(R.string.sign_up),

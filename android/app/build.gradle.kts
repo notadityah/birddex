@@ -21,6 +21,16 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+
+        // The backend's Google *Web* OAuth client (better-auth's GOOGLE_CLIENT_ID). Google
+        // issues the app's ID tokens for this audience so the backend accepts them. The
+        // Android clients (package + SHA-1) live in the same Google Cloud project.
+        // Not a secret: it appears in every Google sign-in URL the website opens.
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"219791307207-uvak3f3mnb684sevl7j974ttbqm7brcl.apps.googleusercontent.com\"",
+        )
     }
 
     buildTypes {
@@ -85,6 +95,10 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.googleid)
 
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

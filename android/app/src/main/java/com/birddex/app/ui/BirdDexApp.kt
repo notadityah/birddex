@@ -107,6 +107,7 @@ fun BirdDexApp() {
                             popUpTo<RegisterRoute> { inclusive = true }
                         }
                     },
+                    onSignedIn = { navController.leaveAuthFlow() },
                     onSignIn = { navController.openLogin() },
                 )
             }

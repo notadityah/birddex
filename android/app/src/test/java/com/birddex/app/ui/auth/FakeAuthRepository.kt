@@ -28,6 +28,14 @@ class FakeAuthRepository : AuthRepository {
         return signInResult
     }
 
+    var googleResult: AuthResult<AuthUser> = AuthResult.Success(user)
+    val googleCalls = mutableListOf<String>()
+
+    override suspend fun signInWithGoogle(idToken: String): AuthResult<AuthUser> {
+        googleCalls += idToken
+        return googleResult
+    }
+
     override suspend fun signUp(name: String, email: String, password: String): AuthResult<Unit> {
         signUpCalls += Triple(name, email, password)
         return signUpResult

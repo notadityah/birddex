@@ -12,11 +12,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
 
-/** Create an account with email and password; ends on the "check your inbox" screen. */
+/**
+ * Create an account with email and password (ends on the "check your inbox" screen), or
+ * continue with Google, which signs straight in (Google has already verified the email).
+ */
 @Composable
 fun RegisterScreen(
     onBack: () -> Unit,
     onRegistered: (email: String) -> Unit,
+    onSignedIn: () -> Unit,
     onSignIn: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
@@ -80,6 +84,7 @@ fun RegisterScreen(
             loading = state.loading,
             onClick = submit,
         )
+        GoogleSignInSection(onSignedIn = onSignedIn)
         AuthLinkRow(
             prompt = stringResource(R.string.register_have_account),
             action = stringResource(R.string.sign_in),

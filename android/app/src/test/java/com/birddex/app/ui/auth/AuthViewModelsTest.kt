@@ -125,6 +125,46 @@ class AuthViewModelsTest {
         assertNull(vm.state.value.registeredEmail)
     }
 
+    // --- Google ---
+
+    @Test fun googleTokenSignsIn() {
+        val vm = GoogleSignInViewModel(repo)
+        vm.onStarted()
+        assertTrue(vm.state.value.loading)
+
+        vm.onIdTokenResult(GoogleIdTokenResult.Token("id.token"))
+
+        assertEquals(listOf("id.token"), repo.googleCalls)
+        assertTrue(vm.state.value.signedIn)
+        assertTrue(!vm.state.value.loading)
+    }
+
+    @Test fun googleSheetClosedIsNotAnError() {
+        val vm = GoogleSignInViewModel(repo)
+        vm.onStarted()
+        vm.onIdTokenResult(GoogleIdTokenResult.Cancelled)
+
+        assertEquals(GoogleSignInUiState(), vm.state.value)
+        assertTrue(repo.googleCalls.isEmpty())
+    }
+
+    @Test fun googleNoAccountOnDevice() {
+        val vm = GoogleSignInViewModel(repo)
+        vm.onStarted()
+        vm.onIdTokenResult(GoogleIdTokenResult.NoGoogleAccount)
+        assertEquals(GoogleSignInError.NoGoogleAccount, vm.state.value.error)
+    }
+
+    @Test fun googleTokenRejectedByServer() {
+        repo.googleResult = AuthResult.Failure(AuthError.Unexpected(401, "Invalid token"))
+        val vm = GoogleSignInViewModel(repo)
+        vm.onStarted()
+        vm.onIdTokenResult(GoogleIdTokenResult.Token("bad"))
+
+        assertEquals(GoogleSignInError.Server(AuthError.Unexpected(401, "Invalid token")), vm.state.value.error)
+        assertTrue(!vm.state.value.signedIn)
+    }
+
     // --- Verify email ---
 
     @Test fun resendVerification() {

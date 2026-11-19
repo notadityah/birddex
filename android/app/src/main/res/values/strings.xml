@@ -49,6 +49,12 @@
     <string name="verify_resent">Verification email resent.</string>
     <string name="verify_already_verified">Already verified?</string>
 
+    <!-- Google sign-in (button copy matches SocialLoginButtons.vue) -->
+    <string name="or_continue_with">or continue with</string>
+    <string name="google">Google</string>
+    <string name="google_no_account">No Google account on this device. Add one in Settings, then try again.</string>
+    <string name="google_failed">Google sign-in didn\'t work. Please try again.</string>
+
     <!-- Form fields -->
     <string name="field_name">Full name</string>
     <string name="field_name_placeholder">Jane Doe</string>

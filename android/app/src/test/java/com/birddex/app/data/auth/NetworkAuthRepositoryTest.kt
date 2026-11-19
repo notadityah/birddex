@@ -117,6 +117,29 @@ class NetworkAuthRepositoryTest {
         assertEquals(SessionState.Unknown, repo.sessionState.value)
     }
 
+    // --- Google ---
+
+    @Test fun googleSignInSendsIdTokenAndStoresSession() = runBlocking {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+
+        val result = repo.signInWithGoogle("google.id.token")
+
+        assertEquals("u1", (result as AuthResult.Success).value.id)
+        assertEquals(SessionState.SignedIn(result.value), repo.sessionState.value)
+        assertEquals(listOf("better-auth.session_token"), storedCookieNames())
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/sign-in/social", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"provider":"google","idToken":{"token":"google.id.token"}}""", request.bodyText())
+    }
+
+    @Test fun googleSignInRejectedTokenKeepsServerMessage() = runBlocking {
+        respond(401, """{"code":"INVALID_TOKEN","message":"Invalid token"}""")
+        assertEquals(AuthResult.Failure(AuthError.Unexpected(401, "Invalid token")), repo.signInWithGoogle("bad"))
+        assertTrue(repo.sessionState.value !is SessionState.SignedIn)
+    }
+
     // --- sign up ---
 
     @Test fun signUpSendsCallbackAndDoesNotSignIn() = runBlocking {

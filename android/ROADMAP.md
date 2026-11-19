@@ -78,11 +78,18 @@ _A2.6 is done next, ahead of A2.4–A2.5: the owner's account and probably most 
 are Google-only, so they can't use email sign-in at all (see A2.1 notes). IDs keep their
 original numbers._
 
-- [ ] **A2.6 Google sign-in**: create an **Android** OAuth client in Google Cloud
+- [x] **A2.6 Google sign-in**: create an **Android** OAuth client in Google Cloud
       (package name + debug and release SHA-1), use Credential Manager with the existing
       **web** client ID as `serverClientId`, then
       `POST /api/auth/sign-in/social` with `{ provider: "google", idToken: { token } }`.
-      *Done when:* Google sign-in lands on the Dex tab with a working session.
+      *Done when:* Google sign-in lands back in the app with a working session.
+      "or continue with / Google" on sign-in and register (`ui/auth/GoogleSignIn*`).
+      `BuildConfig.GOOGLE_WEB_CLIENT_ID` is the backend's web client; Google Cloud project
+      `bird-dex-487702` has an Android client for `fun.birddex.app.debug` with this PC's
+      debug SHA-1 (other machines need their own). No backend changes. Live: Google
+      sign-in → 200, survives a cold restart, sign-out works.
+      **Still to do:** an Android client for the release ID `fun.birddex.app` with the
+      release key's SHA-1, once release signing exists (A6.3).
 - [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
       the website for now (App Links come in A6.2).
 - [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
@@ -134,7 +141,9 @@ original numbers._
 - [ ] **A6.2 App Links**: verify-email and reset-password links on `birddex.fun` open the
       app. Needs `frontend/public/.well-known/assetlinks.json` and a frontend deploy.
 - [ ] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
-      never committed), R8 rules for kotlinx.serialization and Retrofit.
+      never committed), R8 rules for kotlinx.serialization and Retrofit. Then add a Google
+      Cloud Android OAuth client for `fun.birddex.app` with the release (and Play app
+      signing) SHA-1, or Google sign-in won't work in release builds.
 - [ ] **A6.4 CI**: GitHub Actions workflow that runs `assembleDebug` and lint on PRs
       touching `android/`.
 - [ ] **A6.5 Play Console**: listing, data safety form, privacy policy URL, internal

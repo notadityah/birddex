@@ -63,6 +63,13 @@ data class SignUpEmailRequest(
 @Serializable
 data class SendVerificationEmailRequest(val email: String, val callbackURL: String)
 
+/** better-auth `sign-in/social` with an ID token from the device (no browser redirect). */
+@Serializable
+data class SocialIdTokenSignInRequest(val provider: String, val idToken: IdToken) {
+    @Serializable
+    data class IdToken(val token: String)
+}
+
 @Serializable
 data class UserResponse(val user: AuthUser)
 
