@@ -71,6 +71,11 @@ android {
         buildConfig = true
     }
 
+    sourceSets {
+        // Room migration tests read the exported schemas (app/schemas/) as assets.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     testOptions {
         // android.util.Log etc. return defaults instead of throwing in JVM unit tests.
         unitTests.isReturnDefaultValues = true
@@ -121,4 +126,5 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.room.testing)
 }

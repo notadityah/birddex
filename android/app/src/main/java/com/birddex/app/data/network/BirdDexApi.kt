@@ -1,8 +1,7 @@
 package com.birddex.app.data.network
 
 import com.birddex.app.data.birds.Bird
-import kotlinx.serialization.json.JsonElement
-import retrofit2.Response
+import com.birddex.app.data.sightings.Sighting
 import retrofit2.http.GET
 
 /** BirdDex REST API (`backend/lambda/api/index.ts`). Paths are relative to BuildConfig.BASE_URL. */
@@ -12,7 +11,7 @@ interface BirdDexApi {
     @GET("api/birds")
     suspend fun getBirds(): List<Bird>
 
-    /** The signed-in user's sightings; 401 when signed out. Typed in A3.3. */
+    /** The signed-in user's sightings, newest first, with 1-hour photo links. 401 when signed out. */
     @GET("api/sightings")
-    suspend fun getSightings(): Response<JsonElement>
+    suspend fun getSightings(): List<Sighting>
 }

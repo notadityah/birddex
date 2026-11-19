@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 and older: same rule as data_extraction_rules.xml. -->
+<!-- Android 11 and older: same rules as data_extraction_rules.xml. -->
 <full-backup-content>
     <exclude domain="file" path="datastore/cookies.preferences_pb" />
+    <exclude domain="database" path="birddex.db" />
+    <exclude domain="database" path="birddex.db-wal" />
+    <exclude domain="database" path="birddex.db-shm" />
 </full-backup-content>

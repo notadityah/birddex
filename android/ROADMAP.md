@@ -123,10 +123,19 @@ original numbers._
       pull-to-refresh until A3.4. Device tests in `androidTest/` (Room). Live: airplane-mode
       cold start shows all 36; the R8 release build loads the list too. Coroutines pinned to
       1.11.0 so the app matches its test libraries.
-- [ ] **A3.3 Sightings API** for `GET /api/sightings`. Cache images by `image_key`,
+- [x] **A3.3 Sightings API** for `GET /api/sightings`. Cache images by `image_key`,
       not the presigned URL (URLs expire and change).
+      `data/sightings/` (`Sighting`, offline-first `SightingRepository`), saved in Room
+      (database v2, automatic migration from v1, tested on device). Sightings are wiped on
+      sign-out or session expiry (`UserDataCleaner`), and `birddex.db` is excluded from
+      backups. The Dex shows "You've seen N of 36". Live: `/api/sightings` 200 with the
+      owner's account (2 species), offline count kept, R8 release OK. The 401 path still
+      hasn't happened live (needs a server-side expired session). Image loading/caching by
+      `imageKey` lands with the first photos (A3.5).
 - [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %. Replaces A3.2's simple list.
 - [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
+      Load photos with an image library (e.g. Coil) using `Sighting.imageKey` as the
+      memory/disk cache key, so photos still show offline after the 1-hour URL expires.
 - [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
       (`DELETE /api/sightings/:id`) with confirmation.
 

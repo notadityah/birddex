@@ -56,14 +56,14 @@ fun DexScreen(
                 onRefresh = viewModel::refresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                BirdList(state.birds, showingSavedCopy = state.refreshError != null)
+                BirdList(state.birds, state.seenCount, showingSavedCopy = state.refreshError != null)
             }
         }
     }
 }
 
 @Composable
-private fun BirdList(birds: List<Bird>, showingSavedCopy: Boolean) {
+private fun BirdList(birds: List<Bird>, seenCount: Int, showingSavedCopy: Boolean) {
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.fillMaxSize()) {
         item {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -72,6 +72,11 @@ private fun BirdList(birds: List<Bird>, showingSavedCopy: Boolean) {
                     pluralStringResource(R.plurals.dex_species_count, birds.size, birds.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    stringResource(R.string.dex_seen_count, seenCount, birds.size),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 if (showingSavedCopy) {
                     Text(
