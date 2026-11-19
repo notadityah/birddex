@@ -53,7 +53,7 @@ CDK_DEFAULT_ACCOUNT=159987617860 CDK_DEFAULT_REGION=ap-southeast-2 \
 
 Optional sanity checks before deploying:
 ```bash
-cd backend && npm run build && npm test   # tsc + 20 CDK assertion tests
+cd backend && npm run build && npm test   # tsc + CDK assertion tests
 CDK_DEFAULT_ACCOUNT=159987617860 CDK_DEFAULT_REGION=ap-southeast-2 npx cdk diff
 ```
 
