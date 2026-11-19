@@ -1,0 +1,124 @@
+# BirdDex Android — Roadmap
+
+Native Kotlin app (Jetpack Compose) that reuses the existing production API at
+`https://birddex.fun/api/*` unchanged. Auth uses better-auth's session **cookie**,
+stored by a persistent OkHttp cookie jar (no backend changes).
+
+**How to track:** each task below is one commit. Put the task ID at the end of the
+commit subject, e.g. `Add login and register screens (A2.3)`, and tick the box in the
+same commit. A task is done when its "Done when" line is true.
+
+## Decisions
+
+- **Application ID** (permanent once on Play Store): `fun.birddex.app` ✅ confirmed.
+- **Code package / namespace**: `com.birddex.app`. It differs from the app ID because
+  `fun` is a Kotlin keyword and would need backticks in every `package`/`import`.
+- **Min SDK** 26, **target/compile SDK** 37 (Android 17).
+- **Toolchain**: AGP 9.5.1 (built-in Kotlin, no `kotlin-android` plugin), Gradle 9.9.1,
+  Kotlin 2.4.21, Android Studio 2026.2.2 with its bundled JDK 25.
+- Admin dashboard stays **web-only**.
+
+---
+
+## Phase 1 — Scaffold
+
+- [ ] **A1.1 Create the Gradle project** in `android/`: Kotlin DSL, version catalog
+      (`gradle/libs.versions.toml`), single `:app` module, `.gitignore` for build outputs
+      and `local.properties`.
+      *Done when:* `./gradlew assembleDebug` succeeds and the empty app launches.
+- [ ] **A1.2 Compose + Material 3 theme** with colors/typography taken from
+      `frontend/src/assets/main.css`, light and dark.
+      *Done when:* a preview screen renders in both themes.
+- [ ] **A1.3 Build config**: `BASE_URL` per build type (`https://birddex.fun` for both
+      for now), debug app ID suffix `.debug` so it can be installed next to release.
+      *Done when:* `BuildConfig.BASE_URL` is readable from code.
+- [ ] **A1.4 Hilt + navigation skeleton**: Navigation Compose with a bottom bar
+      (Dex · Detect · Gallery · Account) and placeholder screens.
+      *Done when:* you can tap between all four tabs.
+- [ ] **A1.5 Networking core**: OkHttp + Retrofit + kotlinx.serialization, persistent
+      cookie jar backed by DataStore, debug-only logging interceptor, an interceptor that
+      sends `Origin: https://birddex.fun` (only if A2.1 shows it's needed).
+      *Done when:* `GET /api/birds` returns data in a debug log.
+- [ ] **A1.6 Docs**: add an Android section to `AGENTS.md` and `README.md`
+      (how to build/run, where the API URL lives).
+
+## Phase 2 — Auth
+
+- [ ] **A2.1 Cookie-auth spike** (go/no-go for the cookie approach): from the app or
+      curl, `POST /api/auth/sign-in/email` → call `GET /api/sightings` with the cookie →
+      `POST /api/auth/sign-out`. Note whether sign-out needs an `Origin` header.
+      *Done when:* all three work; findings written in this file under "Notes".
+- [ ] **A2.2 AuthRepository**: sign in, sign up, get session (`/api/auth/get-session`),
+      sign out; maps better-auth errors (e.g. unverified email) to app errors.
+- [ ] **A2.3 Login and register screens**: validation, loading and error states,
+      "check your inbox to verify" state after sign-up.
+- [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
+      the website for now (App Links come in A6.2).
+- [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
+      any `401` clears cookies and returns to login.
+      *Done when:* killing and reopening the app keeps you signed in.
+- [ ] **A2.6 Google sign-in**: create an **Android** OAuth client in Google Cloud
+      (package name + debug and release SHA-1), use Credential Manager with the existing
+      **web** client ID as `serverClientId`, then
+      `POST /api/auth/sign-in/social` with `{ provider: "google", idToken: { token } }`.
+      *Done when:* Google sign-in lands on the Dex tab with a working session.
+
+## Phase 3 — Birds + My Dex
+
+- [ ] **A3.1 Birds API + models** for `GET /api/birds` (including Pokédex stats).
+- [ ] **A3.2 Offline cache**: Room table for birds; repository serves the cache first,
+      then refreshes from the network.
+      *Done when:* the Dex shows birds in airplane mode after one online launch.
+- [ ] **A3.3 Sightings API** for `GET /api/sightings`. Cache images by `image_key`,
+      not the presigned URL (URLs expire and change).
+- [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %.
+- [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
+- [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
+      (`DELETE /api/sightings/:id`) with confirmation.
+
+## Phase 4 — Detect (core feature)
+
+- [ ] **A4.1 Image input**: Android Photo Picker plus the system camera
+      (`ActivityResultContracts.TakePicture`); runtime permissions where needed.
+- [ ] **A4.2 Image prep**: fix EXIF rotation, resize to max 1280 px, JPEG quality 85
+      (matches `frontend/src/composables/useImageResize.js`).
+- [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 3 }`; loading,
+      error, cancel-on-new-photo states.
+- [ ] **A4.4 Results UI**: top matches with confidence + stats card, like
+      `BirdStatsCard.vue` / `DetectionResults.vue`.
+- [ ] **A4.5 Save sighting**: `POST /api/sightings`
+      `{ birdId, imageExt: "jpg", detectedAt, notes, public }` → `PUT` the JPEG to the
+      returned `uploadUrl`; refresh the Dex.
+      *Done when:* a saved sighting appears in the Dex and on the website.
+- [ ] **A4.6 Report wrong match**: `POST /api/feedback` with `category: "detection"`
+      and `imageExt` → `PUT` the photo to `uploadUrl`.
+
+## Phase 5 — Gallery, account, feedback
+
+- [ ] **A5.1 Gallery feed**: Paging 3 over `GET /api/gallery?limit&offset`.
+- [ ] **A5.2 Gallery filter + detail**: species filter (`birdId`), full-screen sighting view.
+- [ ] **A5.3 Account screen**: gallery anonymity toggle (`/api/account/settings`),
+      delete all sightings (`DELETE /api/sightings`), sign out.
+- [ ] **A5.4 Feedback form**: bug / suggestion / other via `POST /api/feedback`.
+- [ ] **A5.5 Welcome / onboarding** (optional, matches the web `WelcomeModal`).
+
+## Phase 6 — Ship
+
+- [ ] **A6.1 App icon, adaptive icon, splash screen.**
+- [ ] **A6.2 App Links**: verify-email and reset-password links on `birddex.fun` open the
+      app. Needs `frontend/public/.well-known/assetlinks.json` and a frontend deploy.
+- [ ] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
+      never committed), R8 rules for kotlinx.serialization and Retrofit.
+- [ ] **A6.4 CI**: GitHub Actions workflow that runs `assembleDebug` and lint on PRs
+      touching `android/`.
+- [ ] **A6.5 Play Console**: listing, data safety form, privacy policy URL, internal
+      testing track.
+
+## Later (not scheduled)
+
+- On-device detection with ONNX Runtime Android (offline use in the field).
+- Switch to better-auth bearer tokens if cookies cause trouble.
+
+## Notes
+
+_(Findings from spikes, e.g. A2.1, go here.)_
