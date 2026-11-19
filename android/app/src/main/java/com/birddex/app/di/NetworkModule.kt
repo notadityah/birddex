@@ -3,6 +3,7 @@ package com.birddex.app.di
 import android.content.Context
 import android.util.Log
 import com.birddex.app.BuildConfig
+import com.birddex.app.data.network.AuthApi
 import com.birddex.app.data.network.BirdDexApi
 import com.birddex.app.data.network.PersistentCookieJar
 import dagger.Module
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -62,19 +64,28 @@ object NetworkModule {
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)
             .callTimeout(60, TimeUnit.SECONDS)
-            .apply {
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(
-                        HttpLoggingInterceptor { Log.d("BirdDexHttp", it) }.apply {
-                            level = HttpLoggingInterceptor.Level.BODY
-                            // Never print the session token, even in debug logs.
-                            redactHeader("Cookie")
-                            redactHeader("Set-Cookie")
-                        },
-                    )
-                }
-            }
+            .apply { if (BuildConfig.DEBUG) addInterceptor(debugHttpLogger()) }
             .build()
+
+    /**
+     * Debug-only HTTP log (logcat tag BirdDexHttp). Never prints credentials: cookie headers
+     * are redacted everywhere, and /api/auth/ calls log headers only, because their bodies
+     * carry passwords (requests) and session tokens (responses).
+     */
+    private fun debugHttpLogger(): Interceptor {
+        fun logger(level: HttpLoggingInterceptor.Level) =
+            HttpLoggingInterceptor { Log.d("BirdDexHttp", it) }.apply {
+                this.level = level
+                redactHeader("Cookie")
+                redactHeader("Set-Cookie")
+            }
+        val withBodies = logger(HttpLoggingInterceptor.Level.BODY)
+        val headersOnly = logger(HttpLoggingInterceptor.Level.HEADERS)
+        return Interceptor { chain ->
+            val isAuthCall = chain.request().url.encodedPath.startsWith("/api/auth/")
+            (if (isAuthCall) headersOnly else withBodies).intercept(chain)
+        }
+    }
 
     @Provides
     @Singleton
@@ -88,4 +99,8 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideBirdDexApi(retrofit: Retrofit): BirdDexApi = retrofit.create()
+
+    @Provides
+    @Singleton
+    fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create()
 }

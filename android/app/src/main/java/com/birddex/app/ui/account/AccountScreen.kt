@@ -2,6 +2,9 @@ package com.birddex.app.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,8 +32,13 @@ fun AccountScreen(
         title = stringResource(R.string.tab_account),
         message = stringResource(R.string.placeholder_account),
         iconRes = R.drawable.ic_account_circle_outlined,
-        modifier = modifier,
-        footer = { ApiStatusFooter(apiStatus, onRetry = viewModel::checkApi) },
+        modifier = modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        footer = {
+            ApiStatusFooter(apiStatus, onRetry = viewModel::checkApi)
+            if (BuildConfig.DEBUG) AuthCheckPanel()
+        },
     )
 }
 

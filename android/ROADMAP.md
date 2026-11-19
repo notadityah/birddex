@@ -45,19 +45,24 @@ same commit. A task is done when its "Done when" line is true.
       sends `Origin: https://birddex.fun` (only if A2.1 shows it's needed).
       *Done when:* `GET /api/birds` returns data in a debug log.
       Cookie jar has unit tests (`PersistentCookieJarTest`); the cookie file is excluded
-      from cloud backup. The `Origin` interceptor is left to A2.1. Release (R8) build
+      from cloud backup. The `Origin` interceptor moved to A2.2 (A2.1 showed it's needed). Release (R8) build
       verified against the live API too.
 - [x] **A1.6 Docs**: add an Android section to `AGENTS.md` and `README.md`
       (how to build/run, where the API URL lives).
 
 ## Phase 2 — Auth
 
-- [ ] **A2.1 Cookie-auth spike** (go/no-go for the cookie approach): from the app or
+- [x] **A2.1 Cookie-auth spike** (go/no-go for the cookie approach): from the app or
       curl, `POST /api/auth/sign-in/email` → call `GET /api/sightings` with the cookie →
       `POST /api/auth/sign-out`. Note whether sign-out needs an `Origin` header.
       *Done when:* all three work; findings written in this file under "Notes".
+      **GO.** Sign-out needs `Origin`; see Notes. The debug-only check panel
+      (`ui/account/AuthCheck*`) is removed in A2.3.
 - [ ] **A2.2 AuthRepository**: sign in, sign up, get session (`/api/auth/get-session`),
       sign out; maps better-auth errors (e.g. unverified email) to app errors.
+      From A2.1: send `Origin: https://birddex.fun` on every `/api/auth/*` request, and
+      treat a `200` HTML response from `/api/*` as an error (guard against the CloudFront
+      masking that A2.1 found, now fixed in production; see Notes).
 - [ ] **A2.3 Login and register screens**: validation, loading and error states,
       "check your inbox to verify" state after sign-up.
 - [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
@@ -129,4 +134,34 @@ same commit. A task is done when its "Done when" line is true.
 
 ## Notes
 
-_(Findings from spikes, e.g. A2.1, go here.)_
+### A2.1 cookie-auth spike (2026-11-19): GO
+
+Run against production from the debug app's check panel, with a verified
+email/password test account:
+
+- `POST /api/auth/sign-in/email` (no cookies, no `Origin`) → `200`. The jar stored
+  `__Secure-better-auth.session_token` as a persistent cookie with a 7-day expiry
+  (`rememberMe: true`).
+- After a force-stop and cold start the cookie reloaded from DataStore:
+  `GET /api/auth/get-session` → session present, `GET /api/sightings` → `200`.
+- `POST /api/auth/sign-out` **without** `Origin` → rejected by better-auth's origin check,
+  which applies to any auth request that carries a cookie: `403 MISSING_OR_NULL_ORIGIN`
+  (confirmed once CloudFront stopped hiding it, see below).
+  **With** `Origin: https://birddex.fun` → `200 {"success":true}`,
+  better-auth expired the cookie, the jar dropped it, and `GET /api/sightings` → `401`.
+- Accounts created with Google have no password: email sign-in answers
+  `401 INVALID_EMAIL_OR_PASSWORD`. The owner's own account is Google-only, so
+  Google sign-in (A2.6) matters for real users.
+
+**CloudFront masks API errors.** `errorResponses` in `backend/lib/backend-stack.ts`
+turns every 403 and 404 into `200` + `index.html` for SPA routing, and it applies to
+`/api/*` too. A masked response has `content-type: text/html` and
+`x-cache: Error from cloudfront`. (Errors CloudFront doesn't remap, like 401, also carry
+`x-cache: Error from cloudfront` but keep their real status and JSON body.)
+
+**Fixed in production the same day** by commit `9479de4` (SPA routing moved to a
+CloudFront Function on the website behavior only), deployed from branch
+`claude/quirky-mccarthy-d2f47c`, which is not on `main` yet. Checked live afterwards:
+sign-out without `Origin` → `403` JSON, unknown `/api/*` route → `404`, `/mydex` still
+loads the website. The app still treats `200` + HTML from `/api/*` as an error, as a
+cheap guard in case the old rule ever comes back.
