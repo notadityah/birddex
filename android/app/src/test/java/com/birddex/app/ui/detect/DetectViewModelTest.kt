@@ -2,6 +2,7 @@ package com.birddex.app.ui.detect
 
 import androidx.lifecycle.SavedStateHandle
 import com.birddex.app.data.birds.Bird
+import com.birddex.app.data.birds.BirdRepository
 import com.birddex.app.data.detect.CacheDetectPhotoStore
 import com.birddex.app.data.detect.CameraTarget
 import com.birddex.app.data.detect.DetectPhotoStore
@@ -13,6 +14,9 @@ import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
+import com.birddex.app.data.sightings.Sighting
+import com.birddex.app.data.sightings.SightingRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -93,15 +97,40 @@ class DetectViewModelTest {
         }
     }
 
+    private class FakeSightingRepository : SightingRepository {
+        data class Created(val birdId: Int, val notes: String?, val isPublic: Boolean, val photo: String)
+        val saved = MutableStateFlow<List<Sighting>>(emptyList())
+        val created = mutableListOf<Created>()
+        var result: ApiResult<Unit> = ApiResult.Success(Unit)
+        var gate: CompletableDeferred<Unit>? = null
+        override fun observeSightings() = saved
+        override suspend fun refresh() = ApiResult.Success(Unit)
+        override suspend fun setPublic(id: String, isPublic: Boolean) = ApiResult.Success(Unit)
+        override suspend fun delete(id: String) = ApiResult.Success(Unit)
+        override suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray): ApiResult<Unit> {
+            created += Created(birdId, notes, isPublic, photoJpeg.decodeToString())
+            gate?.await()
+            return result
+        }
+    }
+
+    private class FakeBirdRepository : BirdRepository {
+        val saved = MutableStateFlow<List<Bird>>(emptyList())
+        override fun observeBirds() = saved
+        override suspend fun refresh() = ApiResult.Success(Unit)
+    }
+
     private val store = FakeDetectPhotoStore()
     private val preparer = FakePhotoPreparer()
     private val detector = FakeDetectRepository()
+    private val sightings = FakeSightingRepository()
+    private val birds = FakeBirdRepository()
     private val savedState = SavedStateHandle()
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun open() = DetectViewModel(store, preparer, detector, savedState)
+    private fun open() = DetectViewModel(store, preparer, detector, sightings, birds, savedState)
 
     /** Which photo the prepared JPEGs were made from (see FakePhotoPreparer). */
     private fun DetectViewModel.preparedFrom(): String? = state.value.prepared?.detectJpeg?.decodeToString()
@@ -541,6 +570,120 @@ class DetectViewModelTest {
         detector.gate!!.complete(Unit)
         assertEquals("house_sparrow", vm.state.value.selectedSlug)
     }
+
+    // --- saving (A4.5) ---
+
+    /** A photo detected as threeMatches, with the house sparrow picked. */
+    private fun detected(): DetectViewModel {
+        detector.result = ApiResult.Success(threeMatches)
+        return withPhoto().apply { detect() }
+    }
+
+    @Test fun saveSendsThePickedBirdTheBigPhotoAndTheForm() {
+        val vm = detected()
+        vm.selectMatch("spotted_turtle_dove")
+
+        vm.save("  Two of them on the fence \n", shareToGallery = true)
+
+        // The 2048 px upload JPEG (the fake preparer names it "<file>-upload"), notes trimmed.
+        assertEquals(
+            listOf(FakeSightingRepository.Created(31, "Two of them on the fence", true, "picked-0.jpg-upload")),
+            sightings.created,
+        )
+    }
+
+    @Test fun blankNotesAreSentAsNone() {
+        val vm = detected()
+
+        vm.save("   ", shareToGallery = false)
+
+        assertNull(sightings.created.single().notes)
+    }
+
+    @Test fun savedShowsTheBirdAndLetsGoOfThePhoto() {
+        val vm = detected()
+        val photo = vm.state.value.photo!!
+
+        vm.save("", shareToGallery = false)
+
+        assertEquals(DetectUiState(saved = houseSparrow), vm.state.value)
+        assertFalse(photo.exists())
+        assertEquals(DetectUiState(), open().state.value) // after a restart: back to the start
+    }
+
+    @Test fun detectAnotherStartsOver() {
+        val vm = detected()
+        vm.save("", shareToGallery = false)
+
+        vm.detectAnother()
+
+        assertEquals(DetectUiState(), vm.state.value)
+    }
+
+    @Test fun failedSaveKeepsEverythingForARetry() {
+        sightings.result = ApiResult.Failure(ApiError.Network)
+        val vm = detected()
+
+        vm.save("notes", shareToGallery = false)
+
+        with(vm.state.value) {
+            assertFalse(saving)
+            assertEquals(ApiError.Network, saveError)
+            assertEquals(houseSparrow, selectedBird)
+            assertTrue(photo!!.exists())
+        }
+
+        sightings.result = ApiResult.Success(Unit)
+        vm.save("notes", shareToGallery = false)
+        assertEquals(houseSparrow, vm.state.value.saved)
+        assertEquals(2, sightings.created.size)
+    }
+
+    @Test fun whileSavingNothingElseCanChange() {
+        val vm = detected()
+        sightings.gate = CompletableDeferred()
+
+        vm.save("", shareToGallery = false)
+        assertTrue(vm.state.value.saving)
+        vm.save("", shareToGallery = false) // double tap
+        vm.selectMatch("spotted_turtle_dove")
+        vm.clearPhoto()
+
+        with(vm.state.value) {
+            assertEquals(houseSparrow, selectedBird)
+            assertTrue(photo!!.exists())
+        }
+        sightings.gate!!.complete(Unit)
+        assertEquals(1, sightings.created.size)
+        assertEquals(houseSparrow, vm.state.value.saved)
+    }
+
+    @Test fun cannotSaveWithoutAPickedBird() {
+        detector.result = ApiResult.Success(Detection()) // nothing detected
+        val vm = withPhoto().apply { detect() }
+
+        vm.save("", shareToGallery = false)
+
+        assertTrue(sightings.created.isEmpty())
+    }
+
+    @Test fun dexProgressCountsSpeciesFound() {
+        birds.saved.value = listOf(houseSparrow, dove)
+        val vm = open()
+        assertEquals(DexProgress(emptySet(), 2), vm.dex.value)
+
+        // Two sparrows count once; a sighting of a bird no longer in the list doesn't count.
+        sightings.saved.value = listOf(sightingOf("a", 14), sightingOf("b", 14), sightingOf("c", 99))
+
+        with(vm.dex.value) {
+            assertEquals(setOf(14), foundBirdIds)
+            assertEquals(1, found)
+            assertEquals(50, percent)
+        }
+    }
+
+    private fun sightingOf(id: String, birdId: Int) =
+        Sighting(id = id, birdId = birdId, slug = "x", birdName = "x", createdAt = "2026-11-20T00:00:00Z")
 
     private companion object {
         val sparrow = Detection(predictions = listOf(Prediction("house_sparrow", 91.37)))

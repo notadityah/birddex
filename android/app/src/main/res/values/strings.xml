@@ -86,6 +86,22 @@
     <string name="reference_photo_description">Reference photo of %1$s</string>
     <!-- Credit for a Wikimedia Commons reference photo; %1$s (the author) becomes a link. -->
     <string name="photo_credit">Photo: %1$s (%2$s)</string>
+    <!-- Save sighting (copy matches SightingSaver.vue and DetectPage.vue); %1$s is in bold -->
+    <string name="save_title">Save sighting</string>
+    <string name="save_detected">Detected %1$s</string>
+    <string name="save_already_found">You\'ve already recorded this bird — save again to add another sighting.</string>
+    <string name="save_notes_label">Notes (optional)</string>
+    <string name="save_notes_placeholder">Where did you spot it?</string>
+    <string name="save_share">Share to Community Gallery</string>
+    <string name="save_button">Save to MyDex</string>
+    <string name="saving">Saving…</string>
+    <string name="save_failed">Failed to save sighting. Please try again.</string>
+    <string name="saved_title">Sighting saved!</string>
+    <string name="saved_body">%1$s has been added to your collection.</string>
+    <string name="saved_dex">Dex %1$d/%2$d</string>
+    <string name="saved_percent">%1$d%%</string>
+    <string name="view_in_mydex">View in MyDex</string>
+    <string name="detect_another">Detect another</string>
 
     <!-- Placeholder screens (replaced as each phase lands) -->
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>

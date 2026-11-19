@@ -3,14 +3,19 @@ package com.birddex.app.data.network
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.detect.DetectRequest
 import com.birddex.app.data.detect.Detection
+import com.birddex.app.data.sightings.CreateSightingRequest
+import com.birddex.app.data.sightings.CreatedSighting
 import com.birddex.app.data.sightings.Sighting
 import kotlinx.serialization.Serializable
+import okhttp3.RequestBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Url
 
 /** BirdDex REST API (`backend/lambda/api/index.ts`). Paths are relative to BuildConfig.BASE_URL. */
 interface BirdDexApi {
@@ -22,6 +27,20 @@ interface BirdDexApi {
     /** The signed-in user's sightings, newest first, with 1-hour photo links. 401 when signed out. */
     @GET("api/sightings")
     suspend fun getSightings(): List<Sighting>
+
+    /**
+     * Records a sighting (201). With `imageExt`, the answer carries a presigned S3 `uploadUrl`
+     * (valid 5 minutes) for [uploadPhoto]; the row exists from now on, photo or not.
+     */
+    @POST("api/sightings")
+    suspend fun createSighting(@Body body: CreateSightingRequest): CreatedSighting
+
+    /**
+     * Uploads a sighting photo straight to S3 with the presigned URL from [createSighting].
+     * Not a BirdDex endpoint: no cookies match S3's host, and the /api/ interceptors skip it.
+     */
+    @PUT
+    suspend fun uploadPhoto(@Url uploadUrl: String, @Body photo: RequestBody)
 
     /** Shares (true) or unshares a sighting in the public gallery. 404 if it isn't the user's. */
     @PATCH("api/sightings/{id}")

@@ -57,6 +57,8 @@ class DexViewModelTest {
             gate?.await()
             return actionResult
         }
+        override suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray) =
+            ApiResult.Success(Unit)
     }
 
     private val birds = FakeBirdRepository()

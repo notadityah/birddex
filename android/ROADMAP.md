@@ -153,8 +153,9 @@ original numbers._
       server and asks first (the website has no per-sighting delete for users); a 404 means
       "already gone" and removes it locally. Save photo copies from Coil's cache to
       Pictures/BirdDex (MediaStore; storage permission only on Android 8–9). Live: share
-      (`PATCH public:true` → 200, confirmed after a fresh fetch) and save photo. Not yet run
-      live: unshare, and a confirmed delete (needs a throwaway sighting; do it after A4.5).
+      (`PATCH public:true` → 200, confirmed after a fresh fetch) and save photo. A confirmed
+      delete ran live in A4.5 (`DELETE` → 200, gone after a fresh fetch). Not yet run live:
+      unshare.
 
 ## Phase 4 — Detect (core feature)
 
@@ -203,11 +204,23 @@ original numbers._
       Checked live with four of the website's reference photos copied to the emulator:
       Little Wattlebird 70.39% / Red Wattlebird 56.9%, picking the second swapped photo,
       credit and stats; the credit link opened commons.wikimedia.org; dark mode.
-- [ ] **A4.5 Save sighting**: `POST /api/sightings`
+- [x] **A4.5 Save sighting**: `POST /api/sightings`
       `{ birdId, imageExt: "jpg", detectedAt, notes, public }` → `PUT` the JPEG to the
       returned `uploadUrl`; refresh the Dex.
       *Done when:* a saved sighting appears in the Dex and on the website.
       Then delete that test sighting from the app to run A3.6's delete live.
+      `detectedAt` is left out, as on the website (the server uses now); blank notes are
+      left out too. `SightingRepository.create` uploads the 2048 px JPEG; if the upload
+      fails it deletes the new row again (the website leaves a photo-less sighting), then
+      refreshes. The form copies SightingSaver.vue, including "You've already recorded
+      this bird"; "Change photo" and match picking are locked while saving. After saving,
+      the photo is deleted and "Sighting saved!" shows the Dex progress, with "View in
+      MyDex" / "Detect another" (both start Detect over, like the website). The debug log
+      redacts the presigned link's signature, credential and token. Live, with the
+      owner's OK: a private House Sparrow test sighting (POST 201, S3 PUT 200, 342 KB)
+      showed in the Dex with its note and photo (the website reads the same
+      `/api/sightings`), then was deleted from the Dex sheet. Release (R8) build: an
+      offline save fails cleanly; not saved for real there, to avoid a second test row.
 - [ ] **A4.6 Report wrong match**: `POST /api/feedback` with `category: "detection"`
       and `imageExt` → `PUT` the photo to `uploadUrl`.
 

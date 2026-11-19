@@ -204,4 +204,82 @@ class OfflineFirstSightingRepositoryTest {
 
         assertTrue(saved().isEmpty())
     }
+
+    // --- saving a new sighting (A4.5) ---
+
+    private val photo = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 42, 0xFF.toByte(), 0xD9.toByte())
+    private val newId = "9d7e6f5a-4b3c-4d2e-8f1a-0b9c8d7e6f5a"
+
+    /** The 201 answer, with an upload link that points at the fake server like a presigned S3 URL. */
+    private fun respondCreated() = respond(
+        201,
+        """{"id":"$newId","imageKey":"images/u_test/abc.jpg","uploadUrl":"${server.url("/images/u_test/abc.jpg?X-Amz-Signature=sig")}"}""",
+    )
+
+    @Test fun createRecordsTheSightingUploadsThePhotoAndRefreshes() = runBlocking {
+        respondCreated()
+        respond(200, "") // S3 answers an empty 200
+        respond(200, fixture)
+
+        assertEquals(ApiResult.Success(Unit), repo.create(birdId = 14, notes = "At the feeder", isPublic = true, photoJpeg = photo))
+
+        val create = server.takeRequest()
+        assertEquals("POST", create.method)
+        assertEquals("/api/sightings", create.url.encodedPath)
+        assertEquals("""{"birdId":14,"imageExt":"jpg","notes":"At the feeder","public":true}""", create.body?.utf8())
+
+        val upload = server.takeRequest()
+        assertEquals("PUT", upload.method)
+        assertEquals("/images/u_test/abc.jpg", upload.url.encodedPath)
+        assertEquals("sig", upload.url.queryParameter("X-Amz-Signature"))
+        assertEquals("image/jpeg", upload.headers["Content-Type"])
+        assertEquals(photo.toList(), upload.body!!.toByteArray().toList())
+
+        assertEquals("/api/sightings", server.takeRequest().url.encodedPath) // the refresh
+        assertEquals(3, saved().size)
+    }
+
+    @Test fun noNotesAndNotSharedAreSentLikeTheWebsite() = runBlocking {
+        respondCreated()
+        respond(200, "")
+        respond(200, fixture)
+
+        repo.create(birdId = 14, notes = null, isPublic = false, photoJpeg = photo)
+
+        assertEquals("""{"birdId":14,"imageExt":"jpg","public":false}""", server.takeRequest().body?.utf8())
+    }
+
+    @Test fun failedUploadDeletesTheNewSightingAgain() = runBlocking {
+        respondCreated()
+        respond(403, "<Error><Code>AccessDenied</Code></Error>") // e.g. the 5-minute link expired
+        respond(200, """{"ok":true}""")
+
+        val result = repo.create(birdId = 14, notes = null, isPublic = false, photoJpeg = photo)
+
+        assertTrue(result is ApiResult.Failure)
+        assertEquals("POST", server.takeRequest().method)
+        assertEquals("PUT", server.takeRequest().method)
+        val delete = server.takeRequest()
+        assertEquals("DELETE", delete.method)
+        assertEquals("/api/sightings/$newId", delete.url.encodedPath)
+        assertEquals(3, server.requestCount) // no refresh: nothing was saved
+    }
+
+    @Test fun failedCreateStopsThere() = runBlocking {
+        respond(400, """{"error":"birdId must be a positive number"}""")
+
+        assertEquals(
+            ApiResult.Failure(ApiError.Http(400, "birdId must be a positive number")),
+            repo.create(birdId = 0, notes = null, isPublic = false, photoJpeg = photo),
+        )
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test fun savedEvenIfTheRefreshAfterwardsFails() = runBlocking {
+        respondCreated()
+        respond(200, "")
+        respond(500, """{"error":"Database unavailable"}""")
+
+        assertEquals(ApiResult.Success(Unit), repo.create(birdId = 14, notes = null, isPublic = false, photoJpeg = photo))
+    }
 }

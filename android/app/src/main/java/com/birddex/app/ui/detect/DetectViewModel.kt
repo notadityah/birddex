@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.birddex.app.data.birds.Bird
+import com.birddex.app.data.birds.BirdRepository
 import com.birddex.app.data.detect.DetectPhotoStore
 import com.birddex.app.data.detect.DetectRepository
 import com.birddex.app.data.detect.Detection
@@ -12,13 +13,18 @@ import com.birddex.app.data.detect.PhotoPreparer
 import com.birddex.app.data.detect.PreparedPhoto
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
+import com.birddex.app.data.sightings.SightingRepository
+import com.birddex.app.ui.dex.completionPercent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -42,6 +48,11 @@ data class DetectUiState(
     val detectError: ApiError? = null,
     /** The match the user is looking at: the best one at first, or another they tapped. */
     val selectedSlug: String? = null,
+    /** Saving the selected match as a sighting (create, then upload the photo). */
+    val saving: Boolean = false,
+    val saveError: ApiError? = null,
+    /** The bird just saved: the "Sighting saved!" screen shows until "Detect another". */
+    val saved: Bird? = null,
 ) {
     /** "Detect bird" is shown once the photo is ready and hasn't been identified yet. */
     val canDetect: Boolean get() = prepared != null && !detecting && detection == null
@@ -50,11 +61,18 @@ data class DetectUiState(
     val selectedBird: Bird? get() = selectedSlug?.let { detection?.birds?.get(it) }
 }
 
+/** The user's Dex, for "already recorded" and the progress bar after saving. */
+data class DexProgress(val foundBirdIds: Set<Int> = emptySet(), val total: Int = 0) {
+    val found: Int get() = foundBirdIds.size
+    val percent: Int get() = completionPercent(found, total)
+}
+
 /**
  * The Detect tab (website: DetectPage.vue). A4.1 covers getting the photo in, from the
  * system photo picker or the system camera; neither needs a permission. A4.2 then prepares
  * it (upright, shrunk, JPEG) as soon as it is chosen, like the website. A4.3 sends it to
  * the model; changing the photo cancels a call that is still running (the website aborts it).
+ * A4.4 lets the user pick another match, and A4.5 saves the picked one as a sighting.
  *
  * Both file paths live in [SavedStateHandle], so the chosen photo, and a camera photo that
  * is still being taken, survive the app being killed in the background (camera apps often
@@ -67,6 +85,8 @@ class DetectViewModel @Inject constructor(
     private val store: DetectPhotoStore,
     private val preparer: PhotoPreparer,
     private val detector: DetectRepository,
+    private val sightings: SightingRepository,
+    birds: BirdRepository,
     private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
@@ -75,6 +95,13 @@ class DetectViewModel @Inject constructor(
 
     private var prepareJob: Job? = null
     private var detectJob: Job? = null
+
+    /** From the saved birds and sightings, so it updates as soon as a save refreshes them. */
+    val dex: StateFlow<DexProgress> =
+        combine(birds.observeBirds(), sightings.observeSightings()) { allBirds, mine ->
+            val ids = allBirds.mapTo(HashSet()) { it.id }
+            DexProgress(foundBirdIds = mine.mapTo(HashSet()) { it.birdId }.filterTo(HashSet()) { it in ids }, total = allBirds.size)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, DexProgress())
 
     init {
         // Drop leftovers from earlier visits, but keep a camera photo that is still on its way.
@@ -156,12 +183,41 @@ class DetectViewModel @Inject constructor(
      * species the app knows nothing about (website: falls back to the Dex, which lacks it too).
      */
     fun selectMatch(label: String) {
+        if (_state.value.saving) return // the save is for the bird shown when it started
         if (_state.value.detection?.birds?.containsKey(label) != true) return
         _state.update { it.copy(selectedSlug = label) }
     }
 
+    /**
+     * "Save to MyDex": records the selected match with the 2048 px photo. On success the
+     * photo is no longer needed, so it is deleted and the "Sighting saved!" screen shows.
+     */
+    fun save(notes: String, shareToGallery: Boolean) {
+        val current = _state.value
+        val bird = current.selectedBird ?: return
+        val jpeg = current.prepared?.uploadJpeg ?: return
+        if (current.saving) return
+        _state.update { it.copy(saving = true, saveError = null) }
+        viewModelScope.launch {
+            when (val result = sightings.create(bird.id, notes.trim().ifEmpty { null }, shareToGallery, jpeg)) {
+                is ApiResult.Success -> {
+                    current.photo?.let(store::delete)
+                    savedState.remove<String>(KEY_PHOTO)
+                    _state.value = DetectUiState(saved = bird)
+                }
+                is ApiResult.Failure -> _state.update { it.copy(saving = false, saveError = result.error) }
+            }
+        }
+    }
+
+    /** "Detect another", from the "Sighting saved!" screen. */
+    fun detectAnother() {
+        _state.update { DetectUiState(importing = it.importing) }
+    }
+
     /** "Change photo": back to the Take / Choose buttons, abandoning any detection. */
     fun clearPhoto() {
+        if (_state.value.saving) return // half a save would leave a sighting without its photo
         prepareJob?.cancel()
         detectJob?.cancel()
         _state.value.photo?.let(store::delete)
@@ -181,6 +237,8 @@ class DetectViewModel @Inject constructor(
                 detection = null,
                 detectError = null,
                 selectedSlug = null,
+                saveError = null,
+                saved = null,
             )
         }
         prepare(file)

@@ -64,10 +64,13 @@ import java.io.File
  */
 @Composable
 fun DetectScreen(
+    /** "View in MyDex" after saving a sighting. */
+    onOpenDex: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DetectViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val dex by viewModel.dex.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val hasCamera = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
 
@@ -91,7 +94,18 @@ fun DetectScreen(
         }
 
         val photo = state.photo
-        if (photo == null) {
+        val saved = state.saved
+        if (saved != null) {
+            SightingSaved(
+                bird = saved,
+                dex = dex,
+                onOpenDex = {
+                    viewModel.detectAnother() // the website's Detect page starts over when you come back
+                    onOpenDex()
+                },
+                onDetectAnother = viewModel::detectAnother,
+            )
+        } else if (photo == null) {
             PhotoInput(
                 hasCamera = hasCamera,
                 importing = state.importing,
@@ -110,15 +124,32 @@ fun DetectScreen(
                 },
             )
         } else {
-            SelectedPhoto(photo, matchedBird = state.selectedBird, onChangePhoto = viewModel::clearPhoto)
-            DetectSection(state, onDetect = viewModel::detect, onSelectMatch = viewModel::selectMatch)
+            SelectedPhoto(
+                photo,
+                matchedBird = state.selectedBird,
+                // Hidden while saving, as on the website: half a save would leave a photo-less sighting.
+                onChangePhoto = viewModel::clearPhoto.takeUnless { state.saving },
+            )
+            DetectSection(
+                state,
+                dex = dex,
+                onDetect = viewModel::detect,
+                onSelectMatch = viewModel::selectMatch,
+                onSave = viewModel::save,
+            )
         }
     }
 }
 
 /** Under the photo (website: the Detect button, spinner, error banner and results). */
 @Composable
-private fun DetectSection(state: DetectUiState, onDetect: () -> Unit, onSelectMatch: (String) -> Unit) {
+private fun DetectSection(
+    state: DetectUiState,
+    dex: DexProgress,
+    onDetect: () -> Unit,
+    onSelectMatch: (String) -> Unit,
+    onSave: (notes: String, shareToGallery: Boolean) -> Unit,
+) {
     val error = state.detectError
     val detection = state.detection
     when {
@@ -127,7 +158,16 @@ private fun DetectSection(state: DetectUiState, onDetect: () -> Unit, onSelectMa
         detection != null -> {
             DetectionResults(detection, selectedSlug = state.selectedSlug, onSelect = onSelectMatch)
             // The reference photo is already beside the user's (website: show-photo="false").
-            state.selectedBird?.let { BirdStatsCard(it) }
+            state.selectedBird?.let { bird ->
+                BirdStatsCard(bird)
+                SightingSaver(
+                    bird = bird,
+                    alreadyFound = bird.id in dex.foundBirdIds,
+                    saving = state.saving,
+                    error = state.saveError,
+                    onSave = onSave,
+                )
+            }
         }
         else -> Button(onClick = onDetect, enabled = state.canDetect, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.detect_button))
@@ -248,7 +288,7 @@ private fun ButtonIcon(iconRes: Int) {
  * photo instead, so a wrong match is obvious at a glance (website: DetectPage.vue).
  */
 @Composable
-private fun SelectedPhoto(photo: File, matchedBird: Bird?, onChangePhoto: () -> Unit) {
+private fun SelectedPhoto(photo: File, matchedBird: Bird?, onChangePhoto: (() -> Unit)?) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (matchedBird == null) {
             AsyncImage(
@@ -284,7 +324,7 @@ private fun SelectedPhoto(photo: File, matchedBird: Bird?, onChangePhoto: () -> 
                 }
             }
         }
-        TextButton(onClick = onChangePhoto) { Text(stringResource(R.string.change_photo)) }
+        onChangePhoto?.let { TextButton(onClick = it) { Text(stringResource(R.string.change_photo)) } }
     }
 }
 

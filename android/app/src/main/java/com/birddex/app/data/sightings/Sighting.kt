@@ -38,3 +38,23 @@ data class Sighting(
 
 private fun parseInstant(value: String?): Instant? =
     value?.let { runCatching { Instant.parse(it) }.getOrNull() }
+
+/** `POST /api/sightings` body. `detectedAt` is left out: the server uses now, as for the website. */
+@Serializable
+data class CreateSightingRequest(
+    val birdId: Int,
+    /** Asks for a photo upload link; the app always uploads a JPEG. */
+    val imageExt: String,
+    /** Left out when null (the website sends none for an empty note). */
+    val notes: String? = null,
+    val public: Boolean,
+)
+
+/** `POST /api/sightings` answer (201). */
+@Serializable
+data class CreatedSighting(
+    val id: String,
+    val imageKey: String? = null,
+    /** Presigned S3 PUT link, valid 5 minutes. */
+    val uploadUrl: String? = null,
+)

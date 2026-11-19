@@ -142,7 +142,9 @@ private fun MainTabs() {
             composable<DexRoute> {
                 DexScreen(onFindBird = { navController.navigateToTopLevel(TopLevelDestination.Detect) })
             }
-            composable<DetectRoute> { DetectScreen() }
+            composable<DetectRoute> {
+                DetectScreen(onOpenDex = { navController.navigateToTopLevel(TopLevelDestination.Dex) })
+            }
             composable<GalleryRoute> { GalleryScreen() }
             composable<AccountRoute> { AccountScreen() }
         }

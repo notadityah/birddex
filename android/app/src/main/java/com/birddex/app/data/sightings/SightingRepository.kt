@@ -12,6 +12,8 @@ import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * The signed-in user's sightings, offline first like the birds. The saved copy is wiped on
@@ -39,6 +41,13 @@ interface SightingRepository {
      * Not optimistic: nothing disappears unless the server confirms.
      */
     suspend fun delete(id: String): ApiResult<Unit>
+
+    /**
+     * Saves a new sighting with its photo (a JPEG), then refreshes the saved copy so it shows
+     * in the Dex (website: DetectPage.vue `saveSighting`). If the photo can't be uploaded,
+     * the new sighting is deleted again, so a retry doesn't leave a photo-less duplicate.
+     */
+    suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray): ApiResult<Unit>
 }
 
 @Singleton
@@ -83,6 +92,29 @@ class OfflineFirstSightingRepository @Inject constructor(
         return if (result.isNotFound()) ApiResult.Success(Unit) else result
     }
 
+    override suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray): ApiResult<Unit> {
+        val request = CreateSightingRequest(birdId = birdId, imageExt = "jpg", notes = notes, public = isPublic)
+        val created = when (val result = apiCall(json) { api.createSighting(request) }) {
+            is ApiResult.Failure -> return result
+            is ApiResult.Success -> result.value
+        }
+        val uploaded = created.uploadUrl?.let { url ->
+            apiCall(json) { api.uploadPhoto(url, photoJpeg.toRequestBody(JPEG)) }
+        } ?: ApiResult.Failure(ApiError.Unexpected("No upload URL")) // always sent when imageExt is
+        if (uploaded is ApiResult.Failure) {
+            // Best effort: if this fails too (offline), the photo-less sighting stays, as on the website.
+            apiCall(json) { api.deleteSighting(created.id) }
+            return uploaded
+        }
+        // Saved either way; if this refresh fails, the Dex picks the sighting up next time.
+        refresh()
+        return ApiResult.Success(Unit)
+    }
+
     private fun ApiResult<*>.isNotFound() =
         this is ApiResult.Failure && (error as? ApiError.Http)?.code == 404
+
+    private companion object {
+        val JPEG = "image/jpeg".toMediaType()
+    }
 }
