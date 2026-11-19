@@ -31,9 +31,10 @@ same commit. A task is done when its "Done when" line is true.
       *Done when:* a preview screen renders in both themes.
       Font: Inter variable font bundled in `res/font/inter.ttf` (OFL license shipped in
       `assets/licenses/inter-OFL.txt`).
-- [ ] **A1.3 Build config**: `BASE_URL` per build type (`https://birddex.fun` for both
+- [x] **A1.3 Build config**: `BASE_URL` per build type (`https://birddex.fun` for both
       for now), debug app ID suffix `.debug` so it can be installed next to release.
       *Done when:* `BuildConfig.BASE_URL` is readable from code.
+      Debug builds can target another API with `-Pbirddex.debugBaseUrl=https://...`.
 - [ ] **A1.4 Hilt + navigation skeleton**: Navigation Compose with a bottom bar
       (Dex · Detect · Gallery · Account) and placeholder screens.
       *Done when:* you can tap between all four tabs.

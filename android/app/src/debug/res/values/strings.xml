@@ -1,0 +1,4 @@
+<resources>
+    <!-- Launcher label for debug builds, so they're easy to tell apart from release. -->
+    <string name="app_name">BirdDex Debug</string>
+</resources>

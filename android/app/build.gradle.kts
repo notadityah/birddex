@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// The website and its /api/* routes share this origin (see DEPLOY.md).
+val PRODUCTION_BASE_URL = "https://birddex.fun"
+
 android {
     // Code package. Differs from applicationId because `fun` is a Kotlin keyword.
     namespace = "com.birddex.app"
@@ -18,7 +21,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Installs next to the release app, as "BirdDex Debug" (src/debug/res).
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            // Production API by default. Point debug builds elsewhere with
+            // -Pbirddex.debugBaseUrl=https://... or the same key in ~/.gradle/gradle.properties.
+            val debugBaseUrl = providers.gradleProperty("birddex.debugBaseUrl")
+                .getOrElse(PRODUCTION_BASE_URL)
+            buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
+        }
         release {
+            buildConfigField("String", "BASE_URL", "\"$PRODUCTION_BASE_URL\"")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -34,6 +48,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

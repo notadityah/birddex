@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.birddex.app.BuildConfig
 
 /** Sample of the theme's colors, type and components. Temporary home screen until A1.4. */
 @Composable
@@ -95,6 +96,11 @@ fun ThemeShowcase(modifier: Modifier = Modifier) {
             Swatch("error", colors.error, colors.onError)
             Swatch("surfaceV", colors.surfaceVariant, colors.onSurfaceVariant)
         }
+        Text(
+            "API ${BuildConfig.BASE_URL} · ${BuildConfig.BUILD_TYPE} ${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant,
+        )
         Spacer(Modifier.size(8.dp))
     }
 }
