@@ -64,6 +64,12 @@ interface SightingDao {
     @Query("DELETE FROM sightings")
     suspend fun deleteAll()
 
+    @Query("UPDATE sightings SET isPublic = :isPublic WHERE id = :id")
+    suspend fun setPublic(id: String, isPublic: Boolean)
+
+    @Query("DELETE FROM sightings WHERE id = :id")
+    suspend fun delete(id: String)
+
     @Insert
     suspend fun insertAll(sightings: List<SightingEntity>)
 

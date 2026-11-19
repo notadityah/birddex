@@ -40,8 +40,23 @@ class DexViewModelTest {
         val saved = MutableStateFlow<List<Sighting>>(emptyList())
         var refreshResult: ApiResult<Unit> = ApiResult.Success(Unit)
         var refreshCalls = 0
+        var actionResult: ApiResult<Unit> = ApiResult.Success(Unit)
+        val setPublicCalls = mutableListOf<Pair<String, Boolean>>()
+        val deleteCalls = mutableListOf<String>()
+        /** When set, actions wait on it, so tests can look at the "busy" state mid-request. */
+        var gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         override fun observeSightings() = saved
         override suspend fun refresh(): ApiResult<Unit> = refreshResult.also { refreshCalls++ }
+        override suspend fun setPublic(id: String, isPublic: Boolean): ApiResult<Unit> {
+            setPublicCalls += id to isPublic
+            gate?.await()
+            return actionResult
+        }
+        override suspend fun delete(id: String): ApiResult<Unit> {
+            deleteCalls += id
+            gate?.await()
+            return actionResult
+        }
     }
 
     private val birds = FakeBirdRepository()
@@ -105,6 +120,61 @@ class DexViewModelTest {
 
         assertEquals(listOf(parrot), vm.state.value.entries.map { it.bird })
         assertEquals(ApiError.Network, vm.state.value.refreshError)
+    }
+
+    // --- manage sightings (A3.6) ---
+
+    private fun TestScope.messagesOf(vm: DexViewModel): MutableList<DexMessage> =
+        mutableListOf<DexMessage>().also { list ->
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { list += it } }
+        }
+
+    @Test fun toggleSharedFlipsTheFlag() = runTest {
+        val vm = open()
+        val messages = messagesOf(vm)
+
+        vm.toggleShared(sighting("a", 1).copy(publicValue = true))
+
+        assertEquals(listOf("a" to false), sightings.setPublicCalls)
+        assertTrue(messages.isEmpty()) // success is shown by the globe itself
+    }
+
+    @Test fun toggleSharedFailureIsReported() = runTest {
+        sightings.actionResult = ApiResult.Failure(ApiError.Network)
+        val vm = open()
+        val messages = messagesOf(vm)
+
+        vm.toggleShared(sighting("a", 1))
+
+        assertEquals(listOf(DexMessage.ShareFailed), messages)
+    }
+
+    @Test fun deleteReportsTheOutcome() = runTest {
+        val vm = open()
+        val messages = messagesOf(vm)
+
+        vm.delete(sighting("a", 1))
+        sightings.actionResult = ApiResult.Failure(ApiError.Http(500, null))
+        vm.delete(sighting("b", 1))
+
+        assertEquals(listOf("a", "b"), sightings.deleteCalls)
+        assertEquals(listOf(DexMessage.Deleted, DexMessage.DeleteFailed), messages)
+    }
+
+    @Test fun busySightingIgnoresRepeatTaps() = runTest {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        sightings.gate = gate
+        val vm = open()
+
+        vm.toggleShared(sighting("a", 1))
+        assertEquals(setOf("a"), vm.state.value.busySightingIds)
+        vm.toggleShared(sighting("a", 1)) // double tap while the first request runs
+        vm.delete(sighting("a", 1))
+
+        gate.complete(Unit)
+        assertEquals(1, sightings.setPublicCalls.size)
+        assertTrue(sightings.deleteCalls.isEmpty())
+        assertTrue(vm.state.value.busySightingIds.isEmpty())
     }
 
     @Test fun retryClearsTheErrorWhenItWorks() = runTest {

@@ -24,8 +24,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.birddex.app.data.sightings.Sighting
+import com.birddex.app.ui.components.PhotoSaver
+import java.time.ZoneId
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -58,10 +73,30 @@ fun DexScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     // The open detail sheet, by bird id so it survives rotation and refreshes.
     var openBirdId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+    val savePhoto = rememberPhotoSaving()
+
+    // Short messages from share/delete. Toasts also show above the open sheet.
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { message ->
+            val text = when (message) {
+                DexMessage.ShareFailed -> R.string.share_failed
+                DexMessage.Deleted -> R.string.sighting_deleted
+                DexMessage.DeleteFailed -> R.string.delete_failed
+            }
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     state.entries.firstOrNull { it.bird.id == openBirdId }?.let { entry ->
         BirdDetailSheet(
             entry = entry,
+            actions = SightingActions(
+                busyIds = state.busySightingIds,
+                onToggleShared = viewModel::toggleShared,
+                onSavePhoto = savePhoto,
+                onDelete = viewModel::delete,
+            ),
             onDismiss = { openBirdId = null },
             onFindBird = {
                 openBirdId = null
@@ -248,5 +283,47 @@ private fun LoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
         )
         TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
+    }
+}
+
+/**
+ * Returns a "save this sighting's photo" action. Asks for storage permission first on
+ * Android 8–9 (newer versions don't need it) and reports the result as a toast.
+ */
+@Composable
+private fun rememberPhotoSaving(): (Sighting) -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val saver = remember { PhotoSaver(context.applicationContext) }
+    var pending by remember { mutableStateOf<Sighting?>(null) }
+
+    fun save(sighting: Sighting) {
+        val key = sighting.imageKey ?: return
+        val day = sighting.seenAt?.atZone(ZoneId.systemDefault())?.toLocalDate()?.toString() ?: "photo"
+        scope.launch {
+            val ok = saver.save(key, sighting.imageUrl, PhotoSaver.fileName(sighting.slug, day, key))
+            Toast.makeText(context, if (ok) R.string.photo_saved else R.string.photo_save_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val sighting = pending
+        pending = null
+        if (granted && sighting != null) {
+            save(sighting)
+        } else {
+            Toast.makeText(context, R.string.storage_permission_needed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    return { sighting ->
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            pending = sighting
+            permission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            save(sighting)
+        }
     }
 }

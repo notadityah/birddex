@@ -61,6 +61,14 @@ class DatabaseTest {
             dao.replaceAll(listOf(older, newer))
             assertEquals(listOf(newer, older), dao.observeAll().first())
 
+            dao.setPublic("b", true) // share toggle (A3.6) changes only that row
+            assertEquals(listOf(true, true), dao.observeAll().first().map { it.isPublic })
+            dao.setPublic("a", false)
+            assertEquals(listOf(true, false), dao.observeAll().first().map { it.isPublic })
+
+            dao.delete("b") // delete one (A3.6)
+            assertEquals(listOf("a"), dao.observeAll().first().map { it.id })
+
             dao.replaceAll(emptyList()) // a user with no sightings
             assertTrue(dao.observeAll().first().isEmpty())
         } finally {

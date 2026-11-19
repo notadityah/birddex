@@ -146,9 +146,15 @@ original numbers._
       yet found" and "Go to Detect". The website's modal has no reference photo, so that
       moved to A4.4. Checked on the emulator, light and dark. One unreproduced glitch: on
       the very first open, an unfound bird's sheet seemed to appear late; 5 reruns were fine.
-- [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
+- [x] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
       (`DELETE /api/sightings/:id`) with confirmation. In the detail sheet's sighting rows,
       like the website's globe toggle; also "Download image" (save the photo to the phone).
+      Share toggle is optimistic with rollback (like the website); delete waits for the
+      server and asks first (the website has no per-sighting delete for users); a 404 means
+      "already gone" and removes it locally. Save photo copies from Coil's cache to
+      Pictures/BirdDex (MediaStore; storage permission only on Android 8–9). Live: share
+      (`PATCH public:true` → 200, confirmed after a fresh fetch) and save photo. Not yet run
+      live: unshare, and a confirmed delete (needs a throwaway sighting; do it after A4.5).
 
 ## Phase 4 — Detect (core feature)
 
@@ -166,6 +172,7 @@ original numbers._
       `{ birdId, imageExt: "jpg", detectedAt, notes, public }` → `PUT` the JPEG to the
       returned `uploadUrl`; refresh the Dex.
       *Done when:* a saved sighting appears in the Dex and on the website.
+      Then delete that test sighting from the app to run A3.6's delete live.
 - [ ] **A4.6 Report wrong match**: `POST /api/feedback` with `category: "detection"`
       and `imageExt` → `PUT` the photo to `uploadUrl`.
 

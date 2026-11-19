@@ -29,6 +29,10 @@ class FakeSightingDao : SightingDao {
     override fun observeAll() = rows.map { list -> list.sortedByDescending { it.createdAt } }
     override suspend fun deleteAll() { rows.value = emptyList() }
     override suspend fun insertAll(sightings: List<SightingEntity>) { rows.value = rows.value + sightings }
+    override suspend fun setPublic(id: String, isPublic: Boolean) {
+        rows.value = rows.value.map { if (it.id == id) it.copy(isPublic = isPublic) else it }
+    }
+    override suspend fun delete(id: String) { rows.value = rows.value.filterNot { it.id == id } }
 }
 
 class OfflineFirstSightingRepositoryTest {
@@ -122,6 +126,74 @@ class OfflineFirstSightingRepositoryTest {
     @Test fun unauthorizedIsReported() = runBlocking {
         respond(401, """{"error":"Unauthorized"}""")
         assertEquals(ApiResult.Failure(ApiError.Unauthorized), repo.refresh())
+    }
+
+    // --- share toggle (A3.6) ---
+
+    private val parrotId = "6f1c2a3e-8b4d-4c5e-9f60-1a2b3c4d5e6f" // public in the fixture
+    private suspend fun savedById(id: String) = saved().firstOrNull { it.id == id }
+
+    @Test fun unshareSendsPatchAndKeepsTheChange() = runBlocking {
+        refreshWithFixture()
+        server.takeRequest()
+        respond(200, """{"id":"$parrotId","public":false}""")
+
+        assertEquals(ApiResult.Success(Unit), repo.setPublic(parrotId, false))
+
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/api/sightings/$parrotId", request.url.encodedPath)
+        assertEquals("""{"public":false}""", request.body?.utf8())
+        assertFalse(savedById(parrotId)!!.isPublic)
+    }
+
+    @Test fun shareFailureRollsBack() = runBlocking {
+        refreshWithFixture()
+        respond(500, """{"error":"boom"}""")
+
+        assertTrue(repo.setPublic(parrotId, false) is ApiResult.Failure)
+        assertTrue(savedById(parrotId)!!.isPublic) // put back
+    }
+
+    @Test fun sharingASightingDeletedElsewhereRemovesIt() = runBlocking {
+        refreshWithFixture()
+        respond(404, """{"error":"Not found"}""")
+
+        repo.setPublic(parrotId, false)
+
+        assertNull(savedById(parrotId))
+    }
+
+    // --- delete (A3.6) ---
+
+    @Test fun deleteSendsDeleteThenRemovesLocally() = runBlocking {
+        refreshWithFixture()
+        server.takeRequest()
+        respond(200, """{"ok":true}""")
+
+        assertEquals(ApiResult.Success(Unit), repo.delete(parrotId))
+
+        val request = server.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/sightings/$parrotId", request.url.encodedPath)
+        assertNull(savedById(parrotId))
+        assertEquals(2, saved().size)
+    }
+
+    @Test fun failedDeleteKeepsTheSighting() = runBlocking {
+        refreshWithFixture()
+        server.close() // offline: nothing may disappear without the server's OK
+
+        assertEquals(ApiResult.Failure(ApiError.Network), repo.delete(parrotId))
+        assertEquals(3, saved().size)
+    }
+
+    @Test fun deletingSomethingAlreadyGoneCountsAsDone() = runBlocking {
+        refreshWithFixture()
+        respond(404, """{"error":"Not found"}""")
+
+        assertEquals(ApiResult.Success(Unit), repo.delete(parrotId))
+        assertNull(savedById(parrotId))
     }
 
     @Test fun signedOutDuringDownloadDoesNotSaveTheOldAccountsSightings() = runBlocking {
