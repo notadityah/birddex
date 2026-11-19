@@ -4,6 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.room)
+}
+
+room {
+    // Committed JSON snapshots of each database version, needed to write and test migrations.
+    schemaDirectory("$projectDir/schemas")
 }
 
 // The website and its /api/* routes share this origin (see DEPLOY.md).
@@ -21,6 +27,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The backend's Google *Web* OAuth client (better-auth's GOOGLE_CLIENT_ID). Google
         // issues the app's ID tokens for this audience so the backend accepts them. The
@@ -72,6 +79,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    // Pinned so the app and its tests use the same coroutines (AndroidX alone pulls in 1.9).
+    implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
 
@@ -100,7 +109,16 @@ dependencies {
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.googleid)
 
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // On-device tests (./gradlew connectedDebugAndroidTest, needs an emulator or phone).
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

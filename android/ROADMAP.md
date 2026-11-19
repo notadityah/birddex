@@ -115,14 +115,17 @@ original numbers._
       For A3.5: reference photos are on the website at `/birds/<slug>.jpg`; their
       CC BY / CC BY-SA licences require the author credit listed in
       `frontend/src/data/birdImages.js`.
-- [ ] **A3.2 Offline cache**: Room table for birds; repository serves the cache first,
+- [x] **A3.2 Offline cache**: Room table for birds; repository serves the cache first,
       then refreshes from the network.
       *Done when:* the Dex shows birds in airplane mode after one online launch.
+      Room 2.8.5 (`BirdDexDatabase` v1, schemas in `app/schemas/`), `OfflineFirstBirdRepository`
+      (failed or empty refreshes keep the saved list). The Dex tab shows a simple list with
+      pull-to-refresh until A3.4. Device tests in `androidTest/` (Room). Live: airplane-mode
+      cold start shows all 36; the R8 release build loads the list too. Coroutines pinned to
+      1.11.0 so the app matches its test libraries.
 - [ ] **A3.3 Sightings API** for `GET /api/sightings`. Cache images by `image_key`,
       not the presigned URL (URLs expire and change).
-- [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %.
-      First real caller of `getBirds()`: also run it in a release (R8) build, since R8 can
-      break Retrofit's `List<Bird>` return type.
+- [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %. Replaces A3.2's simple list.
 - [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
 - [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
       (`DELETE /api/sightings/:id`) with confirmation.

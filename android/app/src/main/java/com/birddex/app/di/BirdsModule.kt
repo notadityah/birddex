@@ -1,7 +1,7 @@
 package com.birddex.app.di
 
 import com.birddex.app.data.birds.BirdRepository
-import com.birddex.app.data.birds.NetworkBirdRepository
+import com.birddex.app.data.birds.OfflineFirstBirdRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -11,5 +11,5 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 abstract class BirdsModule {
     @Binds
-    abstract fun bindBirdRepository(impl: NetworkBirdRepository): BirdRepository
+    abstract fun bindBirdRepository(impl: OfflineFirstBirdRepository): BirdRepository
 }

@@ -7,9 +7,18 @@
     <string name="tab_gallery">Gallery</string>
     <string name="tab_account">Account</string>
 
-    <!-- Placeholder screens (replaced as each phase lands) -->
-    <string name="placeholder_dex">Your collection of Australian birds will appear here.</string>
-    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
+    <!-- Dex -->
+    <plurals name="dex_species_count">
+        <item quantity="one">%1$d Australian species</item>
+        <item quantity="other">%1$d Australian species</item>
+    </plurals>
+    <string name="dex_showing_saved">Couldn\'t refresh, showing saved birds. Pull down to try again.</string>
+    <string name="dex_load_failed">Couldn\'t load the birds. Check your connection and try again.</string>
+    <string name="rarity_common">Common</string>
+    <string name="rarity_uncommon">Uncommon</string>
+    <string name="rarity_rare">Rare</string>
+
+    <!-- Placeholder screens (replaced as each phase lands) -->    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
 
     <!-- Common -->

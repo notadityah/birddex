@@ -23,6 +23,7 @@ Run commands from the relevant package directory.
 - `cd android && ./gradlew installDebug`: install the debug app on a running emulator or connected phone.
 - `cd android && ./gradlew testDebugUnitTest`: run Android JVM unit tests.
 - `cd android && ./gradlew assembleRelease`: build the R8-shrunk release APK (unsigned until signing is set up).
+- Android on-device tests (`android/app/src/androidTest/`): `./gradlew connectedDebugAndroidTest` works but uninstalls the app afterwards, wiping its sign-in. To keep app data, run `./gradlew installDebug assembleDebugAndroidTest`, `adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`, then `adb shell am instrument -w fun.birddex.app.debug.test/androidx.test.runner.AndroidJUnitRunner`.
 
 ## Coding Style & Naming Conventions
 
