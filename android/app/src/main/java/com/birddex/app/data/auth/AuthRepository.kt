@@ -5,8 +5,19 @@ import kotlinx.coroutines.flow.StateFlow
 /** Email/password and Google auth against better-auth. */
 interface AuthRepository {
 
-    /** Current sign-in state; [SessionState.Unknown] until [refreshSession] has run once. */
+    /**
+     * Current sign-in state. [SessionState.Unknown] means "a session is saved on the device
+     * but the server hasn't confirmed it yet" (or couldn't be reached). Goes to
+     * [SessionState.SignedOut] by itself when any API call answers 401.
+     */
     val sessionState: StateFlow<SessionState>
+
+    /**
+     * Launch check, local only: returns true if a session cookie is saved on the device.
+     * If not, [sessionState] becomes [SessionState.SignedOut] right away. Follow a `true`
+     * with [refreshSession] to confirm the session with the server.
+     */
+    suspend fun restoreSession(): Boolean
 
     /**
      * Asks the server who is signed in and updates [sessionState]. Returns the user, or

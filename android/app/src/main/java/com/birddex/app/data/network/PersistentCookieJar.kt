@@ -54,6 +54,12 @@ class PersistentCookieJar(
         current.filter { it.matches(url) }
     }
 
+    /** True if any unexpired cookie matches [predicate]. Local only, no network. */
+    fun hasCookie(predicate: (Cookie) -> Boolean): Boolean = synchronized(lock) {
+        val time = now()
+        loaded().any { it.expiresAt > time && predicate(it) }
+    }
+
     /** Forgets every cookie, e.g. on sign-out. */
     fun clear() {
         synchronized(lock) {

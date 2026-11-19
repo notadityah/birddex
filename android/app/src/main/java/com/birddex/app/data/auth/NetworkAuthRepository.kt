@@ -29,10 +29,31 @@ class NetworkAuthRepository(
     private val json: Json,
     private val verifyCallbackUrl: String,
     private val resetPasswordUrl: String,
+    sessionExpiry: SessionExpiry,
 ) : AuthRepository {
 
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Unknown)
     override val sessionState: StateFlow<SessionState> = _sessionState.asStateFlow()
+
+    init {
+        sessionExpiry.setListener(::onSessionExpired)
+    }
+
+    override suspend fun restoreSession(): Boolean {
+        val stored = withContext(Dispatchers.IO) {
+            // "__Secure-better-auth.session_token" over HTTPS, without the prefix over HTTP.
+            cookieJar.hasCookie { it.name.endsWith(SESSION_COOKIE) }
+        }
+        if (!stored) _sessionState.value = SessionState.SignedOut
+        return stored
+    }
+
+    /** A 401 from the API (OkHttp thread): forget the dead session and show sign-in. */
+    private fun onSessionExpired() {
+        if (_sessionState.value == SessionState.SignedOut) return
+        cookieJar.clear()
+        _sessionState.value = SessionState.SignedOut
+    }
 
     override suspend fun refreshSession(): AuthResult<AuthUser?> {
         val result = call { api.getSession() }.then { body ->
@@ -75,6 +96,10 @@ class NetworkAuthRepository(
         (call { api.signOut() } as? AuthResult.Success)?.value?.close()
         withContext(Dispatchers.IO) { cookieJar.clear() }
         _sessionState.value = SessionState.SignedOut
+    }
+
+    private companion object {
+        const val SESSION_COOKIE = "better-auth.session_token"
     }
 
     /** Runs one API call and turns every outcome into an [AuthResult]. */

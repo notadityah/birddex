@@ -19,7 +19,6 @@
     <string name="hide_password">Hide password</string>
 
     <!-- Account tab -->
-    <string name="account_signed_out_message">Sign in to save sightings, build your dex and share with the community.</string>
     <string name="account_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
     <string name="sign_out">Sign out</string>
     <string name="signing_out">Signing out…</string>

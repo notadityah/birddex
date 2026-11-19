@@ -43,7 +43,14 @@ class NetworkAuthRepositoryTest {
         baseUrl = server.url("/").toString()
         val storeFile = tmp.newFolder().resolve("cookies.preferences_pb")
         cookieJar = PersistentCookieJar(PersistentCookieJar.createStore(scope) { storeFile })
-        client = ApiClients.okHttpClient(baseUrl, cookieJar, userAgent = "test", debugLogging = false)
+        val sessionExpiry = SessionExpiry()
+        client = ApiClients.okHttpClient(
+            baseUrl,
+            cookieJar,
+            userAgent = "test",
+            debugLogging = false,
+            onUnauthorized = sessionExpiry::onUnauthorized,
+        )
         val api = ApiClients.retrofit(baseUrl, client).create<AuthApi>()
         repo = NetworkAuthRepository(
             api,
@@ -51,6 +58,7 @@ class NetworkAuthRepositoryTest {
             ApiClients.json,
             verifyCallbackUrl = "https://birddex.fun/login",
             resetPasswordUrl = "https://birddex.fun/reset-password",
+            sessionExpiry = sessionExpiry,
         )
     }
 
@@ -240,6 +248,45 @@ class NetworkAuthRepositoryTest {
 
         assertEquals(SessionState.SignedOut, repo.sessionState.value)
         assertTrue(storedCookieNames().isEmpty())
+    }
+
+    // --- launch restore + expired sessions (A2.5) ---
+
+    private suspend fun signInWithCookie() {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+        repo.signIn("t@example.com", "pw")
+        server.takeRequest()
+    }
+
+    @Test fun restoreWithoutSavedSessionIsSignedOut() = runBlocking {
+        assertEquals(false, repo.restoreSession())
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+    }
+
+    @Test fun restoreFindsSavedSession() = runBlocking {
+        signInWithCookie()
+        assertEquals(true, repo.restoreSession())
+        assertTrue(repo.sessionState.value is SessionState.SignedIn) // unchanged
+    }
+
+    @Test fun apiUnauthorizedSignsOutAndForgetsCookie() = runBlocking {
+        signInWithCookie()
+        respond(401, """{"error":"Unauthorized"}""")
+
+        client.newCall(Request.Builder().url(server.url("/api/sightings")).build()).execute().close()
+
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+        assertTrue(storedCookieNames().isEmpty())
+    }
+
+    @Test fun wrongPasswordWhileSignedInDoesNotSignOut() = runBlocking {
+        signInWithCookie()
+        respond(401, """{"code":"INVALID_EMAIL_OR_PASSWORD","message":"Invalid email or password"}""")
+
+        repo.signIn("t@example.com", "wrong")
+
+        assertTrue(repo.sessionState.value is SessionState.SignedIn)
+        assertEquals(listOf("better-auth.session_token"), storedCookieNames())
     }
 
     // --- interceptors ---

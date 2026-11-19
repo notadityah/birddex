@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -22,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,10 +30,12 @@ import com.birddex.app.R
 import com.birddex.app.data.auth.AuthUser
 import com.birddex.app.data.auth.SessionState
 
+/**
+ * Account tab (only reachable when signed in; the session gate handles signed out).
+ * Settings and feedback come in Phase 5.
+ */
 @Composable
 fun AccountScreen(
-    onSignIn: () -> Unit,
-    onCreateAccount: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -53,10 +52,11 @@ fun AccountScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when (val s = session) {
+            // Saved session not confirmed yet (launch check still running, or offline).
             SessionState.Unknown ->
                 if (offline) Offline(onRetry = viewModel::refresh) else CircularProgressIndicator()
-            SessionState.SignedOut -> SignedOut(onSignIn, onCreateAccount)
             is SessionState.SignedIn -> SignedIn(s.user, signingOut, onSignOut = viewModel::signOut)
+            SessionState.SignedOut -> Unit // the session gate is already switching to sign-in
         }
         if (BuildConfig.DEBUG) {
             Text(
@@ -65,27 +65,6 @@ fun AccountScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun SignedOut(onSignIn: () -> Unit, onCreateAccount: () -> Unit) {
-    Icon(
-        painterResource(R.drawable.ic_account_circle_outlined),
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.size(56.dp),
-    )
-    Text(stringResource(R.string.tab_account), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.secondary)
-    Text(
-        stringResource(R.string.account_signed_out_message),
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center,
-    )
-    Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sign_in)) }
-    OutlinedButton(onClick = onCreateAccount, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.create_account))
     }
 }
 

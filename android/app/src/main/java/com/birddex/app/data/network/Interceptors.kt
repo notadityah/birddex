@@ -36,5 +36,21 @@ class HtmlErrorPageInterceptor : Interceptor {
     }
 }
 
+/**
+ * Reports a `401` from the BirdDex API (session expired or revoked) via [onUnauthorized].
+ * better-auth's own `/api/auth/` calls are skipped: there a 401 means e.g. a wrong password,
+ * not that the current session is gone.
+ */
+class UnauthorizedInterceptor(private val onUnauthorized: () -> Unit) : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val response = chain.proceed(chain.request())
+        val path = chain.request().url.encodedPath
+        if (response.code == 401 && path.startsWith("/api/") && !path.startsWith("/api/auth/")) {
+            onUnauthorized()
+        }
+        return response
+    }
+}
+
 class UnexpectedHtmlResponseException(url: HttpUrl) :
     IOException("Expected JSON from ${url.encodedPath} but got an HTML page")

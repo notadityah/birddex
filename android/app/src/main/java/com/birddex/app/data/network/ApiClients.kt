@@ -28,6 +28,8 @@ object ApiClients {
         cookieJar: CookieJar,
         userAgent: String,
         debugLogging: Boolean,
+        /** Called (on an OkHttp thread) when the API says the session is gone. */
+        onUnauthorized: () -> Unit = {},
     ): OkHttpClient = OkHttpClient.Builder()
         .cookieJar(cookieJar)
         .addInterceptor { chain ->
@@ -35,6 +37,7 @@ object ApiClients {
         }
         .addInterceptor(AuthOriginInterceptor(originOf(baseUrl)))
         .addInterceptor(HtmlErrorPageInterceptor())
+        .addInterceptor(UnauthorizedInterceptor(onUnauthorized))
         // Lambda cold starts can take several seconds (detect is slowest).
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(45, TimeUnit.SECONDS)

@@ -49,13 +49,16 @@ import androidx.compose.ui.unit.dp
 import com.birddex.app.R
 import com.birddex.app.data.auth.AuthError
 
-/** Frame shared by the sign-in, register and verify screens: back arrow, title, subtitle. */
+/**
+ * Frame shared by the sign-in screens: back arrow (hidden when [onBack] is null, i.e. on the
+ * first screen of the flow), title, subtitle.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScaffold(
     title: String,
     subtitle: String,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
@@ -63,8 +66,10 @@ fun AuthScaffold(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.back))
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.back))
+                        }
                     }
                 },
             )

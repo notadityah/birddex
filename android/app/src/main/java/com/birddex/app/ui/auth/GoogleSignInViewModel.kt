@@ -52,6 +52,7 @@ class GoogleSignInViewModel @Inject constructor(
                 }
             }
             GoogleIdTokenResult.Cancelled -> _state.update { it.copy(loading = false) }
+            // signedIn is informational: the session gate reacts to the new session itself.
             GoogleIdTokenResult.NoGoogleAccount ->
                 _state.update { it.copy(loading = false, error = GoogleSignInError.NoGoogleAccount) }
             is GoogleIdTokenResult.Failed -> {
@@ -60,6 +61,4 @@ class GoogleSignInViewModel @Inject constructor(
             }
         }
     }
-
-    fun onSignedInHandled() = _state.update { it.copy(signedIn = false) }
 }

@@ -2,6 +2,7 @@ package com.birddex.app.di
 
 import android.content.Context
 import com.birddex.app.BuildConfig
+import com.birddex.app.data.auth.SessionExpiry
 import com.birddex.app.data.network.ApiClients
 import com.birddex.app.data.network.AuthApi
 import com.birddex.app.data.network.BirdDexApi
@@ -42,12 +43,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(cookieJar: PersistentCookieJar): OkHttpClient =
+    fun provideOkHttpClient(cookieJar: PersistentCookieJar, sessionExpiry: SessionExpiry): OkHttpClient =
         ApiClients.okHttpClient(
             baseUrl = BuildConfig.BASE_URL,
             cookieJar = cookieJar,
             userAgent = "BirdDex-Android/${BuildConfig.VERSION_NAME}",
             debugLogging = BuildConfig.DEBUG,
+            onUnauthorized = sessionExpiry::onUnauthorized,
         )
 
     @Provides

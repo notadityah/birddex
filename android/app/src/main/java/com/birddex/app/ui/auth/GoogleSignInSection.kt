@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -29,22 +28,15 @@ import com.birddex.app.BuildConfig
 import com.birddex.app.R
 import kotlinx.coroutines.launch
 
-/** "or continue with" divider + Google button, as on the website's login and register pages. */
+/**
+ * "or continue with" divider + Google button, as on the website's login and register pages.
+ * After a successful sign-in the session gate swaps the sign-in flow for the tabs.
+ */
 @Composable
-fun GoogleSignInSection(
-    onSignedIn: () -> Unit,
-    viewModel: GoogleSignInViewModel = hiltViewModel(),
-) {
+fun GoogleSignInSection(viewModel: GoogleSignInViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(state.signedIn) {
-        if (state.signedIn) {
-            onSignedIn()
-            viewModel.onSignedInHandled()
-        }
-    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {

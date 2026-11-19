@@ -14,13 +14,12 @@ import com.birddex.app.R
 
 /**
  * Create an account with email and password (ends on the "check your inbox" screen), or
- * continue with Google, which signs straight in (Google has already verified the email).
+ * continue with Google, which signs straight in (the session gate then shows the tabs).
  */
 @Composable
 fun RegisterScreen(
     onBack: () -> Unit,
     onRegistered: (email: String) -> Unit,
-    onSignedIn: () -> Unit,
     onSignIn: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel(),
 ) {
@@ -84,7 +83,7 @@ fun RegisterScreen(
             loading = state.loading,
             onClick = submit,
         )
-        GoogleSignInSection(onSignedIn = onSignedIn)
+        GoogleSignInSection()
         AuthLinkRow(
             prompt = stringResource(R.string.register_have_account),
             action = stringResource(R.string.sign_in),

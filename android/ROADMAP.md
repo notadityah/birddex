@@ -96,9 +96,15 @@ original numbers._
       `POST /api/auth/request-password-reset` with `redirectTo: <site>/reset-password`,
       same as the website. Live check used a made-up address (better-auth answers 200 and
       sends nothing); a real reset email was not sent.
-- [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
+- [x] **A2.5 Session gate**: on launch, check the session and route to login or main;
       any `401` clears cookies and returns to login.
       *Done when:* killing and reopening the app keeps you signed in.
+      `SessionGateViewModel` picks the sign-in flow (no tabs) or the tabs. No saved cookie →
+      sign-in instantly, no network; saved cookie → tabs instantly, confirmed in the
+      background (offline stays in the app). `UnauthorizedInterceptor` + `SessionExpiry`:
+      a 401 from `/api/` (not `/api/auth/`) signs out. Live: signed-out launch → sign-in
+      with zero network calls; kill + reopen while signed in → tabs, get-session 200.
+      The 401 path is unit-tested only until Phase 3 calls signed-in endpoints.
 
 ## Phase 3 — Birds + My Dex
 

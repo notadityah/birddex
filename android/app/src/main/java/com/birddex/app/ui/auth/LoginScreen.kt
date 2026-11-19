@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -17,11 +17,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
 
-/** Email/password or Google sign-in. */
+/**
+ * Email/password or Google sign-in. On success there's nothing to navigate: the session gate
+ * sees the new session and swaps this flow for the tabs.
+ */
 @Composable
 fun LoginScreen(
-    onBack: () -> Unit,
-    onSignedIn: () -> Unit,
+    /** Null when this is the first screen of the sign-in flow (no back arrow). */
+    onBack: (() -> Unit)?,
     onNeedsVerification: (email: String) -> Unit,
     onCreateAccount: () -> Unit,
     onForgotPassword: (email: String) -> Unit,
@@ -32,9 +35,8 @@ fun LoginScreen(
 
     LaunchedEffect(state.outcome) {
         when (val outcome = state.outcome) {
-            LoginOutcome.SignedIn -> onSignedIn()
             is LoginOutcome.NeedsVerification -> onNeedsVerification(outcome.email)
-            null -> return@LaunchedEffect
+            LoginOutcome.SignedIn, null -> return@LaunchedEffect
         }
         viewModel.onOutcomeHandled()
     }
@@ -79,7 +81,7 @@ fun LoginScreen(
             loading = state.loading,
             onClick = submit,
         )
-        GoogleSignInSection(onSignedIn = onSignedIn)
+        GoogleSignInSection()
         AuthLinkRow(
             prompt = stringResource(R.string.login_no_account),
             action = stringResource(R.string.sign_up),

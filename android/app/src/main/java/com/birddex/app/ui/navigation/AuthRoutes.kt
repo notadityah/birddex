@@ -1,11 +1,9 @@
 package com.birddex.app.ui.navigation
 
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hasRoute
 import kotlinx.serialization.Serializable
 
-// Auth screens open full-screen on top of the tabs (no bottom bar).
+// Routes of the sign-in flow, shown by the session gate when signed out (no tabs).
 // Property names are read back by the ViewModels through SavedStateHandle ("email").
 
 /** Sign in, optionally with the email already filled in. */
@@ -18,19 +16,6 @@ import kotlinx.serialization.Serializable
 
 /** Request a password-reset email, starting from whatever was typed on sign-in. */
 @Serializable data class ForgotPasswordRoute(val email: String? = null)
-
-fun NavDestination?.isAuthScreen(): Boolean =
-    this != null && (
-        hasRoute<LoginRoute>() || hasRoute<RegisterRoute>() ||
-            hasRoute<VerifyEmailRoute>() || hasRoute<ForgotPasswordRoute>()
-        )
-
-/** Leaves the sign-in flow entirely (e.g. after signing in), back to the tab underneath. */
-fun NavController.leaveAuthFlow() {
-    while (currentBackStackEntry?.destination.isAuthScreen()) {
-        if (!popBackStack()) break
-    }
-}
 
 /** Opens sign-in, replacing any sign-in screen already on the stack. */
 fun NavController.openLogin(email: String? = null) =

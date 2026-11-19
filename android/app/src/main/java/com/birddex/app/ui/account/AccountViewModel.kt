@@ -29,7 +29,8 @@ class AccountViewModel @Inject constructor(
     val signingOut: StateFlow<Boolean> = _signingOut.asStateFlow()
 
     init {
-        // A2.5 moves this check to app launch; until then the Account tab does it.
+        // The session gate already checks at launch; this covers opening the tab while that
+        // check failed (offline), so the Retry message appears instead of a spinner.
         if (auth.sessionState.value == SessionState.Unknown) refresh()
     }
 
