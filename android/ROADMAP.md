@@ -108,13 +108,21 @@ original numbers._
 
 ## Phase 3 — Birds + My Dex
 
-- [ ] **A3.1 Birds API + models** for `GET /api/birds` (including Pokédex stats).
+- [x] **A3.1 Birds API + models** for `GET /api/birds` (including Pokédex stats).
+      `data/birds/` (`Bird`, `Rarity`, `BirdRepository`) and a shared `ApiResult`/`ApiError`
+      + `apiCall` for all non-auth endpoints. Tested against a saved copy of the live
+      response (`src/test/resources/fixtures/birds.json`, 36 birds).
+      For A3.5: reference photos are on the website at `/birds/<slug>.jpg`; their
+      CC BY / CC BY-SA licences require the author credit listed in
+      `frontend/src/data/birdImages.js`.
 - [ ] **A3.2 Offline cache**: Room table for birds; repository serves the cache first,
       then refreshes from the network.
       *Done when:* the Dex shows birds in airplane mode after one online launch.
 - [ ] **A3.3 Sightings API** for `GET /api/sightings`. Cache images by `image_key`,
       not the presigned URL (URLs expire and change).
 - [ ] **A3.4 Dex grid screen**: seen/unseen birds, completion %.
+      First real caller of `getBirds()`: also run it in a release (R8) build, since R8 can
+      break Retrofit's `List<Bird>` return type.
 - [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
 - [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
       (`DELETE /api/sightings/:id`) with confirmation.
