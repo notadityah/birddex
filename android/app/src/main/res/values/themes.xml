@@ -1,0 +1,4 @@
+<resources>
+    <!-- Window theme only; the real app theme is in Compose (A1.2). -->
+    <style name="Theme.BirdDex" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

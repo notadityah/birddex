@@ -22,7 +22,7 @@ same commit. A task is done when its "Done when" line is true.
 
 ## Phase 1 — Scaffold
 
-- [ ] **A1.1 Create the Gradle project** in `android/`: Kotlin DSL, version catalog
+- [x] **A1.1 Create the Gradle project** in `android/`: Kotlin DSL, version catalog
       (`gradle/libs.versions.toml`), single `:app` module, `.gitignore` for build outputs
       and `local.properties`.
       *Done when:* `./gradlew assembleDebug` succeeds and the empty app launches.
