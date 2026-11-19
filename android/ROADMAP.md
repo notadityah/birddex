@@ -26,9 +26,11 @@ same commit. A task is done when its "Done when" line is true.
       (`gradle/libs.versions.toml`), single `:app` module, `.gitignore` for build outputs
       and `local.properties`.
       *Done when:* `./gradlew assembleDebug` succeeds and the empty app launches.
-- [ ] **A1.2 Compose + Material 3 theme** with colors/typography taken from
+- [x] **A1.2 Compose + Material 3 theme** with colors/typography taken from
       `frontend/src/assets/main.css`, light and dark.
       *Done when:* a preview screen renders in both themes.
+      Font: Inter variable font bundled in `res/font/inter.ttf` (OFL license shipped in
+      `assets/licenses/inter-OFL.txt`).
 - [ ] **A1.3 Build config**: `BASE_URL` per build type (`https://birddex.fun` for both
       for now), debug app ID suffix `.debug` so it can be installed next to release.
       *Done when:* `BuildConfig.BASE_URL` is readable from code.

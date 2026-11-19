@@ -1,0 +1,4 @@
+<resources>
+    <!-- Matches LightColors.background in ui/theme/Color.kt -->
+    <color name="window_background">#FFFFFFFF</color>
+</resources>
