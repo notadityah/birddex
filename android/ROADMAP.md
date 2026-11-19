@@ -58,11 +58,15 @@ same commit. A task is done when its "Done when" line is true.
       *Done when:* all three work; findings written in this file under "Notes".
       **GO.** Sign-out needs `Origin`; see Notes. The debug-only check panel
       (`ui/account/AuthCheck*`) is removed in A2.3.
-- [ ] **A2.2 AuthRepository**: sign in, sign up, get session (`/api/auth/get-session`),
+- [x] **A2.2 AuthRepository**: sign in, sign up, get session (`/api/auth/get-session`),
       sign out; maps better-auth errors (e.g. unverified email) to app errors.
       From A2.1: send `Origin: https://birddex.fun` on every `/api/auth/*` request, and
       treat a `200` HTML response from `/api/*` as an error (guard against the CloudFront
       masking that A2.1 found, now fixed in production; see Notes).
+      `data/auth/` (`AuthRepository`, `SessionState`, `AuthError`) plus
+      `AuthOriginInterceptor` and `HtmlErrorPageInterceptor`; also resends verification
+      emails. Unit-tested against MockWebServer; live check covered signed-out session,
+      sign-out and a wrong password (the signed-in path was proven live in A2.1).
 - [ ] **A2.3 Login and register screens**: validation, loading and error states,
       "check your inbox to verify" state after sign-up.
 - [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens

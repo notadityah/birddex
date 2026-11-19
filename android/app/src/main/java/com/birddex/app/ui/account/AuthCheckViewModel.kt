@@ -4,10 +4,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.birddex.app.BuildConfig
-import com.birddex.app.data.network.AuthApi
+import com.birddex.app.data.auth.AuthRepository
+import com.birddex.app.data.auth.AuthResult
+import com.birddex.app.data.auth.AuthUser
 import com.birddex.app.data.network.BirdDexApi
 import com.birddex.app.data.network.PersistentCookieJar
-import com.birddex.app.data.network.SignInEmailRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import javax.inject.Inject
@@ -20,18 +21,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl.Companion.toHttpUrl
-import retrofit2.Response
 
 /**
- * A2.1 spike, debug builds only: proves cookie-based sign-in works against the real API.
- * Logs HTTP status codes and cookie names/expiry only, never cookie values, tokens or
- * response bodies. Replaced by the real AuthRepository and sign-in screens in A2.2–A2.3.
+ * Debug-only developer panel (A2.1 spike, now driving AuthRepository from A2.2). Logs
+ * results, cookie names and expiry only, never cookie values, tokens, emails or bodies.
+ * Removed when the real sign-in screens land (A2.3).
  */
 @HiltViewModel
 class AuthCheckViewModel @Inject constructor(
-    private val authApi: AuthApi,
+    private val auth: AuthRepository,
     private val api: BirdDexApi,
     private val cookieJar: PersistentCookieJar,
 ) : ViewModel() {
@@ -43,42 +42,37 @@ class AuthCheckViewModel @Inject constructor(
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
     fun signIn(email: String, password: String) = runStep("Sign in") {
-        val response = authApi.signInEmail(SignInEmailRequest(email.trim(), password, rememberMe = true))
-        log("sign-in → ${response.code()}${response.errorSummary()}")
+        log("sign-in → ${auth.signIn(email, password).describe()}")
+        log("state → ${auth.sessionState.value::class.simpleName}")
         log(cookieSummary())
     }
 
     fun checkAndSignOut() = runStep("Check session, sightings, sign-out") {
         log(cookieSummary())
-        val session = authApi.getSession()
-        log("get-session → ${session.code()}, ${if (session.body() is JsonObject) "session present" else "no session"}")
+        log("session → ${auth.refreshSession().describe()}")
         logSightings()
-
-        val signedOut = signOut(origin = null)
-        if (!signedOut) signOut(origin = BuildConfig.BASE_URL)
+        auth.signOut()
+        log("signed out → state ${auth.sessionState.value::class.simpleName}")
         log(cookieSummary())
         logSightings()
     }
 
-    /** Returns true only for a real API success, not CloudFront's HTML error page. */
-    private suspend fun signOut(origin: String?): Boolean {
-        val response = authApi.signOut(origin = origin)
-        val maskedError = response.headers()["x-cache"].orEmpty().contains("Error", ignoreCase = true)
-        val label = if (origin == null) "without Origin" else "with Origin $origin"
-        val detail = when {
-            maskedError -> " but it's CloudFront's error page (${response.headers()["content-type"]}): the API returned 403/404"
-            response.isSuccessful -> ": " + withContext(Dispatchers.IO) { response.body()?.string().orEmpty().take(200) }
-            else -> response.errorSummary()
-        }
-        response.body()?.close()
-        log("sign-out $label → ${response.code()}$detail")
-        return response.isSuccessful && !maskedError
+    private fun AuthResult<AuthUser?>.describe(): String = when (this) {
+        is AuthResult.Success -> value?.let { "OK, signed in (verified=${it.emailVerified})" } ?: "OK, signed out"
+        is AuthResult.Failure -> "failed: $error"
     }
 
     private suspend fun logSightings() {
-        val response = api.getSightings()
-        val count = (response.body() as? JsonArray)?.size
-        log("GET /api/sightings → ${response.code()}${count?.let { " ($it sightings)" }.orEmpty()}")
+        val text = try {
+            val response = api.getSightings()
+            val count = (response.body() as? JsonArray)?.size
+            "${response.code()}${count?.let { " ($it sightings)" }.orEmpty()}"
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            "error ${e::class.simpleName}: ${e.message}"
+        }
+        log("GET /api/sightings → $text")
     }
 
     private suspend fun cookieSummary(): String = withContext(Dispatchers.IO) {
@@ -92,10 +86,6 @@ class AuthCheckViewModel @Inject constructor(
             }
         }
     }
-
-    // better-auth error bodies are {"code": ..., "message": ...}; no credentials in them.
-    private fun Response<*>.errorSummary(): String =
-        if (isSuccessful) "" else ": " + (errorBody()?.string()?.take(200) ?: "(no body)")
 
     private fun runStep(title: String, block: suspend () -> Unit) {
         if (_busy.value) return
