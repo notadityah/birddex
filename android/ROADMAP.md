@@ -35,9 +35,11 @@ same commit. A task is done when its "Done when" line is true.
       for now), debug app ID suffix `.debug` so it can be installed next to release.
       *Done when:* `BuildConfig.BASE_URL` is readable from code.
       Debug builds can target another API with `-Pbirddex.debugBaseUrl=https://...`.
-- [ ] **A1.4 Hilt + navigation skeleton**: Navigation Compose with a bottom bar
+- [x] **A1.4 Hilt + navigation skeleton**: Navigation Compose with a bottom bar
       (Dex · Detect · Gallery · Account) and placeholder screens.
       *Done when:* you can tap between all four tabs.
+      Type-safe routes (`ui/navigation/TopLevelDestination.kt`); tab icons are Material
+      icons copied from Android Studio's bundled set into `res/drawable`.
 - [ ] **A1.5 Networking core**: OkHttp + Retrofit + kotlinx.serialization, persistent
       cookie jar backed by DataStore, debug-only logging interceptor, an interceptor that
       sends `Origin: https://birddex.fun` (only if A2.1 shows it's needed).

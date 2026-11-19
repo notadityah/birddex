@@ -1,3 +1,15 @@
 <resources>
     <string name="app_name">BirdDex</string>
+
+    <!-- Bottom navigation tabs -->
+    <string name="tab_dex">Dex</string>
+    <string name="tab_detect">Detect</string>
+    <string name="tab_gallery">Gallery</string>
+    <string name="tab_account">Account</string>
+
+    <!-- Placeholder screens (replaced as each phase lands) -->
+    <string name="placeholder_dex">Your collection of Australian birds will appear here.</string>
+    <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
+    <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
+    <string name="placeholder_account">Sign in, privacy settings and feedback.</string>
 </resources>
