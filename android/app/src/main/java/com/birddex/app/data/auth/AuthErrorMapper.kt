@@ -18,6 +18,7 @@ internal fun mapAuthError(httpCode: Int, errorBody: String?, json: Json): AuthEr
         body?.code == "PASSWORD_TOO_SHORT" -> AuthError.PasswordTooShort
         body?.code == "PASSWORD_TOO_LONG" -> AuthError.PasswordTooLong
         body?.code == "TOO_MANY_REQUESTS" || httpCode == 429 -> AuthError.TooManyAttempts
+        body?.code == "RESET_PASSWORD_DISABLED" -> AuthError.PasswordResetUnavailable
         else -> AuthError.Unexpected(httpCode, body?.message)
     }
 }

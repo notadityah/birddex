@@ -1,6 +1,12 @@
 package com.birddex.app.ui.auth
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.autofill.ContentType
@@ -11,13 +17,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
 
-/** Email/password or Google sign-in. "Forgot password?" comes in A2.4. */
+/** Email/password or Google sign-in. */
 @Composable
 fun LoginScreen(
     onBack: () -> Unit,
     onSignedIn: () -> Unit,
     onNeedsVerification: (email: String) -> Unit,
     onCreateAccount: () -> Unit,
+    onForgotPassword: (email: String) -> Unit,
     viewModel: LoginViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -60,6 +67,12 @@ fun LoginScreen(
             contentType = ContentType.Password,
             onDone = submit,
         )
+        // Like the website: right-aligned link between the password field and the button.
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            TextButton(onClick = { onForgotPassword(state.email.trim()) }) {
+                Text(stringResource(R.string.forgot_password))
+            }
+        }
         LoadingButton(
             text = stringResource(R.string.sign_in),
             loadingText = stringResource(R.string.signing_in),

@@ -16,8 +16,14 @@ import kotlinx.serialization.Serializable
 /** "Check your inbox" for [email]. */
 @Serializable data class VerifyEmailRoute(val email: String)
 
+/** Request a password-reset email, starting from whatever was typed on sign-in. */
+@Serializable data class ForgotPasswordRoute(val email: String? = null)
+
 fun NavDestination?.isAuthScreen(): Boolean =
-    this != null && (hasRoute<LoginRoute>() || hasRoute<RegisterRoute>() || hasRoute<VerifyEmailRoute>())
+    this != null && (
+        hasRoute<LoginRoute>() || hasRoute<RegisterRoute>() ||
+            hasRoute<VerifyEmailRoute>() || hasRoute<ForgotPasswordRoute>()
+        )
 
 /** Leaves the sign-in flow entirely (e.g. after signing in), back to the tab underneath. */
 fun NavController.leaveAuthFlow() {

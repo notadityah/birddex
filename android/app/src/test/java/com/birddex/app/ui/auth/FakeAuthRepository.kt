@@ -46,5 +46,13 @@ class FakeAuthRepository : AuthRepository {
         return resendResult
     }
 
+    var resetResult: AuthResult<Unit> = AuthResult.Success(Unit)
+    val resetCalls = mutableListOf<String>()
+
+    override suspend fun requestPasswordReset(email: String): AuthResult<Unit> {
+        resetCalls += email
+        return resetResult
+    }
+
     override suspend fun signOut() = Unit
 }

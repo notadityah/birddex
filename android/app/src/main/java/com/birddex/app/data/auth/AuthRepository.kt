@@ -31,6 +31,12 @@ interface AuthRepository {
     suspend fun resendVerificationEmail(email: String): AuthResult<Unit>
 
     /**
+     * Emails a password-reset link. Succeeds even when no account uses [email] (the server
+     * never reveals that). The link opens the website's reset page.
+     */
+    suspend fun requestPasswordReset(email: String): AuthResult<Unit>
+
+    /**
      * Signs out on the server and always forgets the session locally, even if the server
      * can't be reached. Ends in [SessionState.SignedOut].
      */

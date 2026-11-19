@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.birddex.app.ui.account.AccountScreen
+import com.birddex.app.ui.auth.ForgotPasswordScreen
 import com.birddex.app.ui.auth.LoginScreen
 import com.birddex.app.ui.auth.RegisterScreen
 import com.birddex.app.ui.auth.VerifyEmailScreen
@@ -29,6 +30,7 @@ import com.birddex.app.ui.gallery.GalleryScreen
 import com.birddex.app.ui.navigation.AccountRoute
 import com.birddex.app.ui.navigation.DetectRoute
 import com.birddex.app.ui.navigation.DexRoute
+import com.birddex.app.ui.navigation.ForgotPasswordRoute
 import com.birddex.app.ui.navigation.GalleryRoute
 import com.birddex.app.ui.navigation.LoginRoute
 import com.birddex.app.ui.navigation.RegisterRoute
@@ -96,6 +98,13 @@ fun BirdDexApp() {
                     onSignedIn = { navController.leaveAuthFlow() },
                     onNeedsVerification = { email -> navController.navigate(VerifyEmailRoute(email)) },
                     onCreateAccount = { navController.openRegister() },
+                    onForgotPassword = { email -> navController.navigate(ForgotPasswordRoute(email.ifBlank { null })) },
+                )
+            }
+            composable<ForgotPasswordRoute> {
+                ForgotPasswordScreen(
+                    onBack = { navController.popBackStack() },
+                    onSignIn = { email -> navController.openLogin(email.ifBlank { null }) },
                 )
             }
             composable<RegisterRoute> {

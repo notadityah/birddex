@@ -18,12 +18,15 @@ object AuthModule {
 
     @Provides
     @Singleton
-    fun provideAuthRepository(api: AuthApi, cookieJar: PersistentCookieJar, json: Json): AuthRepository =
-        NetworkAuthRepository(
+    fun provideAuthRepository(api: AuthApi, cookieJar: PersistentCookieJar, json: Json): AuthRepository {
+        val site = BuildConfig.BASE_URL.trimEnd('/')
+        return NetworkAuthRepository(
             api = api,
             cookieJar = cookieJar,
             json = json,
-            // Same landing page the website uses after verifying an email.
-            verifyCallbackUrl = BuildConfig.BASE_URL.trimEnd('/') + "/login",
+            // The same website pages the web app uses (frontend/src/stores/auth.js).
+            verifyCallbackUrl = "$site/login",
+            resetPasswordUrl = "$site/reset-password",
         )
+    }
 }

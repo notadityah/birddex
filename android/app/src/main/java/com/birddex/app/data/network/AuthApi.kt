@@ -1,5 +1,6 @@
 package com.birddex.app.data.network
 
+import com.birddex.app.data.auth.RequestPasswordResetRequest
 import com.birddex.app.data.auth.SendVerificationEmailRequest
 import com.birddex.app.data.auth.SignInEmailRequest
 import com.birddex.app.data.auth.SignUpEmailRequest
@@ -39,4 +40,8 @@ interface AuthApi {
 
     @POST("api/auth/send-verification-email")
     suspend fun sendVerificationEmail(@Body body: SendVerificationEmailRequest): Response<ResponseBody>
+
+    /** Succeeds whether or not the email has an account, so it never reveals who is registered. */
+    @POST("api/auth/request-password-reset")
+    suspend fun requestPasswordReset(@Body body: RequestPasswordResetRequest): Response<ResponseBody>
 }

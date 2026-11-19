@@ -90,8 +90,12 @@ original numbers._
       sign-in → 200, survives a cold restart, sign-out works.
       **Still to do:** an Android client for the release ID `fun.birddex.app` with the
       release key's SHA-1, once release signing exists (A6.3).
-- [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
+- [x] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
       the website for now (App Links come in A6.2).
+      "Forgot password?" on sign-in (carries the typed email) → `ForgotPasswordScreen` →
+      `POST /api/auth/request-password-reset` with `redirectTo: <site>/reset-password`,
+      same as the website. Live check used a made-up address (better-auth answers 200 and
+      sends nothing); a real reset email was not sent.
 - [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
       any `401` clears cookies and returns to login.
       *Done when:* killing and reopening the app keeps you signed in.

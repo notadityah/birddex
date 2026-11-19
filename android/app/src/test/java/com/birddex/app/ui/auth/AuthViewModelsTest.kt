@@ -165,6 +165,37 @@ class AuthViewModelsTest {
         assertTrue(!vm.state.value.signedIn)
     }
 
+    // --- Forgot password ---
+
+    private fun forgot(email: String? = null) =
+        ForgotPasswordViewModel(repo, SavedStateHandle(if (email != null) mapOf("email" to email) else emptyMap()))
+
+    @Test fun forgotPasswordInvalidEmailNeverReachesServer() {
+        val vm = forgot()
+        vm.onEmailChange("jane")
+        vm.submit()
+
+        assertEquals(R.string.error_email_invalid, vm.state.value.emailError)
+        assertTrue(repo.resetCalls.isEmpty())
+    }
+
+    @Test fun forgotPasswordSentShowsCheckInbox() {
+        val vm = forgot(email = "jane@example.com ")
+        vm.submit()
+
+        assertEquals(listOf("jane@example.com "), repo.resetCalls)
+        assertEquals("jane@example.com", vm.state.value.sentTo)
+    }
+
+    @Test fun forgotPasswordServerError() {
+        repo.resetResult = AuthResult.Failure(AuthError.PasswordResetUnavailable)
+        val vm = forgot(email = "jane@example.com")
+        vm.submit()
+
+        assertEquals(AuthError.PasswordResetUnavailable, vm.state.value.error)
+        assertNull(vm.state.value.sentTo)
+    }
+
     // --- Verify email ---
 
     @Test fun resendVerification() {

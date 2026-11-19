@@ -30,6 +30,8 @@ sealed interface AuthError {
     data object PasswordTooShort : AuthError
     data object PasswordTooLong : AuthError
     data object TooManyAttempts : AuthError
+    /** The server can't send reset emails right now (RESET_PASSWORD_DISABLED). */
+    data object PasswordResetUnavailable : AuthError
     /** No connection, timeout, DNS failure… */
     data object Network : AuthError
     /** Anything else; [message] is better-auth's own text when there is one. */
@@ -62,6 +64,13 @@ data class SignUpEmailRequest(
 
 @Serializable
 data class SendVerificationEmailRequest(val email: String, val callbackURL: String)
+
+@Serializable
+data class RequestPasswordResetRequest(
+    val email: String,
+    /** The website page where the user picks a new password (link in the email). */
+    val redirectTo: String,
+)
 
 /** better-auth `sign-in/social` with an ID token from the device (no browser redirect). */
 @Serializable

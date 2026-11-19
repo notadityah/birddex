@@ -45,7 +45,13 @@ class NetworkAuthRepositoryTest {
         cookieJar = PersistentCookieJar(PersistentCookieJar.createStore(scope) { storeFile })
         client = ApiClients.okHttpClient(baseUrl, cookieJar, userAgent = "test", debugLogging = false)
         val api = ApiClients.retrofit(baseUrl, client).create<AuthApi>()
-        repo = NetworkAuthRepository(api, cookieJar, ApiClients.json, verifyCallbackUrl = "https://birddex.fun/login")
+        repo = NetworkAuthRepository(
+            api,
+            cookieJar,
+            ApiClients.json,
+            verifyCallbackUrl = "https://birddex.fun/login",
+            resetPasswordUrl = "https://birddex.fun/reset-password",
+        )
     }
 
     @After fun tearDown() {
@@ -163,6 +169,24 @@ class NetworkAuthRepositoryTest {
         respond(200, """{"status":true}""")
         assertEquals(AuthResult.Success(Unit), repo.resendVerificationEmail("t@example.com"))
         assertEquals("/api/auth/send-verification-email", server.takeRequest().url.encodedPath)
+    }
+
+    // --- password reset ---
+
+    @Test fun passwordResetSendsEmailAndWebsiteRedirect() = runBlocking {
+        respond(200, """{"status":true,"message":"If this email exists in our system, check your email for the reset link"}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.requestPasswordReset(" t@example.com "))
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/request-password-reset", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"email":"t@example.com","redirectTo":"https://birddex.fun/reset-password"}""", request.bodyText())
+    }
+
+    @Test fun passwordResetDisabledOnServer() = runBlocking {
+        respond(500, """{"code":"RESET_PASSWORD_DISABLED","message":"Reset password isn't enabled"}""")
+        assertEquals(AuthResult.Failure(AuthError.PasswordResetUnavailable), repo.requestPasswordReset("t@example.com"))
     }
 
     // --- session ---

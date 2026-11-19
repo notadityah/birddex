@@ -21,12 +21,14 @@ import retrofit2.Response
  *
  * @param verifyCallbackUrl where email-verification links land (the website's /login,
  *   like the web app; the Android app takes these links over in A6.2).
+ * @param resetPasswordUrl the website page that password-reset links open.
  */
 class NetworkAuthRepository(
     private val api: AuthApi,
     private val cookieJar: PersistentCookieJar,
     private val json: Json,
     private val verifyCallbackUrl: String,
+    private val resetPasswordUrl: String,
 ) : AuthRepository {
 
     private val _sessionState = MutableStateFlow<SessionState>(SessionState.Unknown)
@@ -62,6 +64,10 @@ class NetworkAuthRepository(
 
     override suspend fun resendVerificationEmail(email: String): AuthResult<Unit> =
         call { api.sendVerificationEmail(SendVerificationEmailRequest(email.trim(), verifyCallbackUrl)) }
+            .then { it.close() }
+
+    override suspend fun requestPasswordReset(email: String): AuthResult<Unit> =
+        call { api.requestPasswordReset(RequestPasswordResetRequest(email.trim(), resetPasswordUrl)) }
             .then { it.close() }
 
     override suspend fun signOut() {

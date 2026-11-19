@@ -49,6 +49,17 @@
     <string name="verify_resent">Verification email resent.</string>
     <string name="verify_already_verified">Already verified?</string>
 
+    <!-- Forgot password (copy matches ForgotPasswordPage.vue) -->
+    <string name="forgot_password">Forgot password?</string>
+    <string name="forgot_title">Reset your password</string>
+    <string name="forgot_subtitle">Enter your email and we\'ll send you a reset link</string>
+    <string name="forgot_send">Send reset link</string>
+    <string name="forgot_sending">Sending…</string>
+    <string name="forgot_sent">Check your inbox at %1$s for a password reset link.</string>
+    <string name="forgot_sent_hint">The link opens the BirdDex website, where you can choose a new password. Then come back and sign in.</string>
+    <string name="forgot_back_to_sign_in">Back to sign in</string>
+    <string name="forgot_remember">Remember your password?</string>
+
     <!-- Google sign-in (button copy matches SocialLoginButtons.vue) -->
     <string name="or_continue_with">or continue with</string>
     <string name="google">Google</string>
@@ -78,6 +89,7 @@
     <string name="auth_error_email_in_use">An account with this email already exists.</string>
     <string name="auth_error_too_many_attempts">Too many attempts. Please try again later.</string>
     <string name="auth_error_password_too_long">That password is too long.</string>
+    <string name="auth_error_reset_unavailable">Password reset is unavailable right now. Please contact support.</string>
     <string name="auth_error_network">Couldn\'t reach BirdDex. Check your connection and try again.</string>
     <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
 </resources>
