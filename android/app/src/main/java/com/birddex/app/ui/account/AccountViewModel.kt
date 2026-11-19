@@ -2,44 +2,51 @@ package com.birddex.app.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.birddex.app.data.network.BirdDexApi
+import com.birddex.app.data.auth.AuthError
+import com.birddex.app.data.auth.AuthRepository
+import com.birddex.app.data.auth.AuthResult
+import com.birddex.app.data.auth.SessionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Until sign-in lands (Phase 2), the Account tab just shows whether the API is reachable. */
+/** Account tab: who is signed in, and signing out. Settings and feedback come in Phase 5. */
 @HiltViewModel
 class AccountViewModel @Inject constructor(
-    private val api: BirdDexApi,
+    private val auth: AuthRepository,
 ) : ViewModel() {
 
-    sealed interface ApiStatus {
-        data object Checking : ApiStatus
-        data class Reachable(val birdCount: Int) : ApiStatus
-        data class Unreachable(val reason: String) : ApiStatus
-    }
+    val sessionState: StateFlow<SessionState> = auth.sessionState
 
-    private val _apiStatus = MutableStateFlow<ApiStatus>(ApiStatus.Checking)
-    val apiStatus: StateFlow<ApiStatus> = _apiStatus.asStateFlow()
+    private val _offline = MutableStateFlow(false)
+    /** True when the session couldn't be checked because the server was unreachable. */
+    val offline: StateFlow<Boolean> = _offline.asStateFlow()
+
+    private val _signingOut = MutableStateFlow(false)
+    val signingOut: StateFlow<Boolean> = _signingOut.asStateFlow()
 
     init {
-        checkApi()
+        // A2.5 moves this check to app launch; until then the Account tab does it.
+        if (auth.sessionState.value == SessionState.Unknown) refresh()
     }
 
-    fun checkApi() {
-        _apiStatus.value = ApiStatus.Checking
+    fun refresh() {
         viewModelScope.launch {
-            _apiStatus.value = try {
-                ApiStatus.Reachable(birdCount = api.getBirds().size)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                ApiStatus.Unreachable(e.message ?: e::class.simpleName.orEmpty())
-            }
+            _offline.value = false
+            val result = auth.refreshSession()
+            _offline.value = result is AuthResult.Failure && result.error == AuthError.Network
+        }
+    }
+
+    fun signOut() {
+        if (_signingOut.value) return
+        viewModelScope.launch {
+            _signingOut.value = true
+            auth.signOut()
+            _signingOut.value = false
         }
     }
 }

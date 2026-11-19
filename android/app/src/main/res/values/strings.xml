@@ -11,11 +11,67 @@
     <string name="placeholder_dex">Your collection of Australian birds will appear here.</string>
     <string name="placeholder_detect">Take or pick a photo to identify a bird.</string>
     <string name="placeholder_gallery">Sightings shared by the BirdDex community.</string>
-    <string name="placeholder_account">Sign in, privacy settings and feedback.</string>
 
-    <!-- API status (Account tab, until sign-in lands) -->
-    <string name="api_checking">Checking connection to BirdDex…</string>
-    <string name="api_reachable">Connected · %1$d birds available</string>
-    <string name="api_unreachable">Couldn\'t reach BirdDex: %1$s</string>
+    <!-- Common -->
+    <string name="back">Back</string>
     <string name="retry">Retry</string>
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+
+    <!-- Account tab -->
+    <string name="account_signed_out_message">Sign in to save sightings, build your dex and share with the community.</string>
+    <string name="account_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <string name="sign_out">Sign out</string>
+    <string name="signing_out">Signing out…</string>
+    <string name="build_info">API %1$s · %2$s %3$s</string>
+
+    <!-- Sign in (copy matches frontend/src/views/LoginPage.vue) -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Sign in to your BirdDex account</string>
+    <string name="sign_in">Sign in</string>
+    <string name="signing_in">Signing in…</string>
+    <string name="login_no_account">Don\'t have an account?</string>
+    <string name="sign_up">Sign up</string>
+
+    <!-- Register (copy matches RegisterPage.vue) -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Start building your bird collection</string>
+    <string name="create_account">Create account</string>
+    <string name="creating_account">Creating account…</string>
+    <string name="register_have_account">Already have an account?</string>
+
+    <!-- Verify email (copy matches VerifyEmailPage.vue) -->
+    <string name="verify_title">Verify your email</string>
+    <string name="verify_subtitle">We sent a verification link to %1$s</string>
+    <string name="verify_body">Click the link in the email to activate your account, then come back here to sign in.</string>
+    <string name="verify_resend">Didn\'t get the email? Resend</string>
+    <string name="verify_sending">Sending…</string>
+    <string name="verify_resent">Verification email resent.</string>
+    <string name="verify_already_verified">Already verified?</string>
+
+    <!-- Form fields -->
+    <string name="field_name">Full name</string>
+    <string name="field_name_placeholder">Jane Doe</string>
+    <string name="field_email">Email</string>
+    <string name="field_email_placeholder">you@example.com</string>
+    <string name="field_password">Password</string>
+    <string name="field_confirm_password">Confirm password</string>
+
+    <!-- Field errors (same text as the website) -->
+    <string name="error_name_required">Name is required.</string>
+    <string name="error_email_required">Email is required.</string>
+    <string name="error_email_invalid">Please enter a valid email address.</string>
+    <string name="error_password_required">Password is required.</string>
+    <string name="error_password_too_short">Password must be at least 8 characters.</string>
+    <string name="error_confirm_password_required">Please confirm your password.</string>
+    <string name="error_passwords_dont_match">Passwords do not match.</string>
+
+    <!-- Server errors (AuthError); first four match frontend/src/stores/auth.js -->
+    <string name="auth_error_invalid_credentials">Invalid email or password.</string>
+    <string name="auth_error_email_not_verified">Please verify your email before signing in.</string>
+    <string name="auth_error_email_in_use">An account with this email already exists.</string>
+    <string name="auth_error_too_many_attempts">Too many attempts. Please try again later.</string>
+    <string name="auth_error_password_too_long">That password is too long.</string>
+    <string name="auth_error_network">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
 </resources>

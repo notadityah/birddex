@@ -67,18 +67,27 @@ same commit. A task is done when its "Done when" line is true.
       `AuthOriginInterceptor` and `HtmlErrorPageInterceptor`; also resends verification
       emails. Unit-tested against MockWebServer; live check covered signed-out session,
       sign-out and a wrong password (the signed-in path was proven live in A2.1).
-- [ ] **A2.3 Login and register screens**: validation, loading and error states,
+- [x] **A2.3 Login and register screens**: validation, loading and error states,
       "check your inbox to verify" state after sign-up.
-- [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
-      the website for now (App Links come in A6.2).
-- [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
-      any `401` clears cookies and returns to login.
-      *Done when:* killing and reopening the app keeps you signed in.
+      `ui/auth/` (Login, Register, VerifyEmail) with the website's copy and rules; the
+      Account tab shows signed-in/out state with Sign out; debug check panel removed.
+      Live: real sign-in → Account tab, cold restart stays signed in, sign-out works.
+      Real sign-up not run live (would create a production account); unit-tested instead.
+
+_A2.6 is done next, ahead of A2.4–A2.5: the owner's account and probably most users'
+are Google-only, so they can't use email sign-in at all (see A2.1 notes). IDs keep their
+original numbers._
+
 - [ ] **A2.6 Google sign-in**: create an **Android** OAuth client in Google Cloud
       (package name + debug and release SHA-1), use Credential Manager with the existing
       **web** client ID as `serverClientId`, then
       `POST /api/auth/sign-in/social` with `{ provider: "google", idToken: { token } }`.
       *Done when:* Google sign-in lands on the Dex tab with a working session.
+- [ ] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
+      the website for now (App Links come in A6.2).
+- [ ] **A2.5 Session gate**: on launch, check the session and route to login or main;
+      any `401` clears cookies and returns to login.
+      *Done when:* killing and reopening the app keeps you signed in.
 
 ## Phase 3 — Birds + My Dex
 
