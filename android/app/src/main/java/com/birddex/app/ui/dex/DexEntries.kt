@@ -3,14 +3,17 @@ package com.birddex.app.ui.dex
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.sightings.Sighting
 
-/** One card in the dex grid. */
+/** One card in the dex grid, with everything the bird detail sheet needs. */
 data class DexEntry(
     val bird: Bird,
-    val sightingCount: Int,
-    /** Newest sighting of this bird that has a photo; shown on the card when found. */
-    val photo: Sighting?,
+    /** The user's sightings of this bird, newest first. */
+    val sightings: List<Sighting>,
 ) {
-    val found: Boolean get() = sightingCount > 0
+    val sightingCount: Int get() = sightings.size
+    val found: Boolean get() = sightings.isNotEmpty()
+
+    /** Newest sighting that has a photo; shown on the card and the detail sheet. */
+    val photo: Sighting? get() = sightings.firstOrNull { it.imageKey != null }
 }
 
 /** The website's filter chips (MyDexPage.vue): All / Found / Not Found. */
@@ -18,16 +21,9 @@ enum class DexFilter { All, Found, NotFound }
 
 /** Pairs every species with the user's sightings of it, keeping the birds' order (by name). */
 fun buildDexEntries(birds: List<Bird>, sightings: List<Sighting>): List<DexEntry> {
-    val byBird = sightings.groupBy { it.birdId }
-    return birds.map { bird ->
-        val mine = byBird[bird.id].orEmpty()
-        DexEntry(
-            bird = bird,
-            sightingCount = mine.size,
-            // ISO-8601 timestamps compare correctly as text.
-            photo = mine.filter { it.imageKey != null }.maxByOrNull { it.createdAt },
-        )
-    }
+    // ISO-8601 timestamps compare correctly as text.
+    val byBird = sightings.sortedByDescending { it.createdAt }.groupBy { it.birdId }
+    return birds.map { bird -> DexEntry(bird = bird, sightings = byBird[bird.id].orEmpty()) }
 }
 
 fun List<DexEntry>.filteredBy(filter: DexFilter): List<DexEntry> = when (filter) {

@@ -46,6 +46,20 @@ class DexEntriesTest {
         assertEquals("new-photo", entry.photo?.id)
     }
 
+    @Test fun eachEntryKeepsItsOwnSightingsNewestFirst() {
+        val entries = buildDexEntries(
+            listOf(parrot, magpie),
+            listOf(
+                sighting("p-old", 1, "2026-11-01T00:00:00Z"),
+                sighting("m", 2, "2026-11-03T00:00:00Z"),
+                sighting("p-new", 1, "2026-11-05T00:00:00Z"),
+            ),
+        )
+
+        assertEquals(listOf("p-new", "p-old"), entries[0].sightings.map { it.id })
+        assertEquals(listOf("m"), entries[1].sightings.map { it.id })
+    }
+
     @Test fun foundWithoutAnyPhoto() {
         val entry = buildDexEntries(listOf(parrot), listOf(sighting("a", 1, "2026-11-01T00:00:00Z"))).single()
         assertTrue(entry.found)

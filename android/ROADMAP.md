@@ -138,11 +138,17 @@ original numbers._
       newest sighting photo and a Found badge, origami placeholder otherwise. Photos load
       with Coil 3 via `ui/components/SightingPhoto`, cached by `imageKey`. Live: photos
       online, from cache in airplane mode, in dark mode, and in an R8 release build.
-- [ ] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
-      Open it from a dex card. Use `SightingPhoto` (already caches by `imageKey`) and
-      `RarityBadge` (in `DexScreen.kt`).
+- [x] **A3.5 Bird detail sheet**: stats, reference photo, your sighting photos.
+      Bottom sheet from any dex card, like the website's BirdDetailModal: "N sightings",
+      the newest photo uncropped, `BirdStatsCard` (rarity, conservation, Wingspan/Length/
+      Weight/Diet, Appearance/Habitat/Call, fun fact) and the sightings list (date, shared,
+      notes). **Stats unlock only once found**, as on the website; unfound birds show "Not
+      yet found" and "Go to Detect". The website's modal has no reference photo, so that
+      moved to A4.4. Checked on the emulator, light and dark. One unreproduced glitch: on
+      the very first open, an unfound bird's sheet seemed to appear late; 5 reruns were fine.
 - [ ] **A3.6 Manage sightings**: toggle public (`PATCH /api/sightings/:id`), delete
-      (`DELETE /api/sightings/:id`) with confirmation.
+      (`DELETE /api/sightings/:id`) with confirmation. In the detail sheet's sighting rows,
+      like the website's globe toggle; also "Download image" (save the photo to the phone).
 
 ## Phase 4 — Detect (core feature)
 
@@ -153,7 +159,9 @@ original numbers._
 - [ ] **A4.3 Detect call**: `POST /api/detect` with `{ imageBase64, topN: 3 }`; loading,
       error, cancel-on-new-photo states.
 - [ ] **A4.4 Results UI**: top matches with confidence + stats card, like
-      `BirdStatsCard.vue` / `DetectionResults.vue`.
+      `BirdStatsCard.vue` / `DetectionResults.vue`. Reuse `ui/components/BirdStatsCard` and
+      add its reference photo (`<site>/birds/<slug>.jpg`) with the photographer credit and
+      licence link from `frontend/src/data/birdImages.js` (CC BY / CC BY-SA require it).
 - [ ] **A4.5 Save sighting**: `POST /api/sightings`
       `{ birdId, imageExt: "jpg", detectedAt, notes, public }` → `PUT` the JPEG to the
       returned `uploadUrl`; refresh the Dex.

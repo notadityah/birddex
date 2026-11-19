@@ -26,10 +26,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,22 +39,36 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
-import com.birddex.app.data.birds.Rarity
 import com.birddex.app.ui.components.BirdPlaceholder
 import com.birddex.app.ui.components.SightingPhoto
 
 /**
  * MyDex (website: MyDexPage.vue + BirdCard.vue): every species as a card, found ones with the
  * user's newest photo, plus progress and All / Found / Not Found filters. Tapping a card opens
- * the bird detail sheet in A3.5.
+ * the bird detail sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DexScreen(
+    /** "Go to Detect to find this bird" in the detail sheet. */
+    onFindBird: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DexViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // The open detail sheet, by bird id so it survives rotation and refreshes.
+    var openBirdId by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    state.entries.firstOrNull { it.bird.id == openBirdId }?.let { entry ->
+        BirdDetailSheet(
+            entry = entry,
+            onDismiss = { openBirdId = null },
+            onFindBird = {
+                openBirdId = null
+                onFindBird()
+            },
+        )
+    }
 
     Box(modifier.fillMaxSize()) {
         when {
@@ -65,14 +81,24 @@ fun DexScreen(
                 onRefresh = viewModel::refresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
-                DexGrid(state, onFilter = viewModel::setFilter, onRetry = viewModel::refresh)
+                DexGrid(
+                    state,
+                    onFilter = viewModel::setFilter,
+                    onRetry = viewModel::refresh,
+                    onOpenBird = { openBirdId = it },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DexGrid(state: DexUiState, onFilter: (DexFilter) -> Unit, onRetry: () -> Unit) {
+private fun DexGrid(
+    state: DexUiState,
+    onFilter: (DexFilter) -> Unit,
+    onRetry: () -> Unit,
+    onOpenBird: (birdId: Int) -> Unit,
+) {
     LazyVerticalGrid(
         // Two columns on phones, more on wider screens (website: 2 → 5 columns).
         columns = GridCells.Adaptive(minSize = 160.dp),
@@ -88,7 +114,7 @@ private fun DexGrid(state: DexUiState, onFilter: (DexFilter) -> Unit, onRetry: (
         if (visible.isEmpty()) {
             fullWidth { NothingToShow() }
         } else {
-            items(visible, key = { it.bird.id }) { entry -> BirdCard(entry) }
+            items(visible, key = { it.bird.id }) { entry -> BirdCard(entry, onClick = { onOpenBird(entry.bird.id) }) }
         }
     }
 }
@@ -160,9 +186,9 @@ private fun Filters(selected: DexFilter, onFilter: (DexFilter) -> Unit) {
 }
 
 @Composable
-private fun BirdCard(entry: DexEntry) {
-    // mergeDescendants: screen readers read the card as one item ("King Parrot, Found, …").
-    Card(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+private fun BirdCard(entry: DexEntry, onClick: () -> Unit) {
+    // A clickable card is read as one item by screen readers ("King Parrot, Found, …").
+    Card(onClick = onClick) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             val photo = entry.photo
             if (entry.found && photo?.imageKey != null) {
@@ -222,23 +248,5 @@ private fun LoadFailed(onRetry: () -> Unit, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
         )
         TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
-    }
-}
-
-/** Same colours as the website's badges: grey common, green uncommon, amber rare. Used by A3.5. */
-@Composable
-fun RarityBadge(rarity: Rarity, modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.colorScheme
-    val (container, content, label) = when (rarity) {
-        Rarity.Common -> Triple(colors.surfaceVariant, colors.onSurfaceVariant, R.string.rarity_common)
-        Rarity.Uncommon -> Triple(colors.secondaryContainer, colors.onSecondaryContainer, R.string.rarity_uncommon)
-        Rarity.Rare -> Triple(colors.tertiaryContainer, colors.onTertiaryContainer, R.string.rarity_rare)
-    }
-    Surface(color = container, contentColor = content, shape = MaterialTheme.shapes.extraLarge, modifier = modifier) {
-        Text(
-            stringResource(label),
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-        )
     }
 }

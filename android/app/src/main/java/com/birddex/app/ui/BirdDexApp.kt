@@ -139,7 +139,9 @@ private fun MainTabs() {
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding),
         ) {
-            composable<DexRoute> { DexScreen() }
+            composable<DexRoute> {
+                DexScreen(onFindBird = { navController.navigateToTopLevel(TopLevelDestination.Detect) })
+            }
             composable<DetectRoute> { DetectScreen() }
             composable<GalleryRoute> { GalleryScreen() }
             composable<AccountRoute> { AccountScreen() }

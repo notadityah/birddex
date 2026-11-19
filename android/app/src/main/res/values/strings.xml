@@ -20,6 +20,26 @@
     <string name="dex_empty_hint">Try changing the filter above.</string>
     <string name="dex_showing_saved">Couldn\'t refresh, showing saved birds.</string>
     <string name="dex_load_failed">Couldn\'t load the birds. Check your connection and try again.</string>
+    <!-- Bird detail (copy matches BirdDetailModal.vue and BirdStatsCard.vue) -->
+    <plurals name="detail_sighting_count">
+        <item quantity="one">%1$d sighting</item>
+        <item quantity="other">%1$d sightings</item>
+    </plurals>
+    <string name="detail_not_found">Not yet found</string>
+    <string name="detail_no_sightings">No sightings yet.</string>
+    <string name="detail_go_detect">Go to Detect to find this bird</string>
+    <string name="detail_your_sightings">Your sightings</string>
+    <string name="detail_shared">Shared to gallery</string>
+    <string name="detail_unknown_date">Date unknown</string>
+    <string name="detail_photo_description">Your photo of %1$s</string>
+    <string name="stat_wingspan">Wingspan</string>
+    <string name="stat_length">Length</string>
+    <string name="stat_weight">Weight</string>
+    <string name="stat_diet">Diet</string>
+    <string name="stat_appearance">Appearance</string>
+    <string name="stat_habitat">Habitat</string>
+    <string name="stat_call">Call</string>
+    <string name="stat_fun_fact">Fun fact</string>
     <string name="rarity_common">Common</string>
     <string name="rarity_uncommon">Uncommon</string>
     <string name="rarity_rare">Rare</string>

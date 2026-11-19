@@ -29,6 +29,8 @@ fun SightingPhoto(
     imageUrl: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    /** Crop fills a tile (dex cards); Fit shows the whole photo (detail sheet). */
+    contentScale: ContentScale = ContentScale.Crop,
 ) {
     val request = ImageRequest.Builder(LocalPlatformContext.current)
         .data(imageUrl)
@@ -39,7 +41,7 @@ fun SightingPhoto(
     SubcomposeAsyncImage(
         model = request,
         contentDescription = contentDescription,
-        contentScale = ContentScale.Crop,
+        contentScale = contentScale,
         loading = { BirdPlaceholder() },
         error = { BirdPlaceholder() },
         modifier = modifier,
