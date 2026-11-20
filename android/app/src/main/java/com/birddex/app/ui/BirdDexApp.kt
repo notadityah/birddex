@@ -52,8 +52,8 @@ import com.birddex.app.ui.welcome.WelcomeViewModel
 fun BirdDexApp(viewModel: SessionGateViewModel = hiltViewModel()) {
     val gate by viewModel.gate.collectAsStateWithLifecycle()
     when (gate) {
-        // Only while the saved session is looked up on the device (no network): the window
-        // background shows for a moment.
+        // Only while the saved session is looked up on the device (no network). MainActivity
+        // keeps the splash screen up meanwhile, so this is rarely seen.
         Gate.Loading -> Box(Modifier.fillMaxSize())
         Gate.SignedOut -> SignInFlow()
         Gate.Main -> MainTabs()

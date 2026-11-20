@@ -3,4 +3,13 @@
     <style name="Theme.BirdDex" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
+
+    <!-- Launch: the logo on the window background (light or dark), then Theme.BirdDex.
+         MainActivity installs it; the same splash on every version (Android 12+ always shows one). -->
+    <style name="Theme.BirdDex.Starting" parent="Theme.SplashScreen.IconBackground">
+        <item name="windowSplashScreenBackground">@color/window_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.BirdDex</item>
+    </style>
 </resources>

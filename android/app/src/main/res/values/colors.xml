@@ -1,4 +1,6 @@
 <resources>
     <!-- Matches LightColors.background in ui/theme/Color.kt -->
     <color name="window_background">#FFFFFFFF</color>
+    <!-- The website primary green (BirdGreen in ui/theme/Color.kt), behind the bird in its logo -->
+    <color name="ic_launcher_background">#FF00D084</color>
 </resources>

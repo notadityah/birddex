@@ -307,7 +307,19 @@ original numbers._
 
 ## Phase 6 — Ship
 
-- [ ] **A6.1 App icon, adaptive icon, splash screen.**
+- [x] **A6.1 App icon, adaptive icon, splash screen.**
+      The icon is the website's logo: its bird mark (`bird-svgrepo-com.svg`, #1a1a1a) on the
+      brand green (#00D084), as in the website's header, sidebar and sign-in card. One
+      adaptive icon in `mipmap-anydpi` (minSdk 26, so no PNG fallbacks): green background,
+      the bird as a vector foreground (48dp wide in the 66dp safe zone, so no launcher mask
+      shape crops it), and the same bird as the monochrome layer for themed icons
+      (Android 13+). Splash: `core-splashscreen` 1.2.0, the same on every version — the
+      logo in a green circle on the window background (white, or dark in dark mode), then
+      `Theme.BirdDex`. MainActivity keeps it up while the saved session is read
+      (`Gate.Loading`), so there's no blank frame before sign-in or the tabs. Emulator:
+      launcher icon, splash light and dark, release (R8) cold start. The themed icon
+      wasn't seen on the launcher (turning on themed icons is a system setting). Still
+      needed for the Play listing: a 512 px PNG of the icon.
 - [ ] **A6.2 App Links**: verify-email and reset-password links on `birddex.fun` open the
       app. Needs `frontend/public/.well-known/assetlinks.json` and a frontend deploy.
 - [ ] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
