@@ -17,6 +17,12 @@ import kotlinx.serialization.Serializable
 /** Request a password-reset email, starting from whatever was typed on sign-in. */
 @Serializable data class ForgotPasswordRoute(val email: String? = null)
 
+/** A tapped email-verification link (EmailLink.VerifyEmail): verifies, then offers sign-in. */
+@Serializable data class VerifyLinkRoute(val token: String)
+
+/** A tapped password-reset link (EmailLink.ResetPassword): "Set new password". */
+@Serializable data class ResetPasswordRoute(val token: String)
+
 /** Opens sign-in, replacing any sign-in screen already on the stack. */
 fun NavController.openLogin(email: String? = null) =
     navigate(LoginRoute(email)) { popUpTo<LoginRoute> { inclusive = true } }

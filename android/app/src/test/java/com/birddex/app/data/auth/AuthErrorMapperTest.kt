@@ -7,6 +7,7 @@ import org.junit.Test
 class AuthErrorMapperTest {
 
     private fun map(code: Int, body: String?) = mapAuthError(code, body, ApiClients.json)
+    private fun mapLink(code: Int, body: String?) = mapAuthError(code, body, ApiClients.json, emailLink = true)
 
     @Test fun knownBetterAuthCodes() {
         assertEquals(AuthError.InvalidCredentials, map(401, """{"code":"INVALID_EMAIL_OR_PASSWORD","message":"x"}"""))
@@ -17,6 +18,20 @@ class AuthErrorMapperTest {
         assertEquals(AuthError.PasswordTooShort, map(400, """{"code":"PASSWORD_TOO_SHORT"}"""))
         assertEquals(AuthError.PasswordTooLong, map(400, """{"code":"PASSWORD_TOO_LONG"}"""))
         assertEquals(AuthError.TooManyAttempts, map(429, """{"code":"TOO_MANY_REQUESTS"}"""))
+    }
+
+    @Test fun emailLinkCodes() {
+        // verify-email answers 401, reset-password 400 (better-auth 1.5).
+        assertEquals(AuthError.InvalidLink, mapLink(401, """{"code":"INVALID_TOKEN","message":"Invalid token"}"""))
+        assertEquals(AuthError.InvalidLink, mapLink(401, """{"code":"TOKEN_EXPIRED","message":"Token expired"}"""))
+        assertEquals(AuthError.InvalidLink, mapLink(401, """{"code":"USER_NOT_FOUND","message":"User not found"}"""))
+        assertEquals(AuthError.InvalidLink, mapLink(400, """{"code":"INVALID_TOKEN","message":"Invalid token"}"""))
+        assertEquals(AuthError.PasswordTooShort, mapLink(400, """{"code":"PASSWORD_TOO_SHORT"}"""))
+    }
+
+    @Test fun tokenCodesOutsideEmailLinksAreNotAboutLinks() {
+        // Google sign-in with an ID token Google rejected.
+        assertEquals(AuthError.Unexpected(401, "Invalid token"), map(401, """{"code":"INVALID_TOKEN","message":"Invalid token"}"""))
     }
 
     @Test fun rateLimitWithoutJsonBody() {

@@ -320,12 +320,34 @@ original numbers._
       launcher icon, splash light and dark, release (R8) cold start. The themed icon
       wasn't seen on the launcher (turning on themed icons is a system setting). Still
       needed for the Play listing: a 512 px PNG of the icon.
-- [ ] **A6.2 App Links**: verify-email and reset-password links on `birddex.fun` open the
+- [x] **A6.2 App Links**: verify-email and reset-password links on `birddex.fun` open the
       app. Needs `frontend/public/.well-known/assetlinks.json` and a frontend deploy.
+      The app claims the links exactly as better-auth emails them (`autoVerify`):
+      `/api/auth/verify-email?token=…` and `/api/auth/reset-password/<token>?…`; website
+      pages stay in the browser. `EmailLink` parses them; `EmailLinkViewModel` holds one
+      (survives process death) until the sign-in flow opens it. Verify: `GET verify-email`
+      without `callbackURL`, so better-auth answers JSON instead of redirecting to the
+      website, then "Email verified" → sign in with the email (read from the token)
+      filled in, or "Link expired". Reset: "Set new password" (ResetPasswordPage.vue copy,
+      register's password rules) → `POST reset-password`; a used link offers "Request a
+      new link". Signed in, a link asks to sign out first (the website's pages are
+      guest-only), then opens. Token errors mean "bad link" only for these two calls
+      (Google sign-in also answers INVALID_TOKEN). The debug log hides `token=`.
+      `launchMode="singleTop"`; links opened from Recents aren't re-run. Host from the
+      build's BASE_URL. assetlinks.json lists `fun.birddex.app.debug` with this PC's
+      debug-key SHA-256 (public); uploaded on its own to S3 plus a `/.well-known/*`
+      invalidation, with the owner's OK (DEPLOY.md has the commands). Google's Digital
+      Asset Links API reads it; the emulator shows `birddex.fun: verified`, and a link
+      opened like Gmail would (no package) goes straight to the app. Checked with made-up
+      tokens (server rejects them, no account changes): signed-in dialog, reset form and
+      error, verify error, debug and release (R8) builds. A real email wasn't sent.
 - [ ] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
       never committed), R8 rules for kotlinx.serialization and Retrofit. Then add a Google
       Cloud Android OAuth client for `fun.birddex.app` with the release (and Play app
-      signing) SHA-1, or Google sign-in won't work in release builds.
+      signing) SHA-1, or Google sign-in won't work in release builds. Also add
+      `fun.birddex.app` with the release (and Play app signing) SHA-256 to
+      `assetlinks.json` and publish it (DEPLOY.md), or email links won't open the
+      release app.
 - [ ] **A6.4 CI**: GitHub Actions workflow that runs `assembleDebug` and lint on PRs
       touching `android/`.
 - [ ] **A6.5 Play Console**: listing, data safety form, privacy policy URL, internal

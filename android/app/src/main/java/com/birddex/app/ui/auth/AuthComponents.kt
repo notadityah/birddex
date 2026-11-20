@@ -122,6 +122,7 @@ fun authErrorMessage(error: AuthError): String = when (error) {
     AuthError.PasswordTooLong -> stringResource(R.string.auth_error_password_too_long)
     AuthError.TooManyAttempts -> stringResource(R.string.auth_error_too_many_attempts)
     AuthError.PasswordResetUnavailable -> stringResource(R.string.auth_error_reset_unavailable)
+    AuthError.InvalidLink -> stringResource(R.string.auth_error_invalid_link)
     AuthError.Network -> stringResource(R.string.auth_error_network)
     // better-auth's own message when the server sent one; never our internal exception text.
     is AuthError.Unexpected ->

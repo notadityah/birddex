@@ -34,6 +34,8 @@ sealed interface AuthError {
     data object TooManyAttempts : AuthError
     /** The server can't send reset emails right now (RESET_PASSWORD_DISABLED). */
     data object PasswordResetUnavailable : AuthError
+    /** A verify-email or reset-password link that is wrong, used up or expired. */
+    data object InvalidLink : AuthError
     /** No connection, timeout, DNS failure… */
     data object Network : AuthError
     /** Anything else; [message] is better-auth's own text when there is one. */
@@ -73,6 +75,10 @@ data class RequestPasswordResetRequest(
     /** The website page where the user picks a new password (link in the email). */
     val redirectTo: String,
 )
+
+/** The new password and the token from a reset link (website: ResetPasswordPage.vue). */
+@Serializable
+data class ResetPasswordRequest(val newPassword: String, val token: String)
 
 /** better-auth `sign-in/social` with an ID token from the device (no browser redirect). */
 @Serializable

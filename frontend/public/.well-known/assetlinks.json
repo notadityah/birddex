@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "fun.birddex.app.debug",
+      "sha256_cert_fingerprints": [
+        "48:B2:14:75:6D:A1:B0:94:AA:74:E1:6A:6F:17:C9:F5:83:B8:03:E7:E5:16:7C:29:40:9A:A4:51:C1:A0:E3:76"
+      ]
+    }
+  }
+]

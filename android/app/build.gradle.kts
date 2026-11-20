@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -50,9 +52,12 @@ android {
             val debugBaseUrl = providers.gradleProperty("birddex.debugBaseUrl")
                 .getOrElse(PRODUCTION_BASE_URL)
             buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
+            // Email links (App Links) on the site the build talks to.
+            manifestPlaceholders["siteHost"] = URI(debugBaseUrl).host
         }
         release {
             buildConfigField("String", "BASE_URL", "\"$PRODUCTION_BASE_URL\"")
+            manifestPlaceholders["siteHost"] = URI(PRODUCTION_BASE_URL).host
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -20,7 +20,7 @@ import com.birddex.app.R
 
 /**
  * "Check your inbox" after sign-up, or after signing in with an unverified email. The link
- * in the email opens the website for now; the app takes it over in A6.2 (App Links).
+ * in the email opens [VerifyLinkScreen] on top of this one (App Links).
  */
 @Composable
 fun VerifyEmailScreen(

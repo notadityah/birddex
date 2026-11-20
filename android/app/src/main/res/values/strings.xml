@@ -245,7 +245,7 @@
     <string name="forgot_send">Send reset link</string>
     <string name="forgot_sending">Sending…</string>
     <string name="forgot_sent">Check your inbox at %1$s for a password reset link.</string>
-    <string name="forgot_sent_hint">The link opens the BirdDex website, where you can choose a new password. Then come back and sign in.</string>
+    <string name="forgot_sent_hint">Open the link to choose a new password, then sign in with it.</string>
     <string name="forgot_back_to_sign_in">Back to sign in</string>
     <string name="forgot_remember">Remember your password?</string>
 
@@ -262,6 +262,7 @@
     <string name="field_email_placeholder">you@example.com</string>
     <string name="field_password">Password</string>
     <string name="field_confirm_password">Confirm password</string>
+    <string name="field_new_password">New password</string>
 
     <!-- Field errors (same text as the website) -->
     <string name="error_name_required">Name is required.</string>
@@ -281,4 +282,21 @@
     <string name="auth_error_reset_unavailable">Password reset is unavailable right now. Please contact support.</string>
     <string name="auth_error_network">Couldn\'t reach BirdDex. Check your connection and try again.</string>
     <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
+    <string name="auth_error_invalid_link">This link is invalid or has expired.</string>
+    <!-- Email links (A6.2). Reset copy matches ResetPasswordPage.vue; the website has no verify page. -->
+    <string name="verify_link_title">Verifying your email</string>
+    <string name="verify_link_subtitle">This only takes a moment.</string>
+    <string name="verify_link_done_title">Email verified</string>
+    <string name="verify_link_done_subtitle">Your account is ready. Sign in to start your collection.</string>
+    <string name="verify_link_invalid_title">Link expired</string>
+    <string name="verify_link_invalid_subtitle">This verification link is invalid or has expired.</string>
+    <string name="verify_link_invalid_body">Sign in with your email and password to get a new link.</string>
+    <string name="reset_title">Set new password</string>
+    <string name="reset_subtitle">Enter and confirm your new password</string>
+    <string name="reset_submit">Reset Password</string>
+    <string name="reset_submitting">Resetting…</string>
+    <string name="reset_done">Your password has been reset successfully.</string>
+    <string name="reset_request_new_link">Request a new link</string>
+    <string name="link_signed_in_title">You\'re signed in</string>
+    <string name="link_signed_in_body">To open this link, sign out first. You can sign back in afterwards.</string>
 </resources>

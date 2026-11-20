@@ -19,9 +19,10 @@ import retrofit2.Response
  * [AuthRepository] over better-auth's HTTP API. The session itself is the cookie in
  * [cookieJar]; this class keeps [sessionState] in step with it.
  *
- * @param verifyCallbackUrl where email-verification links land (the website's /login,
- *   like the web app; the Android app takes these links over in A6.2).
- * @param resetPasswordUrl the website page that password-reset links open.
+ * @param verifyCallbackUrl where email-verification links land in a browser (the website's
+ *   /login, like the web app). With the app installed, the links open the app instead
+ *   (App Links, [EmailLink]).
+ * @param resetPasswordUrl the website page that password-reset links open in a browser.
  */
 class NetworkAuthRepository(
     private val api: AuthApi,
@@ -91,6 +92,13 @@ class NetworkAuthRepository(
         call { api.requestPasswordReset(RequestPasswordResetRequest(email.trim(), resetPasswordUrl)) }
             .then { it.close() }
 
+    override suspend fun verifyEmail(token: String): AuthResult<Unit> =
+        call(emailLink = true) { api.verifyEmail(token) }.then { it.close() }
+
+    override suspend fun resetPassword(token: String, newPassword: String): AuthResult<Unit> =
+        call(emailLink = true) { api.resetPassword(ResetPasswordRequest(newPassword = newPassword, token = token)) }
+            .then { it.close() }
+
     override suspend fun signOut() {
         // Best effort on the server (it also expires the cookie); local sign-out always happens.
         (call { api.signOut() } as? AuthResult.Success)?.value?.close()
@@ -102,13 +110,16 @@ class NetworkAuthRepository(
         const val SESSION_COOKIE = "better-auth.session_token"
     }
 
-    /** Runs one API call and turns every outcome into an [AuthResult]. */
-    private suspend fun <T : Any> call(request: suspend () -> Response<T>): AuthResult<T> = try {
+    /**
+     * Runs one API call and turns every outcome into an [AuthResult]. [emailLink]: the call
+     * comes from an email link, so token errors mean the link is no good ([mapAuthError]).
+     */
+    private suspend fun <T : Any> call(emailLink: Boolean = false, request: suspend () -> Response<T>): AuthResult<T> = try {
         val response = request()
         val body = response.body()
         when {
             !response.isSuccessful ->
-                AuthResult.Failure(mapAuthError(response.code(), response.errorBody()?.string(), json))
+                AuthResult.Failure(mapAuthError(response.code(), response.errorBody()?.string(), json, emailLink))
             body == null -> AuthResult.Failure(AuthError.Unexpected(response.code(), "Empty response"))
             else -> AuthResult.Success(body)
         }

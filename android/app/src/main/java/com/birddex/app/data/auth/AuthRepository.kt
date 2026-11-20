@@ -43,9 +43,19 @@ interface AuthRepository {
 
     /**
      * Emails a password-reset link. Succeeds even when no account uses [email] (the server
-     * never reveals that). The link opens the website's reset page.
+     * never reveals that). The link opens the app where it's installed ([resetPassword]),
+     * and the website's reset page elsewhere.
      */
     suspend fun requestPasswordReset(email: String): AuthResult<Unit>
+
+    /**
+     * Verifies an email address with the token from its verification link. Doesn't sign
+     * in (the server doesn't): the user signs in afterwards. Fine to repeat once verified.
+     */
+    suspend fun verifyEmail(token: String): AuthResult<Unit>
+
+    /** Sets a new password with the token from a reset link. Doesn't sign in. */
+    suspend fun resetPassword(token: String, newPassword: String): AuthResult<Unit>
 
     /**
      * Signs out on the server and always forgets the session locally, even if the server

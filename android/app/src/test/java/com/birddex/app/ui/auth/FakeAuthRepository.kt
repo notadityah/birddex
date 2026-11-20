@@ -71,7 +71,24 @@ class FakeAuthRepository : AuthRepository {
         return resetResult
     }
 
+    var verifyEmailResult: AuthResult<Unit> = AuthResult.Success(Unit)
+    val verifyEmailCalls = mutableListOf<String>()
+    override suspend fun verifyEmail(token: String): AuthResult<Unit> {
+        verifyEmailCalls += token
+        return verifyEmailResult
+    }
+
+    var resetPasswordResult: AuthResult<Unit> = AuthResult.Success(Unit)
+    val resetPasswordCalls = mutableListOf<Pair<String, String>>()
+    override suspend fun resetPassword(token: String, newPassword: String): AuthResult<Unit> {
+        resetPasswordCalls += token to newPassword
+        return resetPasswordResult
+    }
+
+    var signOutCalls = 0
+
     override suspend fun signOut() {
+        signOutCalls++
         state.value = SessionState.SignedOut
     }
 }

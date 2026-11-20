@@ -23,8 +23,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.birddex.app.R
 
 /**
- * Requests a password-reset email. The link in it opens the website's reset page; the app
- * takes those links over in A6.2 (App Links).
+ * Requests a password-reset email. The link in it opens [ResetPasswordScreen] (App Links),
+ * or the website's reset page on a device without the app.
  */
 @Composable
 fun ForgotPasswordScreen(

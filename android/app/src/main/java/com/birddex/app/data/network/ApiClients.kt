@@ -71,8 +71,9 @@ object ApiClients {
                 this.level = level
                 redactHeader("Cookie")
                 redactHeader("Set-Cookie")
-                // Presigned S3 links (photo uploads) work for anyone holding them until they expire.
-                redactQueryParams("X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token")
+                // Presigned S3 links (photo uploads) work for anyone holding them until they
+                // expire, and so does an email-verification token (GET verify-email?token=).
+                redactQueryParams("X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token", "token")
             }
         val withBodies = logger(HttpLoggingInterceptor.Level.BODY)
         val headersOnly = logger(HttpLoggingInterceptor.Level.HEADERS)

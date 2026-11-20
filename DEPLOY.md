@@ -82,6 +82,20 @@ aws cloudfront create-invalidation --distribution-id E2EZ5RFQJAH3C0 --paths "/*"
 The invalidation takes a minute or two to propagate. After it completes, hard-refresh
 https://birddex.fun (or the CloudFront URL) to see the new build.
 
+`frontend/public/.well-known/assetlinks.json` ships with every build. It lets the Android
+app open the verify-email and reset-password links from BirdDex emails (App Links), so it
+must stay at https://birddex.fun/.well-known/assetlinks.json. To publish only that file:
+
+```bash
+aws s3 cp frontend/public/.well-known/assetlinks.json \
+  s3://backendstack-frontendbucketefe2e19c-vdgdgv7nhjjb/.well-known/assetlinks.json \
+  --content-type application/json
+aws cloudfront create-invalidation --distribution-id E2EZ5RFQJAH3C0 --paths "/.well-known/*"
+```
+
+When an app ID or signing key changes (a release key, Play App Signing), add its SHA-256
+fingerprint there and publish again.
+
 ---
 
 ## 4. Order of operations

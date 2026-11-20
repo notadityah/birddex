@@ -1,6 +1,7 @@
 package com.birddex.app.data.network
 
 import com.birddex.app.data.auth.RequestPasswordResetRequest
+import com.birddex.app.data.auth.ResetPasswordRequest
 import com.birddex.app.data.auth.SendVerificationEmailRequest
 import com.birddex.app.data.auth.SignInEmailRequest
 import com.birddex.app.data.auth.SignUpEmailRequest
@@ -13,6 +14,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 /**
  * better-auth endpoints (`backend/lambda/auth/index.ts`, mounted at /api/auth). Use them
@@ -44,4 +46,14 @@ interface AuthApi {
     /** Succeeds whether or not the email has an account, so it never reveals who is registered. */
     @POST("api/auth/request-password-reset")
     suspend fun requestPasswordReset(@Body body: RequestPasswordResetRequest): Response<ResponseBody>
+
+    /**
+     * The verification link's own endpoint. Without a `callbackURL` better-auth answers with
+     * JSON (`{"status":true}`, or an error code) instead of redirecting to the website.
+     */
+    @GET("api/auth/verify-email")
+    suspend fun verifyEmail(@Query("token") token: String): Response<ResponseBody>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body body: ResetPasswordRequest): Response<ResponseBody>
 }

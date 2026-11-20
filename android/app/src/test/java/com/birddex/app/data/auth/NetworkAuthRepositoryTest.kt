@@ -197,6 +197,48 @@ class NetworkAuthRepositoryTest {
         assertEquals(AuthResult.Failure(AuthError.PasswordResetUnavailable), repo.requestPasswordReset("t@example.com"))
     }
 
+    // --- email links (A6.2) ---
+
+    @Test fun verifyEmailAsksForJsonNotTheWebsiteRedirect() = runBlocking {
+        respond(200, """{"status":true,"user":null}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.verifyEmail("a.b+c/d"))
+
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("/api/auth/verify-email", request.url.encodedPath)
+        assertEquals("a.b+c/d", request.url.queryParameter("token")) // encoded on the way out
+        assertNull(request.url.queryParameter("callbackURL")) // or better-auth redirects to the website
+        assertEquals(SessionState.Unknown, repo.sessionState.value) // verifying doesn't sign in
+    }
+
+    @Test fun verifyEmailWithAnExpiredLink() = runBlocking {
+        respond(401, """{"code":"TOKEN_EXPIRED","message":"Token expired"}""")
+        assertEquals(AuthResult.Failure(AuthError.InvalidLink), repo.verifyEmail("old"))
+    }
+
+    @Test fun resetPasswordSendsTheTokenAndNewPassword() = runBlocking {
+        respond(200, """{"status":true}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.resetPassword("tok123", "n3w pass!"))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/auth/reset-password", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"newPassword":"n3w pass!","token":"tok123"}""", request.bodyText())
+    }
+
+    @Test fun resetPasswordWithAUsedLink() = runBlocking {
+        respond(400, """{"code":"INVALID_TOKEN","message":"Invalid token"}""")
+        assertEquals(AuthResult.Failure(AuthError.InvalidLink), repo.resetPassword("used", "longenough"))
+    }
+
+    @Test fun resetPasswordTooShortForTheServer() = runBlocking {
+        respond(400, """{"code":"PASSWORD_TOO_SHORT","message":"Password too short"}""")
+        assertEquals(AuthResult.Failure(AuthError.PasswordTooShort), repo.resetPassword("tok", "short"))
+    }
+
     // --- session ---
 
     @Test fun refreshSessionSignedOut() = runBlocking {
