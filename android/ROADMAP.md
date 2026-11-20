@@ -277,7 +277,16 @@ original numbers._
       Espresso pinned to 3.7.0 (ui-test brings 3.5, which breaks on API 37). Note:
       `uiautomator dump` showed toggle states one step behind; Compose's semantics are
       right, so don't trust dumps for toggles.
-- [ ] **A5.4 Feedback form**: bug / suggestion / other via `POST /api/feedback`.
+- [x] **A5.4 Feedback form**: bug / suggestion / other via `POST /api/feedback`.
+      A "Send feedback" card on the Account tab opens a sheet copying FeedbackButton.vue:
+      Category (Bug Report, Detection Issue, Suggestion, Other, as the website), Message
+      (2000 max, counter), "Please enter a message." when empty, and "Thanks for your
+      feedback!" that closes itself after 2 s. Not the website's floating button on every
+      page, which would cover the grids. Reuses A4.6's `FeedbackRepository`;
+      `pageUrl` is `android:/account`. Unit tests cover sending, trimming, empty, errors and
+      double taps; `FeedbackSheetTest` (on device) covers picking a category, the counter,
+      Submit, the error, sending lock and the auto-close. Emulator: card, sheet, empty
+      submit, category menu, cancel; no real feedback sent (A4.6 ran this endpoint live).
 - [ ] **A5.5 Welcome / onboarding** (optional, matches the web `WelcomeModal`).
 
 ## Phase 6 — Ship

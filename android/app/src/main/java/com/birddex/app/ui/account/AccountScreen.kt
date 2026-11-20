@@ -54,8 +54,9 @@ import java.time.Instant
 
 /**
  * Account tab (website: AccountPage.vue; only reachable when signed in, the session gate
- * handles signed out): profile, gallery anonymity, "Reset Collection" and sign out. The
- * website's Change Password isn't here yet; the feedback form comes in A5.4.
+ * handles signed out): profile, gallery anonymity, feedback, "Reset Collection" and sign
+ * out. The website's Change Password isn't here yet. Feedback lives here rather than in a
+ * floating button on every screen (the website's), where it would cover the grids.
  */
 @Composable
 fun AccountScreen(
@@ -68,6 +69,7 @@ fun AccountScreen(
     val anonymity by viewModel.anonymity.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
     val resetting by viewModel.resetting.collectAsStateWithLifecycle()
+    val feedback by viewModel.feedback.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(viewModel) {
@@ -80,6 +82,8 @@ fun AccountScreen(
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
         }
     }
+
+    feedback?.let { FeedbackSheet(it, onSend = viewModel::sendFeedback, onDismiss = viewModel::closeFeedback) }
 
     Column(
         modifier = modifier
@@ -97,6 +101,7 @@ fun AccountScreen(
             is SessionState.SignedIn -> {
                 ProfileCard(s.user, stats)
                 GallerySettings(anonymity, onToggle = viewModel::toggleAnonymous, onRetry = viewModel::loadSettings)
+                FeedbackCard(onOpen = viewModel::openFeedback)
                 DangerZone(sightingCount = stats.sightings, resetting = resetting, onReset = viewModel::resetCollection)
                 OutlinedButton(onClick = viewModel::signOut, enabled = !signingOut, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (signingOut) R.string.signing_out else R.string.sign_out))
@@ -203,6 +208,28 @@ internal fun GallerySettings(setting: AnonymitySetting, onToggle: () -> Unit, on
                     TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                 }
             }
+        }
+    }
+}
+
+/** Opens "Send Feedback" (website: the floating feedback button). */
+@Composable
+private fun FeedbackCard(onOpen: () -> Unit) {
+    OutlinedCard(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.feedback_card_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.feedback_card_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(onClick = onOpen) { Text(stringResource(R.string.feedback_open)) }
         }
     }
 }

@@ -5,6 +5,9 @@ import com.birddex.app.data.account.AccountSettings
 import com.birddex.app.data.auth.SessionState
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.birds.BirdRepository
+import com.birddex.app.data.feedback.FeedbackCategory
+import com.birddex.app.data.feedback.FeedbackRepository
+import com.birddex.app.data.feedback.FeedbackSent
 import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.sightings.Sighting
@@ -23,6 +26,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -66,15 +70,28 @@ class AccountViewModelTest {
         override suspend fun refresh() = ApiResult.Success(Unit)
     }
 
+    private class FakeFeedbackRepository : FeedbackRepository {
+        data class Sent(val category: FeedbackCategory, val message: String, val page: String, val photo: ByteArray?)
+        val sent = mutableListOf<Sent>()
+        var result: ApiResult<FeedbackSent> = ApiResult.Success(FeedbackSent(photoUploaded = true))
+        var gate: CompletableDeferred<Unit>? = null
+        override suspend fun send(category: FeedbackCategory, message: String, page: String, photoJpeg: ByteArray?): ApiResult<FeedbackSent> {
+            sent += Sent(category, message, page, photoJpeg)
+            gate?.await()
+            return result
+        }
+    }
+
     private val auth = FakeAuthRepository().apply { state.value = SessionState.SignedIn(user) }
     private val account = FakeAccountRepository()
     private val sightings = FakeSightingRepository()
     private val birds = FakeBirdRepository()
+    private val feedback = FakeFeedbackRepository()
 
     @Before fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun open() = AccountViewModel(auth, account, sightings, birds)
+    private fun open() = AccountViewModel(auth, account, sightings, birds, feedback)
 
     private fun TestScope.messagesOf(vm: AccountViewModel): MutableList<AccountMessage> =
         mutableListOf<AccountMessage>().also { list ->
@@ -178,6 +195,70 @@ class AccountViewModelTest {
         )
 
         assertEquals(AccountStats(found = 1, total = 2, shared = 2, sightings = 3), open().stats.value)
+    }
+
+    // --- feedback (A5.4) ---
+
+    @Test fun feedbackSendsTheCategoryAndTrimmedMessage() {
+        val vm = open()
+        vm.openFeedback()
+
+        vm.sendFeedback(FeedbackCategory.Suggestion, "  Dark mode for the website please \n")
+
+        val sent = feedback.sent.single()
+        assertEquals(FeedbackCategory.Suggestion, sent.category)
+        assertEquals("Dark mode for the website please", sent.message)
+        assertEquals("android:/account", sent.page)
+        assertNull(sent.photo)
+        assertEquals(FeedbackUiState(sent = true), vm.feedback.value)
+    }
+
+    @Test fun emptyFeedbackIsNotSent() {
+        val vm = open()
+        vm.openFeedback()
+
+        vm.sendFeedback(FeedbackCategory.Bug, "   ")
+
+        assertTrue(feedback.sent.isEmpty())
+        assertEquals(FeedbackUiState(error = FeedbackError.EmptyMessage), vm.feedback.value)
+    }
+
+    @Test fun failedFeedbackSaysWhyAndCanBeSentAgain() {
+        feedback.result = ApiResult.Failure(ApiError.Network)
+        val vm = open()
+        vm.openFeedback()
+
+        vm.sendFeedback(FeedbackCategory.Bug, "Crash when saving")
+        assertEquals(FeedbackUiState(error = FeedbackError.Network), vm.feedback.value)
+
+        feedback.result = ApiResult.Failure(ApiError.Http(400, "message is required"))
+        vm.sendFeedback(FeedbackCategory.Bug, "Crash when saving")
+        assertEquals(FeedbackUiState(error = FeedbackError.Failed), vm.feedback.value)
+
+        feedback.result = ApiResult.Success(FeedbackSent(photoUploaded = true))
+        vm.sendFeedback(FeedbackCategory.Bug, "Crash when saving")
+        assertEquals(FeedbackUiState(sent = true), vm.feedback.value)
+        assertEquals(3, feedback.sent.size)
+    }
+
+    @Test fun sendingTwiceSendsOnceAndClosingLetsItFinish() {
+        feedback.gate = CompletableDeferred()
+        val vm = open()
+        vm.openFeedback()
+
+        vm.sendFeedback(FeedbackCategory.Other, "Hello")
+        assertEquals(FeedbackUiState(sending = true), vm.feedback.value)
+        vm.sendFeedback(FeedbackCategory.Other, "Hello")
+        vm.closeFeedback()
+        feedback.gate!!.complete(Unit)
+
+        assertEquals(1, feedback.sent.size)
+        assertNull(vm.feedback.value) // doesn't pop open again
+    }
+
+    @Test fun nothingIsSentWithTheSheetClosed() {
+        open().sendFeedback(FeedbackCategory.Bug, "Hello")
+        assertTrue(feedback.sent.isEmpty())
     }
 
     @Test fun signOutStillWorks() {

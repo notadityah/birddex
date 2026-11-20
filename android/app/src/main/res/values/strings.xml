@@ -180,6 +180,23 @@
     <string name="account_reset_failed">Couldn\'t delete your sightings. Try again.</string>
     <string name="account_delete_title">Delete Account</string>
     <string name="account_delete_body">To permanently delete your account and all associated data, send us a request through feedback. We\'ll confirm once it\'s done.</string>
+    <!-- Feedback (copy matches FeedbackButton.vue) -->
+    <string name="feedback_card_title">Feedback</string>
+    <string name="feedback_card_body">Found a bug or have an idea? Let us know.</string>
+    <string name="feedback_open">Send feedback</string>
+    <string name="feedback_title">Send Feedback</string>
+    <string name="feedback_category">Category</string>
+    <string name="feedback_bug">Bug Report</string>
+    <string name="feedback_detection">Detection Issue</string>
+    <string name="feedback_suggestion">Suggestion</string>
+    <string name="feedback_other">Other</string>
+    <string name="feedback_message">Message</string>
+    <string name="feedback_placeholder">Describe the issue or suggestion…</string>
+    <string name="feedback_submit">Submit</string>
+    <string name="feedback_empty">Please enter a message.</string>
+    <string name="feedback_failed">Couldn\'t send your feedback. Please try again.</string>
+    <string name="feedback_sent_title">Thanks for your feedback!</string>
+    <string name="feedback_sent_body">We\'ll review it shortly.</string>
 
     <!-- Sign in (copy matches frontend/src/views/LoginPage.vue) -->
     <string name="login_title">Welcome back</string>

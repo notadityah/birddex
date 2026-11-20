@@ -8,6 +8,9 @@ import com.birddex.app.data.auth.AuthRepository
 import com.birddex.app.data.auth.AuthResult
 import com.birddex.app.data.auth.SessionState
 import com.birddex.app.data.birds.BirdRepository
+import com.birddex.app.data.feedback.FeedbackCategory
+import com.birddex.app.data.feedback.FeedbackRepository
+import com.birddex.app.data.network.ApiError
 import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.sightings.SightingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,12 +39,18 @@ data class AnonymitySetting(
 /** The profile card's numbers, from the saved birds and sightings (website: AccountPage.vue). */
 data class AccountStats(val found: Int = 0, val total: Int = 0, val shared: Int = 0, val sightings: Int = 0)
 
+/** Why feedback wasn't sent. */
+enum class FeedbackError { EmptyMessage, Network, Failed }
+
+/** The open "Send Feedback" sheet. */
+data class FeedbackUiState(val sending: Boolean = false, val error: FeedbackError? = null, val sent: Boolean = false)
+
 /** One-off results, shown as toasts. */
 enum class AccountMessage { SettingFailed, ResetDone, ResetFailed }
 
 /**
  * Account tab (website: AccountPage.vue): who is signed in, gallery anonymity, "Reset
- * Collection" (delete all sightings) and signing out.
+ * Collection" (delete all sightings), feedback (website: FeedbackButton.vue) and signing out.
  */
 @HiltViewModel
 class AccountViewModel @Inject constructor(
@@ -49,6 +58,7 @@ class AccountViewModel @Inject constructor(
     private val account: AccountRepository,
     private val sightings: SightingRepository,
     birds: BirdRepository,
+    private val feedbackRepository: FeedbackRepository,
 ) : ViewModel() {
 
     val sessionState: StateFlow<SessionState> = auth.sessionState
@@ -65,6 +75,10 @@ class AccountViewModel @Inject constructor(
 
     private val _resetting = MutableStateFlow(false)
     val resetting: StateFlow<Boolean> = _resetting.asStateFlow()
+
+    private val _feedback = MutableStateFlow<FeedbackUiState?>(null)
+    /** The "Send Feedback" sheet, or null when it's closed. */
+    val feedback: StateFlow<FeedbackUiState?> = _feedback.asStateFlow()
 
     val stats: StateFlow<AccountStats> =
         combine(birds.observeBirds(), sightings.observeSightings()) { allBirds, mine ->
@@ -136,6 +150,38 @@ class AccountViewModel @Inject constructor(
             val result = sightings.deleteAll()
             _resetting.value = false
             _messages.send(if (result is ApiResult.Success) AccountMessage.ResetDone else AccountMessage.ResetFailed)
+        }
+    }
+
+    fun openFeedback() {
+        _feedback.value = FeedbackUiState()
+    }
+
+    /** Cancel, swiping the sheet away, or two seconds after it was sent. A send keeps going. */
+    fun closeFeedback() {
+        _feedback.value = null
+    }
+
+    fun sendFeedback(category: FeedbackCategory, message: String) {
+        val current = _feedback.value ?: return
+        if (current.sending || current.sent) return
+        val text = message.trim()
+        if (text.isEmpty()) {
+            _feedback.value = current.copy(error = FeedbackError.EmptyMessage)
+            return
+        }
+        _feedback.value = FeedbackUiState(sending = true)
+        viewModelScope.launch {
+            val result = feedbackRepository.send(category, text, FeedbackRepository.appPage("/account"), photoJpeg = null)
+            _feedback.update { open ->
+                open ?: return@update null // closed meanwhile
+                when (result) {
+                    is ApiResult.Success -> FeedbackUiState(sent = true)
+                    is ApiResult.Failure -> FeedbackUiState(
+                        error = if (result.error == ApiError.Network) FeedbackError.Network else FeedbackError.Failed,
+                    )
+                }
+            }
         }
     }
 
