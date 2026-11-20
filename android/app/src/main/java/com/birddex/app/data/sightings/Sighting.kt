@@ -58,3 +58,7 @@ data class CreatedSighting(
     /** Presigned S3 PUT link, valid 5 minutes. */
     val uploadUrl: String? = null,
 )
+
+/** `DELETE /api/sightings` answer. */
+@Serializable
+data class DeletedSightings(val ok: Boolean = false, val deleted: Int = 0)

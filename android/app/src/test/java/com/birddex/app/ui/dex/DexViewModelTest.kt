@@ -59,6 +59,7 @@ class DexViewModelTest {
         }
         override suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray) =
             ApiResult.Success(Unit)
+        override suspend fun deleteAll() = ApiResult.Success(0)
     }
 
     private val birds = FakeBirdRepository()

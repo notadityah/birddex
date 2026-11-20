@@ -42,6 +42,12 @@ class DatesTest {
         assertEquals(RelativeDate.YearsAgo(2), ago(800))
     }
 
+    @Test fun memberSinceShowsMonthAndYear() {
+        val joined = Instant.parse("2026-02-28T20:00:00Z") // already March 1 in Sydney
+        assertEquals("March 2026", formatMonthYear(joined, sydney, australia))
+        assertEquals("February 2026", formatMonthYear(joined, ZoneId.of("UTC"), Locale.US))
+    }
+
     @Test fun aSlightlyFutureTimeIsToday() {
         assertEquals(RelativeDate.Today, relativeDate(now.plusSeconds(90), now))
     }

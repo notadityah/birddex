@@ -115,6 +115,7 @@ class DetectViewModelTest {
             gate?.await()
             return result
         }
+        override suspend fun deleteAll() = ApiResult.Success(0)
     }
 
     private class FakeBirdRepository : BirdRepository {

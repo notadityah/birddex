@@ -261,8 +261,22 @@ original numbers._
       detaches a key's StateFlow instead of clearing it; set the key to null. Live: magpie
       filter (`birdId=2`), an empty species, back to all; detail opened, survived the app
       being killed, closed; dark mode; release (R8) build incl. kill-and-restore.
-- [ ] **A5.3 Account screen**: gallery anonymity toggle (`/api/account/settings`),
+- [x] **A5.3 Account screen**: gallery anonymity toggle (`/api/account/settings`),
       delete all sightings (`DELETE /api/sightings`), sign out.
+      Laid out like AccountPage.vue: profile card (initial, name, email, Verified, "Member
+      since" from better-auth's `createdAt`, species found, shared count), Gallery Settings
+      ("Appear as Anonymous in gallery", flipped only once the server saved it, like the
+      website), Danger Zone ("Reset Collection" behind a dialog with the real count; account
+      deletion is by request, as on the website), Sign out. Not here: the website's Change
+      Password. Bug caught by a test: the JSON setup drops values equal to their default,
+      so `galleryAnonymous = false` would have gone out as `{}` (400); `AccountSettings` has
+      no default now. Live, with the owner's OK: switched anonymity on (gallery showed
+      "Anonymous") and back off; Reset dialog opened and cancelled (no request). Never ran
+      a real reset. Release (R8) build loads the setting. The first Compose UI tests
+      (`ToggleSemanticsTest`) check what screen readers get from the toggle rows; they need
+      Espresso pinned to 3.7.0 (ui-test brings 3.5, which breaks on API 37). Note:
+      `uiautomator dump` showed toggle states one step behind; Compose's semantics are
+      right, so don't trust dumps for toggles.
 - [ ] **A5.4 Feedback form**: bug / suggestion / other via `POST /api/feedback`.
 - [ ] **A5.5 Welcome / onboarding** (optional, matches the web `WelcomeModal`).
 

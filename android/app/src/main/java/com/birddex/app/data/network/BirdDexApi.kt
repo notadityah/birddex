@@ -1,5 +1,6 @@
 package com.birddex.app.data.network
 
+import com.birddex.app.data.account.AccountSettings
 import com.birddex.app.data.birds.Bird
 import com.birddex.app.data.detect.DetectRequest
 import com.birddex.app.data.detect.Detection
@@ -8,6 +9,7 @@ import com.birddex.app.data.feedback.FeedbackRequest
 import com.birddex.app.data.gallery.GalleryPage
 import com.birddex.app.data.sightings.CreateSightingRequest
 import com.birddex.app.data.sightings.CreatedSighting
+import com.birddex.app.data.sightings.DeletedSightings
 import com.birddex.app.data.sightings.Sighting
 import kotlinx.serialization.Serializable
 import okhttp3.RequestBody
@@ -68,6 +70,18 @@ interface BirdDexApi {
     /** Shares (true) or unshares a sighting in the public gallery. 404 if it isn't the user's. */
     @PATCH("api/sightings/{id}")
     suspend fun setSightingPublic(@Path("id") id: String, @Body body: SetPublicRequest)
+
+    /** Permanently deletes every sighting the user has, and their photos ("Reset Collection"). */
+    @DELETE("api/sightings")
+    suspend fun deleteAllSightings(): DeletedSightings
+
+    /** The user's account settings (gallery anonymity). 401 when signed out. */
+    @GET("api/account/settings")
+    suspend fun getAccountSettings(): AccountSettings
+
+    /** Saves the account settings; answers with what was saved. 400 if the flag isn't a boolean. */
+    @PATCH("api/account/settings")
+    suspend fun updateAccountSettings(@Body settings: AccountSettings): AccountSettings
 
     /** Permanently deletes a sighting and its photo. 404 if it isn't the user's (or already gone). */
     @DELETE("api/sightings/{id}")

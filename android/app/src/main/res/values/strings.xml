@@ -149,11 +149,37 @@
     <string name="show_password">Show password</string>
     <string name="hide_password">Hide password</string>
 
-    <!-- Account tab -->
+    <!-- Account tab (copy matches AccountPage.vue) -->
     <string name="account_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
     <string name="sign_out">Sign out</string>
     <string name="signing_out">Signing out…</string>
     <string name="build_info">API %1$s · %2$s %3$s</string>
+    <string name="account_title">My Account</string>
+    <string name="account_verified">Verified</string>
+    <string name="account_unverified">Unverified</string>
+    <string name="account_member_since">Member since %1$s</string>
+    <string name="account_found">%1$d of %2$d birds found</string>
+    <string name="account_shared">%1$d shared to gallery</string>
+    <string name="account_gallery_settings">Gallery Settings</string>
+    <string name="account_anonymous">Appear as Anonymous in gallery</string>
+    <string name="account_anonymous_hint">When enabled, your name won\'t be shown on shared sightings.</string>
+    <string name="account_settings_load_failed">Couldn\'t load your gallery settings.</string>
+    <string name="account_setting_failed">Couldn\'t change the setting. Try again.</string>
+    <string name="account_danger_zone">Danger Zone</string>
+    <string name="account_reset_title">Reset Collection</string>
+    <string name="account_reset_body">Delete all your sightings and images.</string>
+    <string name="account_reset">Reset</string>
+    <string name="account_resetting">Deleting…</string>
+    <string name="account_reset_confirm_title">Delete all your sightings?</string>
+    <plurals name="account_reset_confirm_body">
+        <item quantity="one">This permanently deletes your %1$d sighting and its photo. It can\'t be undone.</item>
+        <item quantity="other">This permanently deletes all %1$d of your sightings and their photos. It can\'t be undone.</item>
+    </plurals>
+    <string name="account_reset_confirm">Delete all</string>
+    <string name="account_reset_done">All sightings deleted.</string>
+    <string name="account_reset_failed">Couldn\'t delete your sightings. Try again.</string>
+    <string name="account_delete_title">Delete Account</string>
+    <string name="account_delete_body">To permanently delete your account and all associated data, send us a request through feedback. We\'ll confirm once it\'s done.</string>
 
     <!-- Sign in (copy matches frontend/src/views/LoginPage.vue) -->
     <string name="login_title">Welcome back</string>

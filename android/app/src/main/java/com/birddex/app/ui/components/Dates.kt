@@ -42,3 +42,10 @@ fun relativeDate(instant: Instant, now: Instant): RelativeDate {
         else -> RelativeDate.YearsAgo(days / 365)
     }
 }
+
+/** Month and year in the phone's language, e.g. "November 2026" (website: "Member since"). */
+fun formatMonthYear(
+    instant: Instant,
+    zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String = DateTimeFormatter.ofPattern("LLLL yyyy", locale).withZone(zone).format(instant)

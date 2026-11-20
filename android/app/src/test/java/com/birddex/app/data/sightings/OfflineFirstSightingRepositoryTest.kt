@@ -275,6 +275,29 @@ class OfflineFirstSightingRepositoryTest {
         assertEquals(1, server.requestCount)
     }
 
+    // --- reset collection (A5.3) ---
+
+    @Test fun deleteAllClearsTheServerThenThePhone() = runBlocking {
+        refreshWithFixture()
+        server.takeRequest()
+        respond(200, """{"ok":true,"deleted":3}""")
+
+        assertEquals(ApiResult.Success(3), repo.deleteAll())
+
+        val request = server.takeRequest()
+        assertEquals("DELETE", request.method)
+        assertEquals("/api/sightings", request.url.encodedPath)
+        assertTrue(saved().isEmpty())
+    }
+
+    @Test fun failedDeleteAllKeepsEverything() = runBlocking {
+        refreshWithFixture()
+        server.close() // offline: nothing may disappear without the server's OK
+
+        assertEquals(ApiResult.Failure(ApiError.Network), repo.deleteAll())
+        assertEquals(3, saved().size)
+    }
+
     @Test fun savedEvenIfTheRefreshAfterwardsFails() = runBlocking {
         respondCreated()
         respond(200, "")

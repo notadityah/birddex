@@ -12,6 +12,8 @@ data class AuthUser(
     val image: String? = null,
     /** "admin" for admins (better-auth admin plugin); null or "user" otherwise. */
     val role: String? = null,
+    /** When the account was made (ISO-8601), for "Member since". */
+    val createdAt: String? = null,
 )
 
 /** Where the app thinks the user is. Starts [Unknown] until the session is checked. */

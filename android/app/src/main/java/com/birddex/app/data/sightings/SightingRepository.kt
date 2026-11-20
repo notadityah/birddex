@@ -7,6 +7,7 @@ import com.birddex.app.data.network.ApiResult
 import com.birddex.app.data.network.BirdDexApi
 import com.birddex.app.data.network.SetPublicRequest
 import com.birddex.app.data.network.apiCall
+import com.birddex.app.data.network.map
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -48,6 +49,12 @@ interface SightingRepository {
      * the new sighting is deleted again, so a retry doesn't leave a photo-less duplicate.
      */
     suspend fun create(birdId: Int, notes: String?, isPublic: Boolean, photoJpeg: ByteArray): ApiResult<Unit>
+
+    /**
+     * Permanently deletes all the user's sightings and photos on the server ("Reset
+     * Collection"), then the saved copy. Returns how many the server deleted.
+     */
+    suspend fun deleteAll(): ApiResult<Int>
 }
 
 @Singleton
@@ -109,6 +116,12 @@ class OfflineFirstSightingRepository @Inject constructor(
         // Saved either way; if this refresh fails, the Dex picks the sighting up next time.
         refresh()
         return ApiResult.Success(Unit)
+    }
+
+    override suspend fun deleteAll(): ApiResult<Int> {
+        val result = apiCall(json) { api.deleteAllSightings() }
+        if (result is ApiResult.Success) dao.deleteAll()
+        return result.map { it.deleted }
     }
 
     private fun ApiResult<*>.isNotFound() =

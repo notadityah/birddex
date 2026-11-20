@@ -134,4 +134,10 @@ dependencies {
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.room.testing)
+    // Compose UI tests (semantics, i.e. what screen readers see).
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // ui-test-junit4 brings Espresso 3.5, which calls InputManager.getInstance (gone on API 37).
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
