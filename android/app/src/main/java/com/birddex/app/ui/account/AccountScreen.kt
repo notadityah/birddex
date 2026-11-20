@@ -1,6 +1,7 @@
 package com.birddex.app.ui.account
 
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -54,12 +55,15 @@ import java.time.Instant
 
 /**
  * Account tab (website: AccountPage.vue; only reachable when signed in, the session gate
- * handles signed out): profile, gallery anonymity, feedback, "Reset Collection" and sign
- * out. The website's Change Password isn't here yet. Feedback lives here rather than in a
- * floating button on every screen (the website's), where it would cover the grids.
+ * handles signed out): profile, gallery anonymity, "How it works", feedback, "Reset
+ * Collection" and sign out. The website's Change Password isn't here yet. Feedback and "How
+ * it works" live here rather than in a floating button and the sidebar (the website's), since
+ * the app has neither.
  */
 @Composable
 fun AccountScreen(
+    /** "How it works": the first-run welcome again. */
+    onShowWelcome: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AccountViewModel = hiltViewModel(),
 ) {
@@ -101,7 +105,10 @@ fun AccountScreen(
             is SessionState.SignedIn -> {
                 ProfileCard(s.user, stats)
                 GallerySettings(anonymity, onToggle = viewModel::toggleAnonymous, onRetry = viewModel::loadSettings)
-                FeedbackCard(onOpen = viewModel::openFeedback)
+                // Website: "How it works" in the sidebar re-opens the welcome.
+                ActionCard(R.string.account_help_title, R.string.account_help_body, R.string.account_help_open, onShowWelcome)
+                // Website: the floating feedback button.
+                ActionCard(R.string.feedback_card_title, R.string.feedback_card_body, R.string.feedback_open, viewModel::openFeedback)
                 DangerZone(sightingCount = stats.sightings, resetting = resetting, onReset = viewModel::resetCollection)
                 OutlinedButton(onClick = viewModel::signOut, enabled = !signingOut, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(if (signingOut) R.string.signing_out else R.string.sign_out))
@@ -212,9 +219,9 @@ internal fun GallerySettings(setting: AnonymitySetting, onToggle: () -> Unit, on
     }
 }
 
-/** Opens "Send Feedback" (website: the floating feedback button). */
+/** A title, a line about it, and a button: "How it works" and "Feedback". */
 @Composable
-private fun FeedbackCard(onOpen: () -> Unit) {
+private fun ActionCard(@StringRes title: Int, @StringRes body: Int, @StringRes button: Int, onClick: () -> Unit) {
     OutlinedCard(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -222,14 +229,14 @@ private fun FeedbackCard(onOpen: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(R.string.feedback_card_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.feedback_card_body),
+                    stringResource(body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            OutlinedButton(onClick = onOpen) { Text(stringResource(R.string.feedback_open)) }
+            OutlinedButton(onClick = onClick) { Text(stringResource(button)) }
         }
     }
 }

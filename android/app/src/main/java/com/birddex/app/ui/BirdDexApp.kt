@@ -44,6 +44,8 @@ import com.birddex.app.ui.navigation.VerifyEmailRoute
 import com.birddex.app.ui.navigation.navigateToTopLevel
 import com.birddex.app.ui.navigation.openLogin
 import com.birddex.app.ui.navigation.openRegister
+import com.birddex.app.ui.welcome.WelcomeDialog
+import com.birddex.app.ui.welcome.WelcomeViewModel
 
 /** Top level: the session gate picks between the sign-in flow and the tabs. */
 @Composable
@@ -102,12 +104,29 @@ private fun SignInFlow() {
 private fun NavHostController.backIfNotFirst(): (() -> Unit)? =
     if (previousBackStackEntry != null) ({ popBackStack() }) else null
 
-/** Signed in: bottom navigation bar + the four tabs. */
+/** Signed in: bottom navigation bar + the four tabs, and the first-run welcome above them. */
 @Composable
-private fun MainTabs() {
+private fun MainTabs(welcome: WelcomeViewModel = hiltViewModel()) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
+
+    val welcomeOpen by welcome.open.collectAsStateWithLifecycle()
+    val welcomeName by welcome.userName.collectAsStateWithLifecycle()
+    if (welcomeOpen) {
+        WelcomeDialog(
+            name = welcomeName,
+            onExplore = {
+                welcome.dismiss()
+                navController.navigateToTopLevel(TopLevelDestination.Dex)
+            },
+            onTryDetect = {
+                welcome.dismiss()
+                navController.navigateToTopLevel(TopLevelDestination.Detect)
+            },
+            onDismiss = welcome::dismiss,
+        )
+    }
 
     Scaffold(
         bottomBar = {
@@ -146,7 +165,7 @@ private fun MainTabs() {
                 DetectScreen(onOpenDex = { navController.navigateToTopLevel(TopLevelDestination.Dex) })
             }
             composable<GalleryRoute> { GalleryScreen() }
-            composable<AccountRoute> { AccountScreen() }
+            composable<AccountRoute> { AccountScreen(onShowWelcome = welcome::show) }
         }
     }
 }

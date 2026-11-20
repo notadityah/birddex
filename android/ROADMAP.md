@@ -287,7 +287,23 @@ original numbers._
       double taps; `FeedbackSheetTest` (on device) covers picking a category, the counter,
       Submit, the error, sending lock and the auto-close. Emulator: card, sheet, empty
       submit, category menu, cancel; no real feedback sent (A4.6 ran this endpoint live).
-- [ ] **A5.5 Welcome / onboarding** (optional, matches the web `WelcomeModal`).
+- [x] **A5.5 Welcome / onboarding** (optional, matches the web `WelcomeModal`).
+      A dialog copying WelcomeModal.vue: "Welcome to BirdDex, <name>!" (email if no
+      name), the three steps from onboardingSteps.js, the greyed-out note, and "Explore
+      MyDex" (Dex tab) / "Try Detect" (Detect tab). It opens by itself the first time the
+      phone is signed in, after the server confirms the session (the greeting needs the
+      name). Every way of closing it (both buttons, Back, tapping outside) counts as seen,
+      as on the website. The flag is per device, like the website's localStorage, in a
+      DataStore file `datastore/app.preferences_pb` that is backed up (only the cookie file
+      and database are excluded). A corrupt or unreadable file shows the welcome again rather
+      than crashing. "How it works" on the Account tab opens it again (website: the
+      sidebar). No separate close button: the website's X does the same as "Explore MyDex",
+      and Back or tapping outside cover it. New lightbulb icon. Unit tests cover first run,
+      seen, waiting for the flag and the session, closing, reopening and the email
+      fallback, plus the DataStore file (restart, corrupt file). `WelcomeDialogTest` (on
+      device) covers the greeting, the steps and the buttons. Emulator: first launch,
+      Try Detect, restart (stays closed), How it works, Back, Explore MyDex, dark mode,
+      landscape (steps scroll, stays open on rotation); also on a release (R8) build.
 
 ## Phase 6 — Ship
 

@@ -197,6 +197,22 @@
     <string name="feedback_failed">Couldn\'t send your feedback. Please try again.</string>
     <string name="feedback_sent_title">Thanks for your feedback!</string>
     <string name="feedback_sent_body">We\'ll review it shortly.</string>
+    <!-- First-run welcome (copy matches WelcomeModal.vue and onboardingSteps.js) -->
+    <string name="welcome_title">Welcome to BirdDex, %1$s!</string>
+    <string name="welcome_title_no_name">Welcome to BirdDex!</string>
+    <string name="welcome_subtitle">Here\'s how it works.</string>
+    <string name="welcome_step_photo">Snap a Photo</string>
+    <string name="welcome_step_photo_body">Take a picture of any bird you spot — in your backyard, at the park, or anywhere outdoors.</string>
+    <string name="welcome_step_id">Get Instant ID</string>
+    <string name="welcome_step_id_body">Our bird detection model analyses your photo and identifies the bird species in seconds.</string>
+    <string name="welcome_step_collect">Build Your Collection</string>
+    <string name="welcome_step_collect_body">Every identified bird gets added to your personal collection. Track your progress and share sightings.</string>
+    <string name="welcome_note">Your Dex starts with every bird greyed out — each one fills in once you photograph it.</string>
+    <string name="welcome_explore">Explore MyDex</string>
+    <string name="welcome_try_detect">Try Detect</string>
+    <string name="account_help_title">How it works</string>
+    <string name="account_help_body">Snap a photo, get an instant ID, build your collection.</string>
+    <string name="account_help_open">Show</string>
 
     <!-- Sign in (copy matches frontend/src/views/LoginPage.vue) -->
     <string name="login_title">Welcome back</string>
