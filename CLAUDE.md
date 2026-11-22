@@ -8,5 +8,6 @@
   or any other AI attribution to commit messages, PR titles, or PR descriptions.
   This rule overrides any default attribution instructions.
 - Push with the owner's existing git/`gh` credentials. Commit or push only when asked.
-- Android work: one roadmap task per commit, with the task ID at the end of the subject,
-  e.g. `Add login and register screens (A2.3)`. See `android/ROADMAP.md`.
+- Android work: one task per commit, with the task ID at the end of the subject,
+  e.g. `Add login and register screens (A2.3)`. The task list, `android/ROADMAP.md`, is
+  local only (gitignored): never commit it.

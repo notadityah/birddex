@@ -16,3 +16,6 @@ captures/
 # Signing keys — never commit
 *.jks
 *.keystore
+
+# Personal task list, kept locally
+/ROADMAP.md

@@ -56,7 +56,6 @@ bird-dex/
 │   └── test/                  # CDK assertion tests
 │
 ├── android/                   # Native Android app (Kotlin, Jetpack Compose)
-│   ├── ROADMAP.md             # Task-by-task plan and progress
 │   └── app/src/
 │       ├── main/java/com/birddex/app/
 │       │   ├── data/network/  # Retrofit API, persistent cookie jar
@@ -98,79 +97,31 @@ npx cdk deploy       # Deploy (requires CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGI
 
 ### Android app
 
-The Android app in `android/` uses the same production API as the website (`https://birddex.fun/api/*`); there is no separate mobile backend. Sign-in reuses better-auth's session cookie, which the app keeps in a persistent cookie jar. Progress is tracked task by task in [`android/ROADMAP.md`](android/ROADMAP.md).
+The native app in `android/` uses the same API and accounts as the website; it has no backend of its own.
 
-Android Studio bundles the JDK and installs the Android SDK on first launch (the app compiles against API 37). Open the `android/` folder in Android Studio, or build from a terminal with `JAVA_HOME` pointing at Android Studio's bundled JDK (`<Android Studio>/jbr`):
+**Install it on a phone:** open the newest `android-v*` release on the [Releases page](https://github.com/notadityah/birddex/releases) on your phone, download the APK, open it and allow the install. It isn't on Google Play.
+
+**Build it** in Android Studio (open the `android/` folder), or from a terminal with `JAVA_HOME` set to Android Studio's JDK (`<Android Studio>/jbr`; in PowerShell use `.\gradlew`):
 
 ```bash
 cd android
-./gradlew assembleDebug        # Build app/build/outputs/apk/debug/app-debug.apk
-./gradlew installDebug         # Install on a running emulator or connected phone
-./gradlew testDebugUnitTest    # Run JVM unit tests
+./gradlew installDebug         # Debug app ("BirdDex Debug") on an emulator or phone
+./gradlew testDebugUnitTest    # Unit tests
+./gradlew assembleRelease      # Signed release APK in app/build/outputs/apk/release/
 ```
 
-On Windows PowerShell, use `.\gradlew` instead of `./gradlew`.
-
-- **API URL:** `BuildConfig.BASE_URL`, set by `PRODUCTION_BASE_URL` in `android/app/build.gradle.kts`. Debug builds can target another API with `-Pbirddex.debugBaseUrl=https://...` (or the same key in `~/.gradle/gradle.properties`); release builds always use production.
-- **App IDs:** release is `fun.birddex.app`; debug installs next to it as `fun.birddex.app.debug` ("BirdDex Debug"). Kotlin code uses the package `com.birddex.app` because `fun` is a Kotlin keyword.
-- **Debug logging:** debug builds log HTTP traffic under the `BirdDexHttp` logcat tag, with `Cookie`/`Set-Cookie` headers redacted.
-
-#### Release builds
-
-`./gradlew assembleRelease` builds the R8-shrunk release APK at `android/app/build/outputs/apk/release/app-release.apk`. It is signed with the **release key** when one is configured, and unsigned otherwise. The app isn't on Google Play; the signed APK is installed directly (see "Installing on a phone" below). The keystore and its passwords are never committed (`*.jks`, `*.keystore` and `local.properties` are gitignored). Keep the keystore outside the repo and back it up together with its password: updates only install over the app if they're signed with the same key.
-
-Create the release key once (keytool asks for the password; PKCS12 keystores use the same password for the key). The alias `upload` means the same key could be the Play upload key if the app ever goes to Google Play:
-
-```bash
-keytool -genkeypair -v -keystore ~/.android/birddex-upload.jks -alias upload \
-  -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=BirdDex"
-```
-
-Then point the build at it in `android/local.properties`:
+**Release signing:** release builds are signed with the keystore set in `android/local.properties`, which is never committed. Back up the keystore and its password: updates only install over the app when they're signed with the same key.
 
 ```properties
-birddex.release.storeFile=C:/Users/<you>/.android/birddex-upload.jks
+birddex.release.storeFile=C\:/Users/<you>/.android/birddex-upload.jks
 birddex.release.storePassword=<password>
 birddex.release.keyAlias=upload
 birddex.release.keyPassword=<password>
 ```
 
-CI can set `BIRDDEX_RELEASE_STORE_FILE`, `BIRDDEX_RELEASE_STORE_PASSWORD`, `BIRDDEX_RELEASE_KEY_ALIAS` and `BIRDDEX_RELEASE_KEY_PASSWORD` instead.
+A new signing key also needs an Android OAuth client in Google Cloud (package `fun.birddex.app`, the key's SHA-1) and an entry in `frontend/public/.well-known/assetlinks.json` (its SHA-256, published as in [`DEPLOY.md`](DEPLOY.md)), or Google sign-in and email links won't work.
 
-Each signing certificate (the release key, or a new one if it's ever replaced) also needs:
-
-- an **Android OAuth client** in the Google Cloud project, with package `fun.birddex.app` and the certificate's SHA-1, or Google sign-in fails;
-- an entry in `frontend/public/.well-known/assetlinks.json` with its SHA-256, published as in [`DEPLOY.md`](DEPLOY.md), or email links open the website instead of the app.
-
-Print both fingerprints with `keytool -list -v -keystore <keystore> -alias upload`.
-
-#### Installing on a phone
-
-The release app (`fun.birddex.app`, "BirdDex") installs next to the debug app ("BirdDex Debug"), so both can be on one device. Any of:
-
-- **Download:** open the newest `android-v*` release on the repo's GitHub Releases page on the phone, tap the APK, and allow installs from the browser when Android asks;
-- **USB:** turn on Developer options → USB debugging on the phone, plug it in, then run `adb install -r app/build/outputs/apk/release/app-release.apk` from `android/` (`adb` is in the Android SDK's `platform-tools`);
-- **Copy the file:** copy the APK to the phone (USB, Drive, email to yourself), open it, and allow installs from that app when Android asks.
-
-Installing a newer build the same way keeps the app's data, as long as it's signed with the same key.
-
-#### Publishing a release
-
-Each Android release is a GitHub release with the signed APK attached, tagged `android-v<versionName>` because the repo also holds the website and backend. From the repo root:
-
-1. Raise `versionCode` (phones only install an update with a higher one) and set `versionName` in `android/app/build.gradle.kts`, then commit and push.
-2. Build and publish:
-
-   ```bash
-   (cd android && ./gradlew assembleRelease)
-   cp android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/birddex-0.1.0.apk
-   git tag -a android-v0.1.0 -m "BirdDex Android 0.1.0"
-   git push origin android-v0.1.0
-   gh release create android-v0.1.0 android/app/build/outputs/apk/release/birddex-0.1.0.apk \
-     --verify-tag --prerelease --title "BirdDex Android 0.1.0" --notes "What changed, how to install"
-   ```
-
-Drop `--prerelease` for a build you'd call stable.
+**Publish a release:** raise `versionCode` and `versionName` in `android/app/build.gradle.kts`, build, then tag `android-v<version>` and attach the APK with `gh release create android-v<version> <apk> --prerelease`.
 
 ### Database
 
