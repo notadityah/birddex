@@ -10,7 +10,9 @@ same commit. A task is done when its "Done when" line is true.
 
 ## Decisions
 
-- **Application ID** (permanent once on Play Store): `fun.birddex.app` ✅ confirmed.
+- **Application ID**: `fun.birddex.app` ✅ confirmed.
+- **Distribution**: no Google Play release. The signed release APK is installed directly
+  on the owner's phone (README "Release builds").
 - **Code package / namespace**: `com.birddex.app`. It differs from the app ID because
   `fun` is a Kotlin keyword and would need backticks in every `package`/`import`.
 - **Min SDK** 26, **target/compile SDK** 37 (Android 17).
@@ -88,8 +90,8 @@ original numbers._
       `bird-dex-487702` has an Android client for `fun.birddex.app.debug` with this PC's
       debug SHA-1 (other machines need their own). No backend changes. Live: Google
       sign-in → 200, survives a cold restart, sign-out works.
-      **Still to do:** an Android client for the release ID `fun.birddex.app` with the
-      release key's SHA-1, once release signing exists (A6.3).
+      The release ID `fun.birddex.app` has its own Android client with the release key's
+      SHA-1 (A6.3).
 - [x] **A2.4 Forgot password screen**: requests the reset email; the reset link opens
       the website for now (App Links come in A6.2).
       "Forgot password?" on sign-in (carries the typed email) → `ForgotPasswordScreen` →
@@ -341,22 +343,42 @@ original numbers._
       opened like Gmail would (no package) goes straight to the app. Checked with made-up
       tokens (server rejects them, no account changes): signed-in dialog, reset form and
       error, verify error, debug and release (R8) builds. A real email wasn't sent.
-- [ ] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
+- [x] **A6.3 Release build**: signing config read from `local.properties` / env (keystore
       never committed), R8 rules for kotlinx.serialization and Retrofit. Then add a Google
-      Cloud Android OAuth client for `fun.birddex.app` with the release (and Play app
-      signing) SHA-1, or Google sign-in won't work in release builds. Also add
-      `fun.birddex.app` with the release (and Play app signing) SHA-256 to
-      `assetlinks.json` and publish it (DEPLOY.md), or email links won't open the
-      release app.
+      Cloud Android OAuth client for `fun.birddex.app` with the release SHA-1, or Google
+      sign-in won't work in release builds. Also add `fun.birddex.app` with the release
+      SHA-256 to `assetlinks.json` and publish it (DEPLOY.md), or email links won't open
+      the release app.
+      `assembleRelease` signs with the release key named in `android/local.properties`
+      (or `BIRDDEX_RELEASE_*` env vars, for CI) and builds unsigned without one; the
+      keystore and passwords stay out of git (README "Release builds", which also covers
+      installing on a phone). No project R8 rules: kotlinx.serialization, Retrofit,
+      OkHttp, Room, Hilt, Navigation and coroutines ship their own (`proguard-rules.pro`
+      says so). Release key: RSA 4096, alias `upload`, `CN=BirdDex`, kept outside the
+      repo on the owner's PC. Google Cloud `bird-dex-487702` has an Android client for
+      `fun.birddex.app` with its SHA-1; assetlinks.json lists `fun.birddex.app` with its
+      SHA-256, uploaded with the owner's OK. Checked on the emulator: apksigner verifies
+      the APK (v2 scheme, not debuggable); Google sign-in → welcome dialog → Dex loads
+      the real collection. App Links for the release app weren't verified yet: Google's
+      Digital Asset Links API still served the old assetlinks.json (cached up to an
+      hour), so `pm get-app-links` showed `1024`; re-check once it refreshes. Releases
+      are GitHub pre-releases tagged `android-v<versionName>` with the signed APK
+      attached (README "Publishing a release"); the first is `android-v0.1.0`.
 - [ ] **A6.4 CI**: GitHub Actions workflow that runs `assembleDebug` and lint on PRs
       touching `android/`.
-- [ ] **A6.5 Play Console**: listing, data safety form, privacy policy URL, internal
-      testing track.
+- [ ] **A6.5 Test on a phone**: install the signed release APK on the owner's phone
+      (README "Installing on a phone") and check what the emulator can't: Google
+      sign-in with the phone's account, Detect with the real camera, and an email link
+      from a real BirdDex email opening the app.
+      *Done when:* those three work on the phone.
 
 ## Later (not scheduled)
 
 - On-device detection with ONNX Runtime Android (offline use in the field).
 - Switch to better-auth bearer tokens if cookies cause trouble.
+- Google Play release: listing, data safety form, privacy policy URL, testing track, a
+  512 px icon. Play App Signing would add a second signing key, which needs its own
+  Android OAuth client and assetlinks.json entry (README "Release builds").
 
 ## Notes
 

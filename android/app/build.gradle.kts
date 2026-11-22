@@ -1,4 +1,5 @@
 import java.net.URI
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -16,6 +17,17 @@ room {
 
 // The website and its /api/* routes share this origin (see DEPLOY.md).
 val PRODUCTION_BASE_URL = "https://birddex.fun"
+
+// Release signing. Read from local.properties (gitignored) or, for CI, the environment;
+// the keystore and its passwords are never committed. Without a keystore, release builds
+// still build, unsigned. Setup: README.md, "Release builds".
+val localProperties = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use(::load)
+}
+fun releaseSigning(property: String, env: String): String? =
+    localProperties.getProperty("birddex.release.$property")?.takeIf { it.isNotBlank() }
+        ?: providers.environmentVariable(env).orNull?.takeIf { it.isNotBlank() }
+val releaseStoreFile = releaseSigning("storeFile", "BIRDDEX_RELEASE_STORE_FILE")
 
 android {
     // Code package. Differs from applicationId because `fun` is a Kotlin keyword.
@@ -42,6 +54,17 @@ android {
         )
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseSigning("storePassword", "BIRDDEX_RELEASE_STORE_PASSWORD")
+                keyAlias = releaseSigning("keyAlias", "BIRDDEX_RELEASE_KEY_ALIAS")
+                keyPassword = releaseSigning("keyPassword", "BIRDDEX_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Installs next to the release app, as "BirdDex Debug" (src/debug/res).
@@ -58,6 +81,7 @@ android {
         release {
             buildConfigField("String", "BASE_URL", "\"$PRODUCTION_BASE_URL\"")
             manifestPlaceholders["siteHost"] = URI(PRODUCTION_BASE_URL).host
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

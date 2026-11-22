@@ -22,7 +22,7 @@ Run commands from the relevant package directory.
 - `cd android && ./gradlew assembleDebug`: build the debug APK (needs `JAVA_HOME` set to Android Studio's bundled JDK, `<Android Studio>/jbr`; use `.\gradlew` in PowerShell).
 - `cd android && ./gradlew installDebug`: install the debug app on a running emulator or connected phone.
 - `cd android && ./gradlew testDebugUnitTest`: run Android JVM unit tests.
-- `cd android && ./gradlew assembleRelease`: build the R8-shrunk release APK (unsigned until signing is set up).
+- `cd android && ./gradlew assembleRelease`: build the R8-shrunk release APK, signed with the release key from `android/local.properties` (unsigned without one; see "Release builds" in the README).
 - Android on-device tests (`android/app/src/androidTest/`): `./gradlew connectedDebugAndroidTest` works but uninstalls the app afterwards, wiping its sign-in. To keep app data, run `./gradlew installDebug assembleDebugAndroidTest`, `adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`, then `adb shell am instrument -w fun.birddex.app.debug.test/androidx.test.runner.AndroidJUnitRunner`.
 
 ## Coding Style & Naming Conventions
