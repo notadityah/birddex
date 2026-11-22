@@ -329,7 +329,7 @@ class DetectViewModelTest {
         assertEquals(listOf("picked-0.jpg"), store.dir.list()!!.toList())
     }
 
-    // --- preparing the photo (A4.2) ---
+    // --- preparing the photo ---
 
     @Test fun chosenPhotoIsPreparedStraightAway() {
         val vm = open()
@@ -411,7 +411,7 @@ class DetectViewModelTest {
         assertEquals(DetectUiState(), vm.state.value)
     }
 
-    // --- detecting (A4.3) ---
+    // --- detecting ---
 
     private fun withPhoto(): DetectViewModel = open().apply { onPhotoPicked("content://media/picker/0/1") }
 
@@ -518,7 +518,7 @@ class DetectViewModelTest {
         assertTrue(vm.state.value.canDetect)
     }
 
-    // --- picking a match (A4.4) ---
+    // --- picking a match ---
 
     @Test fun bestMatchIsShownFirst() {
         detector.result = ApiResult.Success(threeMatches)
@@ -588,7 +588,7 @@ class DetectViewModelTest {
         assertEquals("house_sparrow", vm.state.value.selectedSlug)
     }
 
-    // --- saving (A4.5) ---
+    // --- saving ---
 
     /** A photo detected as threeMatches, with the house sparrow picked. */
     private fun detected(): DetectViewModel {
@@ -699,7 +699,7 @@ class DetectViewModelTest {
         }
     }
 
-    // --- reporting a wrong match (A4.6) ---
+    // --- reporting a wrong match ---
 
     @Test fun reportSendsTheDetailsOnScreenTheNoteAndTheBigPhoto() {
         val vm = detected()

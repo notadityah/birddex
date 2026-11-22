@@ -2,7 +2,6 @@ package com.birddex.app.ui.detect
 
 import android.content.ActivityNotFoundException
 import android.content.pm.PackageManager
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -114,7 +114,7 @@ fun DetectScreen(
                 onTakePhoto = {
                     viewModel.prepareCamera()?.let { uri ->
                         try {
-                            takePhoto.launch(Uri.parse(uri))
+                            takePhoto.launch(uri.toUri())
                         } catch (e: ActivityNotFoundException) {
                             viewModel.onCameraUnavailable()
                         }

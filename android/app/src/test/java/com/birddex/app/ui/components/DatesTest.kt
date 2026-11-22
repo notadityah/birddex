@@ -24,7 +24,7 @@ class DatesTest {
         assertEquals("18 November 2026", formatLongDate(lateUtc, ZoneId.of("UTC"), australia))
     }
 
-    // --- relative dates (gallery cards, A5.1) ---
+    // --- relative dates (gallery cards) ---
 
     private val now = Instant.parse("2026-11-20T09:00:00Z")
     private fun ago(days: Long, hours: Long = 0) = relativeDate(now.minusSeconds((days * 24 + hours) * 3600), now)

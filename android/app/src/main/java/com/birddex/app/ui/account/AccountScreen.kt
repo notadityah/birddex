@@ -173,7 +173,7 @@ private fun ProfileCard(user: AuthUser, stats: AccountStats) {
                 user.createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() }?.let {
                     Text(stringResource(R.string.account_member_since, formatMonthYear(it)), style = statStyle, color = statColor)
                 }
-                Text(stringResource(R.string.account_found, stats.found, stats.total), style = statStyle, color = statColor)
+                Text(pluralStringResource(R.plurals.account_found, stats.total, stats.found, stats.total), style = statStyle, color = statColor)
                 Text(stringResource(R.string.account_shared, stats.shared), style = statStyle, color = statColor)
             }
         }

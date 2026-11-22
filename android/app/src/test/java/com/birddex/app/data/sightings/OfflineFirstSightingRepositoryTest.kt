@@ -128,7 +128,7 @@ class OfflineFirstSightingRepositoryTest {
         assertEquals(ApiResult.Failure(ApiError.Unauthorized), repo.refresh())
     }
 
-    // --- share toggle (A3.6) ---
+    // --- share toggle ---
 
     private val parrotId = "6f1c2a3e-8b4d-4c5e-9f60-1a2b3c4d5e6f" // public in the fixture
     private suspend fun savedById(id: String) = saved().firstOrNull { it.id == id }
@@ -164,7 +164,7 @@ class OfflineFirstSightingRepositoryTest {
         assertNull(savedById(parrotId))
     }
 
-    // --- delete (A3.6) ---
+    // --- delete ---
 
     @Test fun deleteSendsDeleteThenRemovesLocally() = runBlocking {
         refreshWithFixture()
@@ -205,7 +205,7 @@ class OfflineFirstSightingRepositoryTest {
         assertTrue(saved().isEmpty())
     }
 
-    // --- saving a new sighting (A4.5) ---
+    // --- saving a new sighting ---
 
     private val photo = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 42, 0xFF.toByte(), 0xD9.toByte())
     private val newId = "9d7e6f5a-4b3c-4d2e-8f1a-0b9c8d7e6f5a"
@@ -275,7 +275,7 @@ class OfflineFirstSightingRepositoryTest {
         assertEquals(1, server.requestCount)
     }
 
-    // --- reset collection (A5.3) ---
+    // --- reset collection ---
 
     @Test fun deleteAllClearsTheServerThenThePhone() = runBlocking {
         refreshWithFixture()

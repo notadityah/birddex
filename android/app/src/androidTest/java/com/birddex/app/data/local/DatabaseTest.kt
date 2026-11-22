@@ -24,7 +24,7 @@ class DatabaseTest {
 
     @Test fun migrate1To2KeepsSavedBirdsAndAddsSightings() = runTest {
         val name = "migration-test.db"
-        // A v1 database (A3.2) with one saved bird, written with the v1 schema in app/schemas/.
+        // A v1 database with one saved bird, written with the v1 schema in app/schemas/.
         migrations.createDatabase(name, 1).apply {
             execSQL(
                 "INSERT INTO birds (id, name, scientificName, slug, rarity) " +
@@ -61,12 +61,12 @@ class DatabaseTest {
             dao.replaceAll(listOf(older, newer))
             assertEquals(listOf(newer, older), dao.observeAll().first())
 
-            dao.setPublic("b", true) // share toggle (A3.6) changes only that row
+            dao.setPublic("b", true) // share toggle changes only that row
             assertEquals(listOf(true, true), dao.observeAll().first().map { it.isPublic })
             dao.setPublic("a", false)
             assertEquals(listOf(true, false), dao.observeAll().first().map { it.isPublic })
 
-            dao.delete("b") // delete one (A3.6)
+            dao.delete("b") // delete one
             assertEquals(listOf("a"), dao.observeAll().first().map { it.id })
 
             dao.replaceAll(emptyList()) // a user with no sightings

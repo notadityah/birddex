@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.scale
 import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -76,7 +78,7 @@ class BitmapPhotoPreparer @Inject constructor() : PhotoPreparer {
         val made = mutableListOf<Bitmap>() // everything created here, to free afterwards
         fun Bitmap.track(): Bitmap = also { if (it !== source) made += it }
         try {
-            var bitmap = Bitmap.createScaledBitmap(source, size.width, size.height, true).track()
+            var bitmap = source.scale(size.width, size.height).track()
             if (orientation != null) {
                 bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, orientation, true).track()
             }
@@ -91,7 +93,7 @@ class BitmapPhotoPreparer @Inject constructor() : PhotoPreparer {
     }
 
     private fun onWhite(bitmap: Bitmap): Bitmap =
-        Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888).apply {
+        createBitmap(bitmap.width, bitmap.height).apply {
             Canvas(this).apply {
                 drawColor(Color.WHITE)
                 drawBitmap(bitmap, 0f, 0f, null)

@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
         openEmailLink(intent)
     }
 
-    /** App Links (A6.2, AndroidManifest): verify-email and reset-password links from emails. */
+    /** App Links (AndroidManifest): verify-email and reset-password links from emails. */
     private fun openEmailLink(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
         // Reopened from Recents with the old link: it was opened already.

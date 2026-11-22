@@ -80,12 +80,11 @@ data class DexProgress(val foundBirdIds: Set<Int> = emptySet(), val total: Int =
 }
 
 /**
- * The Detect tab (website: DetectPage.vue). A4.1 covers getting the photo in, from the
- * system photo picker or the system camera; neither needs a permission. A4.2 then prepares
- * it (upright, shrunk, JPEG) as soon as it is chosen, like the website. A4.3 sends it to
- * the model; changing the photo cancels a call that is still running (the website aborts it).
- * A4.4 lets the user pick another match, A4.5 saves the picked one as a sighting, and A4.6
- * reports a wrong or missing match to the admins.
+ * The Detect tab (website: DetectPage.vue). The photo comes from the system photo picker or
+ * the system camera; neither needs a permission. It is prepared (upright, shrunk, JPEG) as
+ * soon as it is chosen, like the website, then sent to the model; changing the photo cancels
+ * a call that is still running (the website aborts it). The user can then pick another
+ * match, save the picked one as a sighting, or report a wrong or missing match to the admins.
  *
  * Both file paths live in [SavedStateHandle], so the chosen photo, and a camera photo that
  * is still being taken, survive the app being killed in the background (camera apps often

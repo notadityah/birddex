@@ -7,7 +7,7 @@ import okhttp3.Response
 
 /**
  * Adds the website's `Origin` to better-auth calls. better-auth rejects any auth request
- * that carries a session cookie without one (403 MISSING_OR_NULL_ORIGIN, found in A2.1),
+ * that carries a session cookie without one (403 MISSING_OR_NULL_ORIGIN),
  * which would break sign-out and every call made while signed in.
  */
 class AuthOriginInterceptor(private val origin: String) : Interceptor {
@@ -20,7 +20,7 @@ class AuthOriginInterceptor(private val origin: String) : Interceptor {
 
 /**
  * Turns a "successful" HTML page from an `/api/` path into an error. CloudFront used to answer API
- * 403/404s with the website's index.html and status 200 (fixed in production since A2.1);
+ * 403/404s with the website's index.html and status 200 (since fixed in production);
  * this keeps such a page from ever being read as success if it comes back.
  */
 class HtmlErrorPageInterceptor : Interceptor {

@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Build
+import androidx.annotation.RequiresApi
 import android.os.Environment
 import android.provider.MediaStore
 import coil3.SingletonImageLoader
@@ -44,6 +45,7 @@ class PhotoSaver(private val context: Context) {
         return cache.openSnapshot(key)?.use { snapshot -> cache.fileSystem.read(snapshot.data) { readByteArray() } }
     }
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     private fun saveWithMediaStore(bytes: ByteArray, fileName: String, mimeType: String): Boolean {
         val resolver = context.contentResolver
         val values = ContentValues().apply {

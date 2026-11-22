@@ -46,7 +46,7 @@ data class DexUiState(
 /** One-off feedback shown as a short message. */
 enum class DexMessage { ShareFailed, Deleted, DeleteFailed }
 
-/** MyDex: every species, found or not, with the user's progress and sightings (A3.4–A3.6). */
+/** MyDex: every species, found or not, with the user's progress and sightings. */
 @HiltViewModel
 class DexViewModel @Inject constructor(
     private val birds: BirdRepository,

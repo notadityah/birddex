@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -165,7 +166,7 @@ private fun Header(state: DexUiState) {
             Text(stringResource(R.string.dex_welcome, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Text(
-            stringResource(R.string.dex_found_count, state.foundCount, state.totalCount),
+            pluralStringResource(R.plurals.dex_found_count, state.totalCount, state.foundCount, state.totalCount),
             style = MaterialTheme.typography.titleMedium,
         )
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

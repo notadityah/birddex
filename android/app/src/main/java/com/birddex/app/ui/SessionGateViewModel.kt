@@ -24,7 +24,7 @@ enum class Gate {
 }
 
 /**
- * Session gate (A2.5). Every BirdDex feature beyond the bird list needs an account, like the
+ * Session gate. Every BirdDex feature beyond the bird list needs an account, like the
  * website's route guard, so the tabs only show to a signed-in user. Reacts to sign-in,
  * sign-out and expired sessions (401s) through [AuthRepository.sessionState].
  */

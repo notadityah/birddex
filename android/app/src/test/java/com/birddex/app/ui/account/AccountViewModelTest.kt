@@ -197,7 +197,7 @@ class AccountViewModelTest {
         assertEquals(AccountStats(found = 1, total = 2, shared = 2, sightings = 3), open().stats.value)
     }
 
-    // --- feedback (A5.4) ---
+    // --- feedback ---
 
     @Test fun feedbackSendsTheCategoryAndTrimmedMessage() {
         val vm = open()

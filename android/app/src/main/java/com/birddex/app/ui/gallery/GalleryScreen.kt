@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -231,7 +232,7 @@ private fun GalleryCard(sighting: GallerySighting, now: Instant, onClick: () -> 
 private fun relativeDateText(date: RelativeDate): String = when (date) {
     RelativeDate.Today -> stringResource(R.string.date_today)
     RelativeDate.Yesterday -> stringResource(R.string.date_yesterday)
-    is RelativeDate.DaysAgo -> stringResource(R.string.date_days_ago, date.days)
+    is RelativeDate.DaysAgo -> pluralStringResource(R.plurals.date_days_ago, date.days.toInt(), date.days)
     is RelativeDate.WeeksAgo -> stringResource(R.string.date_weeks_ago, date.weeks)
     is RelativeDate.MonthsAgo -> stringResource(R.string.date_months_ago, date.months)
     is RelativeDate.YearsAgo -> stringResource(R.string.date_years_ago, date.years)

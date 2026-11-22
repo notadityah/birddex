@@ -1,8 +1,8 @@
 package com.birddex.app.data.detect
 
 import android.content.Context
-import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -59,7 +59,7 @@ class CacheDetectPhotoStore @Inject constructor(
     }
 
     override suspend fun importPicked(uri: String): ImportResult = withContext(Dispatchers.IO) {
-        val source = Uri.parse(uri)
+        val source = uri.toUri()
         val mimeType = context.contentResolver.getType(source)
         if (mimeType != null && !mimeType.startsWith("image/")) return@withContext ImportResult.NotAnImage
 
@@ -88,7 +88,7 @@ class CacheDetectPhotoStore @Inject constructor(
 
         /**
          * The website allows 20 MB, but photos from 100+ megapixel phone cameras can be bigger.
-         * The photo is shrunk before it is sent (A4.2), so this only guards the cache.
+         * The photo is shrunk before it is sent, so this only guards the cache.
          */
         const val MAX_BYTES = 50L * 1024 * 1024
 

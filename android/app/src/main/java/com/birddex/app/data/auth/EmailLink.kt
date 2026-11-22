@@ -10,7 +10,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * A link from a BirdDex email that the app opens (App Links, A6.2). better-auth builds them
+ * A link from a BirdDex email that the app opens (App Links). better-auth builds them
  * on the site's own domain (backend/lambda/auth/index.ts):
  * - `https://birddex.fun/api/auth/verify-email?token=<jwt>&callbackURL=…`
  * - `https://birddex.fun/api/auth/reset-password/<token>?callbackURL=…`

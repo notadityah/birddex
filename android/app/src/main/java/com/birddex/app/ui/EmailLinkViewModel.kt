@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * An email link the app was opened with (A6.2), until a screen takes it. MainActivity hands
+ * An email link the app was opened with, until a screen takes it. MainActivity hands
  * links in; the sign-in flow opens them. Like the website, whose reset and verify pages are
  * for signed-out visitors only, a signed-in user is asked to sign out first.
  */

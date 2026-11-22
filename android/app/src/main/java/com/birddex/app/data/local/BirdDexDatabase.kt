@@ -12,8 +12,8 @@ import com.birddex.app.data.sightings.SightingEntity
  * The app's local database (file "birddex.db"). Bump [version] and add a migration whenever a
  * table changes; Room writes each version's schema to android/app/schemas/.
  *
- * - v1 (A3.2): birds
- * - v2 (A3.3): + sightings (automatic migration: new table only)
+ * - v1: birds
+ * - v2: + sightings (automatic migration: new table only)
  */
 @Database(
     entities = [BirdEntity::class, SightingEntity::class],

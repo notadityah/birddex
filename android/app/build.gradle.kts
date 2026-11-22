@@ -20,7 +20,7 @@ val PRODUCTION_BASE_URL = "https://birddex.fun"
 
 // Release signing. Read from local.properties (gitignored) or, for CI, the environment;
 // the keystore and its passwords are never committed. Without a keystore, release builds
-// still build, unsigned. Setup: README.md, "Release builds".
+// still build, unsigned. Setup: README.md, "Android app".
 val localProperties = Properties().apply {
     rootProject.file("local.properties").takeIf { it.isFile }?.inputStream()?.use(::load)
 }
@@ -83,6 +83,7 @@ android {
             manifestPlaceholders["siteHost"] = URI(PRODUCTION_BASE_URL).host
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -146,9 +147,9 @@ dependencies {
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
-    // Photo rotation from the camera's EXIF tag (Detect, A4.2).
+    // Photo rotation from the camera's EXIF tag (Detect).
     implementation(libs.androidx.exifinterface)
-    // Gallery feed that loads more as you scroll (A5.1).
+    // Gallery feed that loads more as you scroll.
     implementation(libs.androidx.paging.compose)
 
     implementation(libs.androidx.room.runtime)

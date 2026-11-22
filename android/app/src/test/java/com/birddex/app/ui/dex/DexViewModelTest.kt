@@ -125,7 +125,7 @@ class DexViewModelTest {
         assertEquals(ApiError.Network, vm.state.value.refreshError)
     }
 
-    // --- manage sightings (A3.6) ---
+    // --- manage sightings ---
 
     private fun TestScope.messagesOf(vm: DexViewModel): MutableList<DexMessage> =
         mutableListOf<DexMessage>().also { list ->

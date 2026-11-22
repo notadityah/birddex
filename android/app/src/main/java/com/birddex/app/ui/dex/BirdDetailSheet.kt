@@ -40,7 +40,7 @@ import com.birddex.app.ui.components.BirdStatsCard
 import com.birddex.app.ui.components.SightingPhoto
 import com.birddex.app.ui.components.formatLongDate
 
-/** What the user can do with one of their sightings in the sheet (A3.6). */
+/** What the user can do with one of their sightings in the sheet. */
 class SightingActions(
     val busyIds: Set<String>,
     val onToggleShared: (Sighting) -> Unit,

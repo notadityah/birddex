@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">BirdDex</string>
 
     <!-- Bottom navigation tabs -->
@@ -10,7 +10,11 @@
     <!-- Dex (copy matches frontend/src/views/MyDexPage.vue and BirdCard.vue) -->
     <string name="dex_title">MyDex</string>
     <string name="dex_welcome">Welcome back, %1$s.</string>
-    <string name="dex_found_count">You\'ve found %1$d of %2$d birds.</string>
+    <!-- Quantity: the total number of birds. -->
+    <plurals name="dex_found_count">
+        <item quantity="one">You\'ve found %1$d of %2$d bird.</item>
+        <item quantity="other">You\'ve found %1$d of %2$d birds.</item>
+    </plurals>
     <string name="dex_percent_complete">%1$d%% complete</string>
     <string name="dex_filter_all">All</string>
     <string name="dex_filter_found">Found</string>
@@ -138,7 +142,10 @@
     <!-- Relative dates (website: relativeDate in utils/dateFormat.js) -->
     <string name="date_today">Today</string>
     <string name="date_yesterday">Yesterday</string>
-    <string name="date_days_ago">%1$d days ago</string>
+    <plurals name="date_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
     <string name="date_weeks_ago">%1$dw ago</string>
     <string name="date_months_ago">%1$dmo ago</string>
     <string name="date_years_ago">%1$dy ago</string>
@@ -158,8 +165,12 @@
     <string name="account_verified">Verified</string>
     <string name="account_unverified">Unverified</string>
     <string name="account_member_since">Member since %1$s</string>
-    <string name="account_found">%1$d of %2$d birds found</string>
-    <string name="account_shared">%1$d shared to gallery</string>
+    <!-- Quantity: the total number of birds. -->
+    <plurals name="account_found">
+        <item quantity="one">%1$d of %2$d bird found</item>
+        <item quantity="other">%1$d of %2$d birds found</item>
+    </plurals>
+    <string name="account_shared" tools:ignore="PluralsCandidate">%1$d shared to gallery</string>
     <string name="account_gallery_settings">Gallery Settings</string>
     <string name="account_anonymous">Appear as Anonymous in gallery</string>
     <string name="account_anonymous_hint">When enabled, your name won\'t be shown on shared sightings.</string>
@@ -283,7 +294,7 @@
     <string name="auth_error_network">Couldn\'t reach BirdDex. Check your connection and try again.</string>
     <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
     <string name="auth_error_invalid_link">This link is invalid or has expired.</string>
-    <!-- Email links (A6.2). Reset copy matches ResetPasswordPage.vue; the website has no verify page. -->
+    <!-- Email links. Reset copy matches ResetPasswordPage.vue; the website has no verify page. -->
     <string name="verify_link_title">Verifying your email</string>
     <string name="verify_link_subtitle">This only takes a moment.</string>
     <string name="verify_link_done_title">Email verified</string>

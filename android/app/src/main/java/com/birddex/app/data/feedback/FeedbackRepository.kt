@@ -31,8 +31,8 @@ data class FeedbackCreated(val id: String, val uploadUrl: String? = null)
 data class FeedbackSent(val photoUploaded: Boolean)
 
 /**
- * Feedback to the BirdDex team, read in the admin panel: wrong detections now (A4.6), and
- * the general feedback form later (A5.4).
+ * Feedback to the BirdDex team, read in the admin panel: wrong-detection reports from
+ * Detect and the general feedback form on the account tab.
  */
 interface FeedbackRepository {
     /**

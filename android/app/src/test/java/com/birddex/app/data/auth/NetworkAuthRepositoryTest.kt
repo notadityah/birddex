@@ -197,7 +197,7 @@ class NetworkAuthRepositoryTest {
         assertEquals(AuthResult.Failure(AuthError.PasswordResetUnavailable), repo.requestPasswordReset("t@example.com"))
     }
 
-    // --- email links (A6.2) ---
+    // --- email links ---
 
     @Test fun verifyEmailAsksForJsonNotTheWebsiteRedirect() = runBlocking {
         respond(200, """{"status":true,"user":null}""")
@@ -292,7 +292,7 @@ class NetworkAuthRepositoryTest {
         assertTrue(storedCookieNames().isEmpty())
     }
 
-    // --- launch restore + expired sessions (A2.5) ---
+    // --- launch restore + expired sessions ---
 
     private suspend fun signInWithCookie() {
         respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
