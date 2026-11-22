@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Files the FileProvider may hand to other apps: only the Detect tab's camera photos
+     (CacheDetectPhotoStore.DIR_NAME), so the system camera can write into them. -->
+<paths>
+    <cache-path name="detect" path="detect/" />
+</paths>

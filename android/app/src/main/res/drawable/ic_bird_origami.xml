@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Not found yet" placeholder, converted from frontend/public/bird-in-flight-origami-svgrepo-com.svg
+     (viewBox 0 0 290.873 290.873). Tinted by the caller. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="290.873"
+    android:viewportHeight="290.873">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M44.268,139.532L44.268,79.35L44.268,41.049L93.507,90.294Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M0,73.384L32.334,41.049L32.334,73.384Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M149.583,249.824L113.508,213.748L149.583,181.843Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M103.066,202.799L47.216,153.823L160.968,48.77L290.873,48.77Z" />
+</vector>

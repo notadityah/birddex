@@ -1,0 +1,243 @@
+package com.birddex.app.ui
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.birddex.app.R
+import com.birddex.app.data.auth.EmailLink
+import com.birddex.app.ui.account.AccountScreen
+import com.birddex.app.ui.auth.ForgotPasswordScreen
+import com.birddex.app.ui.auth.LoginScreen
+import com.birddex.app.ui.auth.RegisterScreen
+import com.birddex.app.ui.auth.ResetPasswordScreen
+import com.birddex.app.ui.auth.VerifyEmailScreen
+import com.birddex.app.ui.auth.VerifyLinkScreen
+import com.birddex.app.ui.detect.DetectScreen
+import com.birddex.app.ui.dex.DexScreen
+import com.birddex.app.ui.gallery.GalleryScreen
+import com.birddex.app.ui.navigation.AccountRoute
+import com.birddex.app.ui.navigation.DetectRoute
+import com.birddex.app.ui.navigation.DexRoute
+import com.birddex.app.ui.navigation.ForgotPasswordRoute
+import com.birddex.app.ui.navigation.GalleryRoute
+import com.birddex.app.ui.navigation.LoginRoute
+import com.birddex.app.ui.navigation.RegisterRoute
+import com.birddex.app.ui.navigation.ResetPasswordRoute
+import com.birddex.app.ui.navigation.TopLevelDestination
+import com.birddex.app.ui.navigation.VerifyEmailRoute
+import com.birddex.app.ui.navigation.VerifyLinkRoute
+import com.birddex.app.ui.navigation.navigateToTopLevel
+import com.birddex.app.ui.navigation.openLogin
+import com.birddex.app.ui.navigation.openRegister
+import com.birddex.app.ui.welcome.WelcomeDialog
+import com.birddex.app.ui.welcome.WelcomeViewModel
+
+/**
+ * Top level: the session gate picks between the sign-in flow and the tabs. Email links the
+ * app was opened with ([EmailLinkViewModel]) open in the sign-in flow.
+ */
+@Composable
+fun BirdDexApp(
+    viewModel: SessionGateViewModel = hiltViewModel(),
+    links: EmailLinkViewModel = hiltViewModel(),
+) {
+    val gate by viewModel.gate.collectAsStateWithLifecycle()
+    val link by links.pending.collectAsStateWithLifecycle()
+    when (gate) {
+        // Only while the saved session is looked up on the device (no network). MainActivity
+        // keeps the splash screen up meanwhile, so this is rarely seen.
+        Gate.Loading -> Box(Modifier.fillMaxSize())
+        Gate.SignedOut -> SignInFlow(link, onLinkOpened = links::handled)
+        Gate.Main -> {
+            MainTabs()
+            if (link != null) {
+                val signingOut by links.signingOut.collectAsStateWithLifecycle()
+                SignedInLinkDialog(signingOut, onSignOut = links::signOutToOpen, onCancel = links::handled)
+            }
+        }
+    }
+}
+
+/**
+ * Signed out: sign in, register, verify email, forgot password, and the screens email links
+ * open ([link], then [onLinkOpened]). No tabs.
+ */
+@Composable
+private fun SignInFlow(link: EmailLink?, onLinkOpened: () -> Unit) {
+    val navController = rememberNavController()
+    NavHost(navController = navController, startDestination = LoginRoute()) {
+        composable<LoginRoute> {
+            LoginScreen(
+                onBack = navController.backIfNotFirst(),
+                onNeedsVerification = { email -> navController.navigate(VerifyEmailRoute(email)) },
+                onCreateAccount = { navController.openRegister() },
+                onForgotPassword = { email -> navController.navigate(ForgotPasswordRoute(email.ifBlank { null })) },
+            )
+        }
+        composable<RegisterRoute> {
+            RegisterScreen(
+                onBack = { navController.popBackStack() },
+                onRegistered = { email ->
+                    navController.navigate(VerifyEmailRoute(email)) {
+                        // Back from "check your inbox" shouldn't return to a filled-in form.
+                        popUpTo<RegisterRoute> { inclusive = true }
+                    }
+                },
+                onSignIn = { navController.openLogin() },
+            )
+        }
+        composable<VerifyEmailRoute> {
+            VerifyEmailScreen(
+                onBack = { navController.popBackStack() },
+                onSignIn = { email -> navController.openLogin(email) },
+            )
+        }
+        composable<ForgotPasswordRoute> {
+            ForgotPasswordScreen(
+                onBack = { navController.popBackStack() },
+                onSignIn = { email -> navController.openLogin(email.ifBlank { null }) },
+            )
+        }
+        composable<VerifyLinkRoute> {
+            VerifyLinkScreen(
+                onBack = navController.backIfNotFirst(),
+                onSignIn = { email -> navController.openLogin(email) },
+            )
+        }
+        composable<ResetPasswordRoute> {
+            ResetPasswordScreen(
+                onBack = navController.backIfNotFirst(),
+                onSignIn = { navController.openLogin() },
+                onRequestNewLink = {
+                    navController.navigate(ForgotPasswordRoute()) { popUpTo<ResetPasswordRoute> { inclusive = true } }
+                },
+            )
+        }
+    }
+
+    // After the NavHost, so its graph is set. Opens on top of whatever was showing (often
+    // "Verify your email"), so Back returns there.
+    LaunchedEffect(link) {
+        when (link) {
+            null -> return@LaunchedEffect
+            is EmailLink.VerifyEmail -> navController.navigate(VerifyLinkRoute(link.token))
+            is EmailLink.ResetPassword -> navController.navigate(ResetPasswordRoute(link.token))
+        }
+        onLinkOpened()
+    }
+}
+
+/** An email link opened while signed in (website: those pages are for signed-out visitors). */
+@Composable
+private fun SignedInLinkDialog(signingOut: Boolean, onSignOut: () -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { if (!signingOut) onCancel() },
+        title = { Text(stringResource(R.string.link_signed_in_title)) },
+        text = { Text(stringResource(R.string.link_signed_in_body)) },
+        confirmButton = {
+            TextButton(onClick = onSignOut, enabled = !signingOut) {
+                Text(stringResource(if (signingOut) R.string.signing_out else R.string.sign_out))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, enabled = !signingOut) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}
+
+/** A back action, or null on the first screen (where Back leaves the app instead). */
+private fun NavHostController.backIfNotFirst(): (() -> Unit)? =
+    if (previousBackStackEntry != null) ({ popBackStack() }) else null
+
+/** Signed in: bottom navigation bar + the four tabs, and the first-run welcome above them. */
+@Composable
+private fun MainTabs(welcome: WelcomeViewModel = hiltViewModel()) {
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = backStackEntry?.destination
+
+    val welcomeOpen by welcome.open.collectAsStateWithLifecycle()
+    val welcomeName by welcome.userName.collectAsStateWithLifecycle()
+    if (welcomeOpen) {
+        WelcomeDialog(
+            name = welcomeName,
+            onExplore = {
+                welcome.dismiss()
+                navController.navigateToTopLevel(TopLevelDestination.Dex)
+            },
+            onTryDetect = {
+                welcome.dismiss()
+                navController.navigateToTopLevel(TopLevelDestination.Detect)
+            },
+            onDismiss = welcome::dismiss,
+        )
+    }
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                TopLevelDestination.entries.forEach { destination ->
+                    val selected = currentDestination.isOn(destination)
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = { navController.navigateToTopLevel(destination) },
+                        icon = {
+                            Icon(
+                                painterResource(
+                                    if (selected) destination.selectedIcon else destination.unselectedIcon,
+                                ),
+                                // The label below already names the tab for screen readers.
+                                contentDescription = null,
+                            )
+                        },
+                        label = { Text(stringResource(destination.label)) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = DexRoute,
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding),
+        ) {
+            composable<DexRoute> {
+                DexScreen(onFindBird = { navController.navigateToTopLevel(TopLevelDestination.Detect) })
+            }
+            composable<DetectRoute> {
+                DetectScreen(onOpenDex = { navController.navigateToTopLevel(TopLevelDestination.Dex) })
+            }
+            composable<GalleryRoute> { GalleryScreen() }
+            composable<AccountRoute> { AccountScreen(onShowWelcome = welcome::show) }
+        }
+    }
+}
+
+private fun NavDestination?.isOn(destination: TopLevelDestination): Boolean =
+    this?.hierarchy?.any { it.hasRoute(destination.route::class) } == true

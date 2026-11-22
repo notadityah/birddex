@@ -1,0 +1,66 @@
+{
+  "predictions": [
+    {
+      "label": "house_sparrow",
+      "confidence": 91.37
+    },
+    {
+      "label": "spotted_turtle_dove",
+      "confidence": 4.2
+    },
+    {
+      "label": "removed_bird",
+      "confidence": 0.5
+    }
+  ],
+  "bird": {
+    "id": 14,
+    "name": "House Sparrow",
+    "scientific_name": "Passer domesticus",
+    "slug": "house_sparrow",
+    "wingspan": "21–25 cm",
+    "length": "14–16 cm",
+    "weight": "24–32 g",
+    "conservation_status": "Least Concern",
+    "habitat": "Urban areas, farms (introduced)",
+    "diet": "Seeds, grain, insects, scraps",
+    "call_description": "Persistent chirping \"cheep cheep\"",
+    "fun_fact": "One of the world's most widespread birds, introduced to Australia in the 1860s.",
+    "rarity": "common",
+    "appearance": "Male has a grey crown, black bib and chestnut nape; female is plain grey-brown with a pale eyebrow."
+  },
+  "birds": {
+    "house_sparrow": {
+      "id": 14,
+      "name": "House Sparrow",
+      "scientific_name": "Passer domesticus",
+      "slug": "house_sparrow",
+      "wingspan": "21–25 cm",
+      "length": "14–16 cm",
+      "weight": "24–32 g",
+      "conservation_status": "Least Concern",
+      "habitat": "Urban areas, farms (introduced)",
+      "diet": "Seeds, grain, insects, scraps",
+      "call_description": "Persistent chirping \"cheep cheep\"",
+      "fun_fact": "One of the world's most widespread birds, introduced to Australia in the 1860s.",
+      "rarity": "common",
+      "appearance": "Male has a grey crown, black bib and chestnut nape; female is plain grey-brown with a pale eyebrow."
+    },
+    "spotted_turtle_dove": {
+      "id": 31,
+      "name": "Spotted Turtle-dove",
+      "scientific_name": "Spilopelia chinensis",
+      "slug": "spotted_turtle_dove",
+      "wingspan": null,
+      "length": null,
+      "weight": null,
+      "conservation_status": null,
+      "habitat": null,
+      "diet": null,
+      "call_description": null,
+      "fun_fact": null,
+      "rarity": null,
+      "appearance": null
+    }
+  }
+}

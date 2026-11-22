@@ -1,6 +1,6 @@
 # BirdDex
 
-A Pokedex-style bird-tracking web app that lets you identify Australian birds using AI-powered detection, log your sightings, and share them with the community.
+A Pokedex-style bird-tracking web app that lets you identify Australian birds using AI-powered detection, log your sightings, and share them with the community. A native Android app is in progress in [`android/`](android/).
 
 ## Features
 
@@ -23,6 +23,7 @@ A Pokedex-style bird-tracking web app that lets you identify Australian birds us
 | Detection      | ONNX Runtime inference on Lambda (Docker, x86_64)          |
 | Database       | Neon (serverless PostgreSQL 17)                            |
 | Infrastructure | AWS CDK (TypeScript), HTTP API Gateway v2, CloudFront, S3  |
+| Android app    | Kotlin, Jetpack Compose, Material 3, Hilt, Retrofit/OkHttp |
 
 ## Project Structure
 
@@ -53,6 +54,14 @@ bird-dex/
 │   │   ├── migrate/           # schema.sql — DB schema + seed data (applied manually)
 │   │   └── lib/               # Shared utilities (DB connections, secrets caching)
 │   └── test/                  # CDK assertion tests
+│
+├── android/                   # Native Android app (Kotlin, Jetpack Compose)
+│   └── app/src/
+│       ├── main/java/com/birddex/app/
+│       │   ├── data/network/  # Retrofit API, persistent cookie jar
+│       │   ├── di/            # Hilt modules
+│       │   └── ui/            # Theme, navigation, one package per tab
+│       └── test/              # JVM unit tests
 │___
 ```
 
@@ -63,6 +72,7 @@ bird-dex/
 - Node.js 22+
 - AWS CLI configured (for backend deployment)
 - AWS CDK CLI (`npm install -g aws-cdk`)
+- Android Studio 2026.2+ (only for the Android app)
 
 ### Frontend
 
@@ -84,6 +94,34 @@ npm test             # Run CDK assertion tests
 npx cdk synth        # Synthesize CloudFormation template
 npx cdk deploy       # Deploy (requires CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGION)
 ```
+
+### Android app
+
+The native app in `android/` uses the same API and accounts as the website; it has no backend of its own.
+
+**Install it on a phone:** open the newest `android-v*` release on the [Releases page](https://github.com/notadityah/birddex/releases) on your phone, download the APK, open it and allow the install. It isn't on Google Play.
+
+**Build it** in Android Studio (open the `android/` folder), or from a terminal with `JAVA_HOME` set to Android Studio's JDK (`<Android Studio>/jbr`; in PowerShell use `.\gradlew`):
+
+```bash
+cd android
+./gradlew installDebug         # Debug app ("BirdDex Debug") on an emulator or phone
+./gradlew testDebugUnitTest    # Unit tests
+./gradlew assembleRelease      # Signed release APK in app/build/outputs/apk/release/
+```
+
+**Release signing:** release builds are signed with the keystore set in `android/local.properties`, which is never committed. Back up the keystore and its password: updates only install over the app when they're signed with the same key.
+
+```properties
+birddex.release.storeFile=C\:/Users/<you>/.android/birddex-upload.jks
+birddex.release.storePassword=<password>
+birddex.release.keyAlias=upload
+birddex.release.keyPassword=<password>
+```
+
+A new signing key also needs an Android OAuth client in Google Cloud (package `fun.birddex.app`, the key's SHA-1) and an entry in `frontend/public/.well-known/assetlinks.json` (its SHA-256, published as in [`DEPLOY.md`](DEPLOY.md)), or Google sign-in and email links won't work.
+
+**Publish a release:** raise `versionCode` and `versionName` in `android/app/build.gradle.kts`, build, then tag `android-v<version>` and attach the APK with `gh release create android-v<version> <apk> --prerelease`.
 
 ### Database
 

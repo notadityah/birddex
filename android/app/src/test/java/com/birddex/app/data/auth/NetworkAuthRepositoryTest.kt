@@ -1,0 +1,347 @@
+package com.birddex.app.data.auth
+
+import com.birddex.app.data.network.ApiClients
+import com.birddex.app.data.network.AuthApi
+import com.birddex.app.data.network.PersistentCookieJar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import mockwebserver3.RecordedRequest
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import retrofit2.create
+
+/** Runs the real HTTP stack (interceptors, Retrofit, cookie jar) against a fake server. */
+class NetworkAuthRepositoryTest {
+
+    @get:Rule val tmp = TemporaryFolder()
+
+    private val server = MockWebServer()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private lateinit var baseUrl: String
+    private lateinit var cookieJar: PersistentCookieJar
+    private lateinit var client: OkHttpClient
+    private lateinit var repo: NetworkAuthRepository
+
+    private val userJson =
+        """{"id":"u1","name":"Test","email":"t@example.com","emailVerified":true,"createdAt":"2026-11-19T00:00:00Z"}"""
+
+    @Before fun setUp() {
+        server.start()
+        baseUrl = server.url("/").toString()
+        val storeFile = tmp.newFolder().resolve("cookies.preferences_pb")
+        cookieJar = PersistentCookieJar(PersistentCookieJar.createStore(scope) { storeFile })
+        val sessionExpiry = SessionExpiry()
+        client = ApiClients.okHttpClient(
+            baseUrl,
+            cookieJar,
+            userAgent = "test",
+            debugLogging = false,
+            onUnauthorized = sessionExpiry::onUnauthorized,
+        )
+        val api = ApiClients.retrofit(baseUrl, client).create<AuthApi>()
+        repo = NetworkAuthRepository(
+            api,
+            cookieJar,
+            ApiClients.json,
+            verifyCallbackUrl = "https://birddex.fun/login",
+            resetPasswordUrl = "https://birddex.fun/reset-password",
+            sessionExpiry = sessionExpiry,
+        )
+    }
+
+    @After fun tearDown() {
+        server.close()
+        scope.cancel()
+    }
+
+    private fun respond(code: Int, body: String, contentType: String = "application/json", vararg headers: Pair<String, String>) {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(code)
+                .addHeader("Content-Type", contentType)
+                .apply { headers.forEach { (name, value) -> addHeader(name, value) } }
+                .body(body)
+                .build(),
+        )
+    }
+
+    private val sessionCookie = "Set-Cookie" to "better-auth.session_token=abc.sig; Max-Age=604800; Path=/; HttpOnly"
+    private fun storedCookieNames() = cookieJar.loadForRequest(server.url("/api/sightings")).map { it.name }
+    private fun RecordedRequest.bodyText() = body?.utf8().orEmpty()
+
+    // --- sign in ---
+
+    @Test fun signInSuccessStoresSessionAndSendsOrigin() = runBlocking {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+
+        val result = repo.signIn("  t@example.com ", "pw")
+
+        assertEquals("u1", (result as AuthResult.Success).value.id)
+        assertEquals(SessionState.SignedIn(result.value), repo.sessionState.value)
+        assertEquals(listOf("better-auth.session_token"), storedCookieNames())
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/sign-in/email", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        val body = request.bodyText()
+        assertTrue(body, body.contains(""""email":"t@example.com"""") && body.contains(""""rememberMe":true"""))
+    }
+
+    @Test fun wrongPasswordIsInvalidCredentialsAndStaysSignedOut() = runBlocking {
+        respond(401, """{"code":"INVALID_EMAIL_OR_PASSWORD","message":"Invalid email or password"}""")
+
+        assertEquals(AuthResult.Failure(AuthError.InvalidCredentials), repo.signIn("t@example.com", "nope"))
+        assertTrue(repo.sessionState.value !is SessionState.SignedIn)
+        assertTrue(storedCookieNames().isEmpty())
+    }
+
+    @Test fun unverifiedEmail() = runBlocking {
+        respond(403, """{"code":"EMAIL_NOT_VERIFIED","message":"Email not verified"}""")
+        assertEquals(AuthResult.Failure(AuthError.EmailNotVerified), repo.signIn("t@example.com", "pw"))
+    }
+
+    @Test fun rateLimited() = runBlocking {
+        respond(429, "Too many requests. Please try again later.", contentType = "text/plain")
+        assertEquals(AuthResult.Failure(AuthError.TooManyAttempts), repo.signIn("t@example.com", "pw"))
+    }
+
+    @Test fun htmlPageIsAnErrorNotSuccess() = runBlocking {
+        // Uses a call whose body isn't parsed as JSON, so only HtmlErrorPageInterceptor can catch it.
+        respond(200, "<!DOCTYPE html><html></html>", contentType = "text/html")
+        val result = repo.resendVerificationEmail("t@example.com")
+        assertTrue(result.toString(), result is AuthResult.Failure && result.error is AuthError.Unexpected)
+    }
+
+    @Test fun serverUnreachableIsNetworkError() = runBlocking {
+        server.close()
+        assertEquals(AuthResult.Failure(AuthError.Network), repo.signIn("t@example.com", "pw"))
+        assertEquals(SessionState.Unknown, repo.sessionState.value)
+    }
+
+    // --- Google ---
+
+    @Test fun googleSignInSendsIdTokenAndStoresSession() = runBlocking {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+
+        val result = repo.signInWithGoogle("google.id.token")
+
+        assertEquals("u1", (result as AuthResult.Success).value.id)
+        assertEquals(SessionState.SignedIn(result.value), repo.sessionState.value)
+        assertEquals(listOf("better-auth.session_token"), storedCookieNames())
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/sign-in/social", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"provider":"google","idToken":{"token":"google.id.token"}}""", request.bodyText())
+    }
+
+    @Test fun googleSignInRejectedTokenKeepsServerMessage() = runBlocking {
+        respond(401, """{"code":"INVALID_TOKEN","message":"Invalid token"}""")
+        assertEquals(AuthResult.Failure(AuthError.Unexpected(401, "Invalid token")), repo.signInWithGoogle("bad"))
+        assertTrue(repo.sessionState.value !is SessionState.SignedIn)
+    }
+
+    // --- sign up ---
+
+    @Test fun signUpSendsCallbackAndDoesNotSignIn() = runBlocking {
+        respond(200, """{"token":null,"user":$userJson}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.signUp(" Test ", "t@example.com", "longpassword"))
+        assertEquals(SessionState.Unknown, repo.sessionState.value)
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/sign-up/email", request.url.encodedPath)
+        val body = request.bodyText()
+        assertTrue(body, body.contains(""""name":"Test"""") && body.contains(""""callbackURL":"https://birddex.fun/login""""))
+    }
+
+    @Test fun signUpWithExistingEmail() = runBlocking {
+        respond(422, """{"code":"USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL","message":"User already exists"}""")
+        assertEquals(AuthResult.Failure(AuthError.EmailAlreadyInUse), repo.signUp("Test", "t@example.com", "longpassword"))
+    }
+
+    @Test fun resendVerificationEmail() = runBlocking {
+        respond(200, """{"status":true}""")
+        assertEquals(AuthResult.Success(Unit), repo.resendVerificationEmail("t@example.com"))
+        assertEquals("/api/auth/send-verification-email", server.takeRequest().url.encodedPath)
+    }
+
+    // --- password reset ---
+
+    @Test fun passwordResetSendsEmailAndWebsiteRedirect() = runBlocking {
+        respond(200, """{"status":true,"message":"If this email exists in our system, check your email for the reset link"}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.requestPasswordReset(" t@example.com "))
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/request-password-reset", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"email":"t@example.com","redirectTo":"https://birddex.fun/reset-password"}""", request.bodyText())
+    }
+
+    @Test fun passwordResetDisabledOnServer() = runBlocking {
+        respond(500, """{"code":"RESET_PASSWORD_DISABLED","message":"Reset password isn't enabled"}""")
+        assertEquals(AuthResult.Failure(AuthError.PasswordResetUnavailable), repo.requestPasswordReset("t@example.com"))
+    }
+
+    // --- email links ---
+
+    @Test fun verifyEmailAsksForJsonNotTheWebsiteRedirect() = runBlocking {
+        respond(200, """{"status":true,"user":null}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.verifyEmail("a.b+c/d"))
+
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("/api/auth/verify-email", request.url.encodedPath)
+        assertEquals("a.b+c/d", request.url.queryParameter("token")) // encoded on the way out
+        assertNull(request.url.queryParameter("callbackURL")) // or better-auth redirects to the website
+        assertEquals(SessionState.Unknown, repo.sessionState.value) // verifying doesn't sign in
+    }
+
+    @Test fun verifyEmailWithAnExpiredLink() = runBlocking {
+        respond(401, """{"code":"TOKEN_EXPIRED","message":"Token expired"}""")
+        assertEquals(AuthResult.Failure(AuthError.InvalidLink), repo.verifyEmail("old"))
+    }
+
+    @Test fun resetPasswordSendsTheTokenAndNewPassword() = runBlocking {
+        respond(200, """{"status":true}""")
+
+        assertEquals(AuthResult.Success(Unit), repo.resetPassword("tok123", "n3w pass!"))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/auth/reset-password", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertEquals("""{"newPassword":"n3w pass!","token":"tok123"}""", request.bodyText())
+    }
+
+    @Test fun resetPasswordWithAUsedLink() = runBlocking {
+        respond(400, """{"code":"INVALID_TOKEN","message":"Invalid token"}""")
+        assertEquals(AuthResult.Failure(AuthError.InvalidLink), repo.resetPassword("used", "longenough"))
+    }
+
+    @Test fun resetPasswordTooShortForTheServer() = runBlocking {
+        respond(400, """{"code":"PASSWORD_TOO_SHORT","message":"Password too short"}""")
+        assertEquals(AuthResult.Failure(AuthError.PasswordTooShort), repo.resetPassword("tok", "short"))
+    }
+
+    // --- session ---
+
+    @Test fun refreshSessionSignedOut() = runBlocking {
+        respond(200, "null")
+        assertEquals(AuthResult.Success(null), repo.refreshSession())
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+    }
+
+    @Test fun refreshSessionSignedIn() = runBlocking {
+        respond(200, """{"session":{"id":"s1","expiresAt":"2026-11-26T00:00:00Z"},"user":$userJson}""")
+        val result = repo.refreshSession() as AuthResult.Success
+        assertEquals("u1", result.value?.id)
+        assertEquals(SessionState.SignedIn(result.value!!), repo.sessionState.value)
+    }
+
+    @Test fun refreshSessionOfflineKeepsState() = runBlocking {
+        respond(200, "null")
+        repo.refreshSession()
+        server.close()
+
+        assertEquals(AuthResult.Failure(AuthError.Network), repo.refreshSession())
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+    }
+
+    // --- sign out ---
+
+    @Test fun signOutSendsOriginAndClearsCookie() = runBlocking {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+        repo.signIn("t@example.com", "pw")
+        server.takeRequest()
+        respond(200, """{"success":true}""")
+
+        repo.signOut()
+
+        val request = server.takeRequest()
+        assertEquals("/api/auth/sign-out", request.url.encodedPath)
+        assertEquals(ApiClients.originOf(baseUrl), request.headers["Origin"])
+        assertTrue(request.headers["Cookie"].orEmpty().contains("better-auth.session_token=abc.sig"))
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+        assertTrue(storedCookieNames().isEmpty())
+    }
+
+    @Test fun signOutClearsLocallyEvenIfServerFails() = runBlocking {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+        repo.signIn("t@example.com", "pw")
+        respond(500, """{"message":"boom"}""")
+
+        repo.signOut()
+
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+        assertTrue(storedCookieNames().isEmpty())
+    }
+
+    // --- launch restore + expired sessions ---
+
+    private suspend fun signInWithCookie() {
+        respond(200, """{"redirect":false,"token":"abc","user":$userJson}""", headers = arrayOf(sessionCookie))
+        repo.signIn("t@example.com", "pw")
+        server.takeRequest()
+    }
+
+    @Test fun restoreWithoutSavedSessionIsSignedOut() = runBlocking {
+        assertEquals(false, repo.restoreSession())
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+    }
+
+    @Test fun restoreFindsSavedSession() = runBlocking {
+        signInWithCookie()
+        assertEquals(true, repo.restoreSession())
+        assertTrue(repo.sessionState.value is SessionState.SignedIn) // unchanged
+    }
+
+    @Test fun apiUnauthorizedSignsOutAndForgetsCookie() = runBlocking {
+        signInWithCookie()
+        respond(401, """{"error":"Unauthorized"}""")
+
+        client.newCall(Request.Builder().url(server.url("/api/sightings")).build()).execute().close()
+
+        assertEquals(SessionState.SignedOut, repo.sessionState.value)
+        assertTrue(storedCookieNames().isEmpty())
+    }
+
+    @Test fun wrongPasswordWhileSignedInDoesNotSignOut() = runBlocking {
+        signInWithCookie()
+        respond(401, """{"code":"INVALID_EMAIL_OR_PASSWORD","message":"Invalid email or password"}""")
+
+        repo.signIn("t@example.com", "wrong")
+
+        assertTrue(repo.sessionState.value is SessionState.SignedIn)
+        assertEquals(listOf("better-auth.session_token"), storedCookieNames())
+    }
+
+    // --- interceptors ---
+
+    @Test fun originIsOnlyAddedToAuthCalls() {
+        respond(200, "[]")
+        client.newCall(Request.Builder().url(server.url("/api/birds")).build()).execute().close()
+        assertNull(server.takeRequest().headers["Origin"])
+    }
+
+    @Test fun originOfBaseUrl() {
+        assertEquals("https://birddex.fun", ApiClients.originOf("https://birddex.fun"))
+        assertEquals("https://birddex.fun", ApiClients.originOf("https://birddex.fun/"))
+        assertEquals("http://localhost:8080", ApiClients.originOf("http://localhost:8080/api/"))
+    }
+}

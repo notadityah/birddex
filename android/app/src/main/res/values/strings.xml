@@ -1,0 +1,313 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">BirdDex</string>
+
+    <!-- Bottom navigation tabs -->
+    <string name="tab_dex">Dex</string>
+    <string name="tab_detect">Detect</string>
+    <string name="tab_gallery">Gallery</string>
+    <string name="tab_account">Account</string>
+
+    <!-- Dex (copy matches frontend/src/views/MyDexPage.vue and BirdCard.vue) -->
+    <string name="dex_title">MyDex</string>
+    <string name="dex_welcome">Welcome back, %1$s.</string>
+    <!-- Quantity: the total number of birds. -->
+    <plurals name="dex_found_count">
+        <item quantity="one">You\'ve found %1$d of %2$d bird.</item>
+        <item quantity="other">You\'ve found %1$d of %2$d birds.</item>
+    </plurals>
+    <string name="dex_percent_complete">%1$d%% complete</string>
+    <string name="dex_filter_all">All</string>
+    <string name="dex_filter_found">Found</string>
+    <string name="dex_filter_not_found">Not Found</string>
+    <string name="dex_found_badge">Found</string>
+    <string name="dex_empty_title">No birds to show</string>
+    <string name="dex_empty_hint">Try changing the filter above.</string>
+    <string name="dex_showing_saved">Couldn\'t refresh, showing saved birds.</string>
+    <string name="dex_load_failed">Couldn\'t load the birds. Check your connection and try again.</string>
+    <!-- Bird detail (copy matches BirdDetailModal.vue and BirdStatsCard.vue) -->
+    <plurals name="detail_sighting_count">
+        <item quantity="one">%1$d sighting</item>
+        <item quantity="other">%1$d sightings</item>
+    </plurals>
+    <string name="detail_not_found">Not yet found</string>
+    <string name="detail_no_sightings">No sightings yet.</string>
+    <string name="detail_go_detect">Go to Detect to find this bird</string>
+    <string name="detail_your_sightings">Your sightings</string>
+    <string name="detail_shared">Shared to gallery</string>
+    <string name="detail_private">Only you can see this</string>
+    <string name="share_to_gallery">Share to gallery</string>
+    <string name="unshare_from_gallery">Unshare from gallery</string>
+    <string name="share_failed">Couldn\'t change sharing. Try again.</string>
+    <string name="save_photo">Save photo</string>
+    <string name="photo_saved">Photo saved to Pictures/BirdDex</string>
+    <string name="photo_save_failed">Couldn\'t save the photo.</string>
+    <string name="storage_permission_needed">Allow storage access to save photos.</string>
+    <string name="delete_sighting">Delete sighting</string>
+    <string name="delete_confirm_title">Delete this sighting?</string>
+    <string name="delete_confirm_body">This permanently deletes the sighting and its photo. It can\'t be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="sighting_deleted">Sighting deleted</string>
+    <string name="delete_failed">Couldn\'t delete the sighting. Try again.</string>
+    <string name="detail_unknown_date">Date unknown</string>
+    <string name="detail_photo_description">Your photo of %1$s</string>
+    <string name="stat_wingspan">Wingspan</string>
+    <string name="stat_length">Length</string>
+    <string name="stat_weight">Weight</string>
+    <string name="stat_diet">Diet</string>
+    <string name="stat_appearance">Appearance</string>
+    <string name="stat_habitat">Habitat</string>
+    <string name="stat_call">Call</string>
+    <string name="stat_fun_fact">Fun fact</string>
+    <string name="rarity_common">Common</string>
+    <string name="rarity_uncommon">Uncommon</string>
+    <string name="rarity_rare">Rare</string>
+
+    <!-- Detect (copy follows DetectPage.vue and ImageUploader.vue) -->
+    <string name="detect_subtitle">Take or pick a photo to identify a bird.</string>
+    <string name="take_photo">Take photo</string>
+    <string name="choose_photo">Choose photo</string>
+    <string name="change_photo">Change photo</string>
+    <string name="detect_selected_photo">Selected bird photo</string>
+    <string name="detect_error_not_image">That file isn\'t a photo. Please choose an image.</string>
+    <string name="detect_error_too_large">Photo is too large. Maximum size is 50 MB.</string>
+    <string name="detect_error_import">Couldn\'t open that photo. Try a different one.</string>
+    <string name="detect_error_no_camera">No camera app found. Choose a photo instead.</string>
+    <string name="detect_error_camera">The camera didn\'t save a photo. Please try again.</string>
+    <string name="detect_error_unreadable">Couldn\'t read that photo. Try a different one.</string>
+    <string name="detect_button">Detect bird</string>
+    <string name="detecting">Detecting…</string>
+    <string name="detecting_hint">This may take a moment on first use.</string>
+    <string name="detect_failed">Detection failed. Please try again.</string>
+    <string name="detect_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <!-- Detection results (copy matches DetectionResults.vue) -->
+    <string name="results_title">Results</string>
+    <string name="results_none">No birds detected — try a clearer photo.</string>
+    <string name="best_match">Best match</string>
+    <string name="results_pick_another">Not this bird? Tap another match.</string>
+    <string name="your_photo">Your photo</string>
+    <string name="reference_caption">Reference — %1$s</string>
+    <string name="reference_photo_description">Reference photo of %1$s</string>
+    <!-- Credit for a Wikimedia Commons reference photo; %1$s (the author) becomes a link. -->
+    <string name="photo_credit">Photo: %1$s (%2$s)</string>
+    <!-- Save sighting (copy matches SightingSaver.vue and DetectPage.vue); %1$s is in bold -->
+    <string name="save_title">Save sighting</string>
+    <string name="save_detected">Detected %1$s</string>
+    <string name="save_already_found">You\'ve already recorded this bird — save again to add another sighting.</string>
+    <string name="save_notes_label">Notes (optional)</string>
+    <string name="save_notes_placeholder">Where did you spot it?</string>
+    <string name="save_share">Share to Community Gallery</string>
+    <string name="save_button">Save to MyDex</string>
+    <string name="saving">Saving…</string>
+    <string name="save_failed">Failed to save sighting. Please try again.</string>
+    <string name="saved_title">Sighting saved!</string>
+    <string name="saved_body">%1$s has been added to your collection.</string>
+    <string name="saved_dex">Dex %1$d/%2$d</string>
+    <string name="saved_percent">%1$d%%</string>
+    <string name="view_in_mydex">View in MyDex</string>
+    <string name="detect_another">Detect another</string>
+    <!-- Report a wrong match (copy matches ReportMatchModal.vue and DetectPage.vue) -->
+    <string name="report_link">Wrong match? Report this bird</string>
+    <string name="report_title">Report this bird</string>
+    <string name="report_subtitle">Not the right match, or not in the dex? Tell us and we\'ll take a look.</string>
+    <string name="report_photo_description">Your bird photo</string>
+    <string name="report_details">Detection details</string>
+    <string name="report_no_details">No prediction data.</string>
+    <string name="report_note_label">What bird do you think this is? (optional)</string>
+    <string name="report_note_placeholder">e.g. I think this is a Rainbow Lorikeet — not in the list.</string>
+    <string name="report_note_count">%1$d / %2$d</string>
+    <string name="report_submit">Submit report</string>
+    <string name="report_sending">Sending…</string>
+    <string name="report_failed">Couldn\'t send the report. Please try again.</string>
+    <string name="report_sent_title">Thanks for the report!</string>
+    <string name="report_sent_body">We\'ll use it to improve detection.</string>
+    <string name="report_photo_failed">Your photo couldn\'t be sent, but the report was.</string>
+
+    <!-- Community Gallery (copy matches GalleryPage.vue and GallerySightingCard.vue) -->
+    <string name="gallery_title">Community Gallery</string>
+    <string name="gallery_subtitle">Bird sightings shared by the community.</string>
+    <string name="gallery_by">by %1$s</string>
+    <string name="gallery_anonymous">Anonymous</string>
+    <string name="gallery_empty">No sightings shared yet. Be the first!</string>
+    <string name="gallery_load_failed">Couldn\'t load the gallery. Check your connection and try again.</string>
+    <string name="gallery_refresh_failed">Couldn\'t refresh the gallery.</string>
+    <string name="gallery_load_more_failed">Couldn\'t load more sightings.</string>
+    <string name="gallery_filter_label">Filter by bird</string>
+    <string name="gallery_all_birds">All birds</string>
+    <string name="gallery_empty_filtered">No shared sightings of %1$s yet.</string>
+    <!-- Gallery sighting detail (copy matches GallerySightingModal.vue) -->
+    <string name="gallery_spotted_by">Spotted by</string>
+    <string name="gallery_date">Date</string>
+    <string name="close">Close</string>
+    <!-- Relative dates (website: relativeDate in utils/dateFormat.js) -->
+    <string name="date_today">Today</string>
+    <string name="date_yesterday">Yesterday</string>
+    <plurals name="date_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <string name="date_weeks_ago">%1$dw ago</string>
+    <string name="date_months_ago">%1$dmo ago</string>
+    <string name="date_years_ago">%1$dy ago</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="retry">Retry</string>
+    <string name="show_password">Show password</string>
+    <string name="hide_password">Hide password</string>
+
+    <!-- Account tab (copy matches AccountPage.vue) -->
+    <string name="account_offline">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <string name="sign_out">Sign out</string>
+    <string name="signing_out">Signing out…</string>
+    <string name="build_info">API %1$s · %2$s %3$s</string>
+    <string name="account_title">My Account</string>
+    <string name="account_verified">Verified</string>
+    <string name="account_unverified">Unverified</string>
+    <string name="account_member_since">Member since %1$s</string>
+    <!-- Quantity: the total number of birds. -->
+    <plurals name="account_found">
+        <item quantity="one">%1$d of %2$d bird found</item>
+        <item quantity="other">%1$d of %2$d birds found</item>
+    </plurals>
+    <string name="account_shared" tools:ignore="PluralsCandidate">%1$d shared to gallery</string>
+    <string name="account_gallery_settings">Gallery Settings</string>
+    <string name="account_anonymous">Appear as Anonymous in gallery</string>
+    <string name="account_anonymous_hint">When enabled, your name won\'t be shown on shared sightings.</string>
+    <string name="account_settings_load_failed">Couldn\'t load your gallery settings.</string>
+    <string name="account_setting_failed">Couldn\'t change the setting. Try again.</string>
+    <string name="account_danger_zone">Danger Zone</string>
+    <string name="account_reset_title">Reset Collection</string>
+    <string name="account_reset_body">Delete all your sightings and images.</string>
+    <string name="account_reset">Reset</string>
+    <string name="account_resetting">Deleting…</string>
+    <string name="account_reset_confirm_title">Delete all your sightings?</string>
+    <plurals name="account_reset_confirm_body">
+        <item quantity="one">This permanently deletes your %1$d sighting and its photo. It can\'t be undone.</item>
+        <item quantity="other">This permanently deletes all %1$d of your sightings and their photos. It can\'t be undone.</item>
+    </plurals>
+    <string name="account_reset_confirm">Delete all</string>
+    <string name="account_reset_done">All sightings deleted.</string>
+    <string name="account_reset_failed">Couldn\'t delete your sightings. Try again.</string>
+    <string name="account_delete_title">Delete Account</string>
+    <string name="account_delete_body">To permanently delete your account and all associated data, send us a request through feedback. We\'ll confirm once it\'s done.</string>
+    <!-- Feedback (copy matches FeedbackButton.vue) -->
+    <string name="feedback_card_title">Feedback</string>
+    <string name="feedback_card_body">Found a bug or have an idea? Let us know.</string>
+    <string name="feedback_open">Send feedback</string>
+    <string name="feedback_title">Send Feedback</string>
+    <string name="feedback_category">Category</string>
+    <string name="feedback_bug">Bug Report</string>
+    <string name="feedback_detection">Detection Issue</string>
+    <string name="feedback_suggestion">Suggestion</string>
+    <string name="feedback_other">Other</string>
+    <string name="feedback_message">Message</string>
+    <string name="feedback_placeholder">Describe the issue or suggestion…</string>
+    <string name="feedback_submit">Submit</string>
+    <string name="feedback_empty">Please enter a message.</string>
+    <string name="feedback_failed">Couldn\'t send your feedback. Please try again.</string>
+    <string name="feedback_sent_title">Thanks for your feedback!</string>
+    <string name="feedback_sent_body">We\'ll review it shortly.</string>
+    <!-- First-run welcome (copy matches WelcomeModal.vue and onboardingSteps.js) -->
+    <string name="welcome_title">Welcome to BirdDex, %1$s!</string>
+    <string name="welcome_title_no_name">Welcome to BirdDex!</string>
+    <string name="welcome_subtitle">Here\'s how it works.</string>
+    <string name="welcome_step_photo">Snap a Photo</string>
+    <string name="welcome_step_photo_body">Take a picture of any bird you spot — in your backyard, at the park, or anywhere outdoors.</string>
+    <string name="welcome_step_id">Get Instant ID</string>
+    <string name="welcome_step_id_body">Our bird detection model analyses your photo and identifies the bird species in seconds.</string>
+    <string name="welcome_step_collect">Build Your Collection</string>
+    <string name="welcome_step_collect_body">Every identified bird gets added to your personal collection. Track your progress and share sightings.</string>
+    <string name="welcome_note">Your Dex starts with every bird greyed out — each one fills in once you photograph it.</string>
+    <string name="welcome_explore">Explore MyDex</string>
+    <string name="welcome_try_detect">Try Detect</string>
+    <string name="account_help_title">How it works</string>
+    <string name="account_help_body">Snap a photo, get an instant ID, build your collection.</string>
+    <string name="account_help_open">Show</string>
+
+    <!-- Sign in (copy matches frontend/src/views/LoginPage.vue) -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Sign in to your BirdDex account</string>
+    <string name="sign_in">Sign in</string>
+    <string name="signing_in">Signing in…</string>
+    <string name="login_no_account">Don\'t have an account?</string>
+    <string name="sign_up">Sign up</string>
+
+    <!-- Register (copy matches RegisterPage.vue) -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Start building your bird collection</string>
+    <string name="create_account">Create account</string>
+    <string name="creating_account">Creating account…</string>
+    <string name="register_have_account">Already have an account?</string>
+
+    <!-- Verify email (copy matches VerifyEmailPage.vue) -->
+    <string name="verify_title">Verify your email</string>
+    <string name="verify_subtitle">We sent a verification link to %1$s</string>
+    <string name="verify_body">Click the link in the email to activate your account, then come back here to sign in.</string>
+    <string name="verify_resend">Didn\'t get the email? Resend</string>
+    <string name="verify_sending">Sending…</string>
+    <string name="verify_resent">Verification email resent.</string>
+    <string name="verify_already_verified">Already verified?</string>
+
+    <!-- Forgot password (copy matches ForgotPasswordPage.vue) -->
+    <string name="forgot_password">Forgot password?</string>
+    <string name="forgot_title">Reset your password</string>
+    <string name="forgot_subtitle">Enter your email and we\'ll send you a reset link</string>
+    <string name="forgot_send">Send reset link</string>
+    <string name="forgot_sending">Sending…</string>
+    <string name="forgot_sent">Check your inbox at %1$s for a password reset link.</string>
+    <string name="forgot_sent_hint">Open the link to choose a new password, then sign in with it.</string>
+    <string name="forgot_back_to_sign_in">Back to sign in</string>
+    <string name="forgot_remember">Remember your password?</string>
+
+    <!-- Google sign-in (button copy matches SocialLoginButtons.vue) -->
+    <string name="or_continue_with">or continue with</string>
+    <string name="google">Google</string>
+    <string name="google_no_account">No Google account on this device. Add one in Settings, then try again.</string>
+    <string name="google_failed">Google sign-in didn\'t work. Please try again.</string>
+
+    <!-- Form fields -->
+    <string name="field_name">Full name</string>
+    <string name="field_name_placeholder">Jane Doe</string>
+    <string name="field_email">Email</string>
+    <string name="field_email_placeholder">you@example.com</string>
+    <string name="field_password">Password</string>
+    <string name="field_confirm_password">Confirm password</string>
+    <string name="field_new_password">New password</string>
+
+    <!-- Field errors (same text as the website) -->
+    <string name="error_name_required">Name is required.</string>
+    <string name="error_email_required">Email is required.</string>
+    <string name="error_email_invalid">Please enter a valid email address.</string>
+    <string name="error_password_required">Password is required.</string>
+    <string name="error_password_too_short">Password must be at least 8 characters.</string>
+    <string name="error_confirm_password_required">Please confirm your password.</string>
+    <string name="error_passwords_dont_match">Passwords do not match.</string>
+
+    <!-- Server errors (AuthError); first four match frontend/src/stores/auth.js -->
+    <string name="auth_error_invalid_credentials">Invalid email or password.</string>
+    <string name="auth_error_email_not_verified">Please verify your email before signing in.</string>
+    <string name="auth_error_email_in_use">An account with this email already exists.</string>
+    <string name="auth_error_too_many_attempts">Too many attempts. Please try again later.</string>
+    <string name="auth_error_password_too_long">That password is too long.</string>
+    <string name="auth_error_reset_unavailable">Password reset is unavailable right now. Please contact support.</string>
+    <string name="auth_error_network">Couldn\'t reach BirdDex. Check your connection and try again.</string>
+    <string name="auth_error_unexpected">Something went wrong. Please try again.</string>
+    <string name="auth_error_invalid_link">This link is invalid or has expired.</string>
+    <!-- Email links. Reset copy matches ResetPasswordPage.vue; the website has no verify page. -->
+    <string name="verify_link_title">Verifying your email</string>
+    <string name="verify_link_subtitle">This only takes a moment.</string>
+    <string name="verify_link_done_title">Email verified</string>
+    <string name="verify_link_done_subtitle">Your account is ready. Sign in to start your collection.</string>
+    <string name="verify_link_invalid_title">Link expired</string>
+    <string name="verify_link_invalid_subtitle">This verification link is invalid or has expired.</string>
+    <string name="verify_link_invalid_body">Sign in with your email and password to get a new link.</string>
+    <string name="reset_title">Set new password</string>
+    <string name="reset_subtitle">Enter and confirm your new password</string>
+    <string name="reset_submit">Reset Password</string>
+    <string name="reset_submitting">Resetting…</string>
+    <string name="reset_done">Your password has been reset successfully.</string>
+    <string name="reset_request_new_link">Request a new link</string>
+    <string name="link_signed_in_title">You\'re signed in</string>
+    <string name="link_signed_in_body">To open this link, sign out first. You can sign back in afterwards.</string>
+</resources>

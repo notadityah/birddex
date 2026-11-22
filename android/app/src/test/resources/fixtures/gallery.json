@@ -1,0 +1,31 @@
+{
+  "sightings": [
+    {
+      "id": "3c1d2e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+      "bird_id": 14,
+      "bird_name": "House Sparrow",
+      "scientific_name": "Passer domesticus",
+      "slug": "house_sparrow",
+      "detected_at": "2026-11-19T22:41:07.512Z",
+      "notes": "clayton station",
+      "created_at": "2026-11-19T22:41:07.512Z",
+      "user_name": "Jane Doe",
+      "image_url": "https://birddex-bucket.s3.ap-southeast-2.amazonaws.com/images/u_jane/0b7e9c1d.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=abc123"
+    },
+    {
+      "id": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+      "bird_id": 1,
+      "bird_name": "Australian King Parrot",
+      "scientific_name": "Alisterus scapularis",
+      "slug": "australian_king_parrot",
+      "detected_at": null,
+      "notes": null,
+      "created_at": "2026-11-12T08:05:00.000Z",
+      "user_name": "Anonymous",
+      "image_url": null
+    }
+  ],
+  "total": 45,
+  "limit": 20,
+  "offset": 0
+}
